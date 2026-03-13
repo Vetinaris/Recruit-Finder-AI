@@ -1,0 +1,73 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Profile Settings";
+    ViewData["ActivePage"] = ManageNavPages.Index;
+}
+<partial name="_StatusMessage" for="StatusMessage" />
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+        <form id="profile-form" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+
+            <h5 class="mb-3 text-primary"><i class="bi bi-person-circle me-2"></i>Personal Information</h5>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Username" class="form-label">Username</label>
+                    <input asp-for="Username" class="form-control" placeholder="Please choose your username." disabled />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Input.PhoneNumber" class="form-label">Phone Number</label>
+                    <input asp-for="Input.PhoneNumber" class="form-control" placeholder="Please enter your phone number." />
+                    <span asp-validation-for="Input.PhoneNumber" class="text-danger"></span>
+                </div>
+            </div>
+
+            <hr class="my-4" />
+
+            <h5 class="mb-3 text-primary"><i class="bi bi-building me-2"></i>Company Details (For Employers)</h5>
+            <p class="text-muted small">Fill this out if you intend to post job listings. This data will be used for invoices and offer headers.</p>
+
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" asp-for="Input.IsEmployer" id="employerSwitch">
+                        <label class="form-check-label fw-bold" for="employerSwitch">I am an Employer / Recruiter</label>
+                    </div>
+                </div>
+
+                <div id="companyFields" style="@(Model.Input.IsEmployer ? "" : "display:none;")">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Input.CompanyName" class="form-label">Company Name</label>
+                            <input asp-for="Input.CompanyName" class="form-control" placeholder="Legal name of your business" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Input.NIP" class="form-label">NIP (Tax ID)</label>
+                            <input asp-for="Input.NIP" class="form-control" placeholder="e.g., 1234567890" />
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label asp-for="Input.CompanyAddress" class="form-label">Headquarters Address</label>
+                            <textarea asp-for="Input.CompanyAddress" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="update-profile-button" type="submit" class="w-100 btn btn-lg btn-primary shadow-sm mt-3">
+                Save Account Settings
+            </button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.getElementById('employerSwitch').addEventListener('change', function() {
+            const fields = document.getElementById('companyFields');
+            fields.style.display = this.checked ? 'block' : 'none';
+        });
+    </script>
+}

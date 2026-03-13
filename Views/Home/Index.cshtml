@@ -1,8 +1,28 @@
-﻿@{
+﻿@model List<string>
+@{
     ViewData["Title"] = "Home Page";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="text-center mb-5">
+    <h1 class="display-4">Find Your Next Career</h1>
+    <p class="lead">Select a category to browse job offers.</p>
+</div>
+
+<div class="container">
+    <div class="row">
+        @foreach (var category in Model)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 shadow-sm text-center">
+                    <div class="card-body d-flex flex-column justify-content-center">
+                        <h5 class="card-title">@category</h5>
+                        <a asp-controller="Offer"
+                           asp-action="List"
+                           asp-route-category="@category"
+                           class="btn btn-primary mt-3">View Offers</a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
 </div>
