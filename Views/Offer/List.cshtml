@@ -1,0 +1,46 @@
+﻿@model IEnumerable<Recruit_Finder_AI.Models.JobOffer>
+@{
+    ViewData["Title"] = "Job Offers";
+}
+
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-end mb-4">
+        <div>
+            <h2 class="fw-bold text-dark">Available Roles</h2>
+            <p class="text-muted">Found @Model.Count() opportunities in @ViewBag.CategoryName</p>
+        </div>
+        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary rounded-pill">
+            <i class="bi bi-chevron-left"></i> Categories
+        </a>
+    </div>
+
+    <div class="row g-4">
+        @foreach (var item in Model)
+        {
+            <div class="col-lg-4 col-md-6">
+                <div class="card h-100 border-0 shadow-sm job-card">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="badge bg-soft-primary text-primary rounded-pill">@item.Location</span>
+                            <small class="text-muted">Full-time</small>
+                        </div>
+                        <h4 class="card-title fw-bold mb-1">@item.Title</h4>
+                        <p class="text-primary fw-medium mb-3">@item.Company</p>
+                        <p class="text-muted small">
+                            @(item.Description?.Length > 100 ? item.Description.Substring(0, 100) + "..." : item.Description)
+                        </p>
+                    </div>
+                    <div class="card-footer bg-white border-0 p-4 pt-0">
+                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-primary w-100 rounded-pill">View Details</a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .bg-soft-primary { background-color: rgba(67, 97, 238, 0.1); }
+    .job-card { border-radius: 16px; transition: transform 0.2s; }
+    .job-card:hover { transform: scale(1.02); }
+</style>

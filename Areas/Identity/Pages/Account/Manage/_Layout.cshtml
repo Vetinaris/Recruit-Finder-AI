@@ -1,0 +1,53 @@
+﻿@{
+    if (ViewData.TryGetValue("ParentLayout", out var parentLayout) && parentLayout != null)
+    {
+        Layout = parentLayout.ToString();
+    }
+    else
+    {
+        Layout = "/Views/Shared/_Layout.cshtml";
+    }
+}
+
+<div class="container py-5">
+    <div class="mb-5">
+        <h1 class="fw-bold text-dark">Account Settings</h1>
+        <p class="text-muted">Manage your profile, security, and personal data.</p>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-2">
+                <partial name="_ManageNav" />
+            </div>
+        </div>
+
+        <div class="col-md-9">
+            <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5">
+                @RenderBody()
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @RenderSection("Scripts", required: false)
+}
+
+<style>
+    .nav-pills .nav-link {
+        color: #4a4e69;
+        font-weight: 500;
+        border-radius: 12px;
+        padding: 12px 20px;
+        transition: all 0.2s;
+    }
+    .nav-pills .nav-link.active {
+        background-color: #4361ee !important;
+        color: white;
+    }
+    .nav-pills .nav-link:hover:not(.active) {
+        background-color: #f8f9fa;
+        color: #4361ee;
+    }
+</style>
