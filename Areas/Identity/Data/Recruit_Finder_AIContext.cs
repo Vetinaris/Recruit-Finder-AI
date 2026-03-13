@@ -1,0 +1,23 @@
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using Recruit_Finder_AI.Models;
+namespace Recruit_Finder_AI.Data;
+
+public class Recruit_Finder_AIContext : IdentityDbContext<ApplicationUser>
+{
+    public Recruit_Finder_AIContext(DbContextOptions<Recruit_Finder_AIContext> options)
+        : base(options)
+    {
+    }
+
+    public DbSet<JobOffer> JobOffers { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        base.OnModelCreating(builder);
+        builder.Entity<ApplicationUser>(entity =>
+        {
+            entity.Property(e => e.NIP).HasMaxLength(15);
+        });
+    }
+}

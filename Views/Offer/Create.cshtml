@@ -1,0 +1,71 @@
+﻿@model Recruit_Finder_AI.Models.JobOffer
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    ViewData["Title"] = "Post New Job Offer";
+    var user = await UserManager.GetUserAsync(User);
+    bool hasCompanyData = !string.IsNullOrEmpty(user?.CompanyName);
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            @if (!hasCompanyData)
+            {
+                <div class="card shadow border-0 text-center p-5">
+                    <div class="card-body">
+                        <i class="bi bi-building-exclamation text-warning mb-3" style="font-size: 3rem;"></i>
+                        <h2 class="h4">Profile Incomplete</h2>
+                        <p class="text-muted">You must set your Company Name in your profile before posting an offer.</p>
+                        <a href="/Identity/Account/Manage" class="btn btn-primary mt-3">Complete Profile</a>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="card shadow border-0">
+                    <div class="card-header bg-primary text-white py-3">
+                        <h2 class="h4 mb-0"><i class="bi bi-plus-circle me-2"></i>Post a New Job Opportunity</h2>
+                    </div>
+                    <div class="card-body p-4">
+                        <form asp-action="Create">
+                            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label asp-for="Title" class="form-label fw-bold">Job Title</label>
+                                    <input asp-for="Title" class="form-control" placeholder="e.g. Senior C# Developer" />
+                                    <span asp-validation-for="Title" class="text-danger small"></span>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label asp-for="Company" class="form-label fw-bold">Company Name</label>
+                                    <input asp-for="Company" class="form-control bg-light" value="@user.CompanyName" readonly />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label asp-for="Category" class="form-label fw-bold">Category</label>
+                                    <select asp-for="Category" class="form-select">
+                                        <option value="IT">IT</option>
+                                        <option value="Marketing">Marketing</option>
+                                        <option value="Finance">Finance</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label asp-for="Location" class="form-label fw-bold">Location</label>
+                                    <input asp-for="Location" class="form-control" placeholder="e.g. Remote" />
+                                </div>
+                                <div class="col-12 mb-4">
+                                    <label asp-for="Description" class="form-label fw-bold">Job Description</label>
+                                    <textarea asp-for="Description" class="form-control" rows="8"></textarea>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <a asp-action="MyListings" class="btn btn-outline-secondary">Cancel</a>
+                                <button type="submit" class="btn btn-success px-5">Publish Offer</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>

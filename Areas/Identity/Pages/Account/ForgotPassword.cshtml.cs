@@ -7,10 +7,11 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
-using Recruit_Finder_AI.Models;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Text.Encodings.Web;
+using Recruit_Finder_AI.Models;
+
 
 namespace Recruit_Finder_AI.Areas.Identity.Pages.Account
 {

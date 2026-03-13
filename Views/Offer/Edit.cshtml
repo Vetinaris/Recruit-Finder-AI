@@ -1,0 +1,39 @@
+﻿@model Recruit_Finder_AI.Models.JobOffer
+
+@{
+    ViewData["Title"] = "Edit Job Offer";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow border-0">
+                <div class="card-header bg-warning py-3">
+                    <h2 class="h4 mb-0"><i class="bi bi-pencil-square me-2"></i>Edit Your Job Listing</h2>
+                </div>
+                <div class="card-body p-4">
+                    <form asp-action="Edit">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                        <input type="hidden" asp-for="Id" />
+                        <input type="hidden" asp-for="RecruiterId" />
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Title" class="form-label fw-bold">Job Title</label>
+                                <input asp-for="Title" class="form-control" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Company" class="form-label fw-bold">Company Name</label>
+                                <input asp-for="Company" class="form-control bg-light" readonly />
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-3">
+                            <a asp-action="MyListings" class="btn btn-outline-secondary">Discard</a>
+                            <button type="submit" class="btn btn-warning fw-bold">Update Listing</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

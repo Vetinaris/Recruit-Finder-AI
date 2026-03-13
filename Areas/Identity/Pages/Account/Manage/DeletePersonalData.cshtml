@@ -7,12 +7,18 @@
 
 <h3 class="fw-bold text-danger mb-4">@ViewData["Title"]</h3>
 
-<div class="alert alert-danger rounded-4 p-4 border-0 mb-4" role="alert">
+<div class="alert alert-danger rounded-4 p-4 border-0 mb-4 shadow-sm" role="alert">
     <div class="d-flex">
-        <i class="bi bi-exclamation-triangle-fill fs-3 me-3"></i>
+        <div class="flex-shrink-0">
+            <i class="bi bi-exclamation-triangle-fill fs-2 me-3"></i>
+        </div>
         <div>
-            <h5 class="fw-bold">Warning!</h5>
-            <p class="mb-0 small">Deleting this data will permanently remove your account and all associated AI recruitment data, including job offers and CV analyses. This action cannot be undone.</p>
+            <h5 class="fw-bold">Permanent Action Warning</h5>
+            <p class="mb-0 small opacity-75">
+                Deleting this data will permanently remove your account and all associated AI recruitment history, 
+                including your posted job offers, matched candidates, and CV analysis reports. 
+                <strong>This action cannot be undone.</strong>
+            </p>
         </div>
     </div>
 </div>
@@ -25,18 +31,45 @@
             @if (Model.RequirePassword)
             {
                 <div class="form-floating mb-4">
-                    <input asp-for="Input.Password" class="form-control rounded-3" autocomplete="current-password" aria-required="true" placeholder="Please enter your password." />
-                    <label asp-for="Input.Password" class="form-label"></label>
+                    <input asp-for="Input.Password" class="form-control rounded-3 border-danger-subtle" autocomplete="current-password" aria-required="true" placeholder="Enter your password to confirm" />
+                    <label asp-for="Input.Password" class="form-label text-muted">Confirm with Password</label>
                     <span asp-validation-for="Input.Password" class="text-danger small"></span>
+                    <div class="form-text mt-2 small text-muted">
+                        For security reasons, please enter your password to authorize this permanent deletion.
+                    </div>
                 </div>
             }
             
-            <button class="btn btn-danger btn-lg rounded-pill px-5 shadow-sm" type="submit">
-                <i class="bi bi-trash3 me-2"></i>Delete My Data & Account
-            </button>
+            <div class="d-grid d-md-block">
+                <button class="btn btn-danger btn-lg rounded-pill px-5 shadow-sm hover-shake" type="submit">
+                    <i class="bi bi-trash3 me-2"></i>Delete My Data & Account
+                </button>
+                <a asp-page="./Index" class="btn btn-light btn-lg rounded-pill px-4 ms-md-2 mt-2 mt-md-0">Cancel</a>
+            </div>
         </form>
     </div>
 </div>
+
+<style>
+    .hover-shake:hover {
+        animation: shake 0.5s;
+        animation-iteration-count: infinite;
+    }
+
+    @@keyframes shake {
+        0% { transform: translate(1px, 1px) rotate(0deg); }
+        10% { transform: translate(-1px, -2px) rotate(-1deg); }
+        20% { transform: translate(-3px, 0px) rotate(1deg); }
+        30% { transform: translate(3px, 2px) rotate(0deg); }
+        40% { transform: translate(1px, -1px) rotate(1deg); }
+        50% { transform: translate(-1px, 2px) rotate(-1deg); }
+        60% { transform: translate(-3px, 1px) rotate(0deg); }
+        70% { transform: translate(3px, 1px) rotate(-1deg); }
+        80% { transform: translate(-1px, -1px) rotate(1deg); }
+        90% { transform: translate(1px, 2px) rotate(0deg); }
+        100% { transform: translate(1px, -2px) rotate(-1deg); }
+    }
+</style>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
