@@ -1,66 +1,46 @@
 ﻿@model IEnumerable<Recruit_Finder_AI.Models.JobOffer>
-
 @{
-    ViewData["Title"] = "Available Offers";
+    ViewData["Title"] = "Job Offers";
 }
 
-<div class="mb-4 pb-2 border-bottom">
-    <h1 class="display-6">Job Openings: <span class="text-primary">@ViewBag.CategoryName</span></h1>
-    <p class="text-muted">Discover your next opportunity from top recruiters.</p>
-</div>
-
-@if (!Model.Any())
-{
-    <div class="text-center py-5 border rounded bg-light">
-        <i class="bi bi-search mb-3 d-block text-secondary" style="font-size: 2.5rem;"></i>
-        <p class="lead text-muted">No offers found in this category yet.</p>
-        <a asp-controller="Home" asp-action="Index" class="btn btn-primary">Try another category</a>
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-end mb-4">
+        <div>
+            <h2 class="fw-bold text-dark">Available Roles</h2>
+            <p class="text-muted">Found @Model.Count() opportunities in @ViewBag.CategoryName</p>
+        </div>
+        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary rounded-pill">
+            <i class="bi bi-chevron-left"></i> Categories
+        </a>
     </div>
-}
-else
-{
-    <div class="row">
+
+    <div class="row g-4">
         @foreach (var item in Model)
         {
-            <div class="col-md-6 col-lg-4 mb-4">
-                <div class="card h-100 shadow-sm border-0 transition-card">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <h5 class="card-title text-primary mb-1">@item.Title</h5>
-                            <span class="badge rounded-pill bg-light text-dark border">@item.Location</span>
+            <div class="col-lg-4 col-md-6">
+                <div class="card h-100 border-0 shadow-sm job-card">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="badge bg-soft-primary text-primary rounded-pill">@item.Location</span>
+                            <small class="text-muted">Full-time</small>
                         </div>
-                        <h6 class="card-subtitle mb-3 text-muted">@item.Company</h6>
-
-                        <p class="card-text text-muted small">
-                            @(item.Description?.Length > 120 ? item.Description.Substring(0, 120) + "..." : item.Description)
+                        <h4 class="card-title fw-bold mb-1">@item.Title</h4>
+                        <p class="text-primary fw-medium mb-3">@item.Company</p>
+                        <p class="text-muted small">
+                            @(item.Description?.Length > 100 ? item.Description.Substring(0, 100) + "..." : item.Description)
                         </p>
                     </div>
-                    <div class="card-footer bg-transparent border-0 pb-3">
-                        <div class="d-grid">
-                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-primary">
-                                View Full Details
-                            </a>
-                        </div>
+                    <div class="card-footer bg-white border-0 p-4 pt-0">
+                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-primary w-100 rounded-pill">View Details</a>
                     </div>
                 </div>
             </div>
         }
     </div>
-}
-
-<div class="mt-4">
-    <a asp-controller="Home" asp-action="Index" class="btn btn-link text-decoration-none p-0">
-        <i class="bi bi-arrow-left"></i> Back to All Categories
-    </a>
 </div>
 
 <style>
-    .transition-card {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-        .transition-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1) !important;
-        }
+    .bg-soft-primary { background-color: rgba(67, 97, 238, 0.1); }
+    .job-card { border-radius: 16px; transition: transform 0.2s; }
+    .job-card:hover { transform: scale(1.02); }
 </style>

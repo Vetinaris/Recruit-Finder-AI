@@ -9,7 +9,12 @@ namespace Recruit_Finder_AI.Controllers
 
         public IActionResult Index()
         {
-            var categories = new List<string> { "IT", "Marketing", "Finance", "Healthcare", "Education" };
+            if (User.Identity.IsAuthenticated && User.IsInRole("ADMIN"))
+            {
+                return RedirectToAction("Index", "Admin");
+            }
+
+            var categories = new List<string> { "IT", "Marketing", "Finance", "Healthcare", "Education", "Engineering", "Sales", "Customer Service", "Human Resources" };
             return View(categories);
         }
         public IActionResult Privacy()

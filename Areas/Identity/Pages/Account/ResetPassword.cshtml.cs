@@ -2,73 +2,58 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 #nullable disable
 
-using System;
-using System.ComponentModel.DataAnnotations;
-using System.Text;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.EntityFrameworkCore;
+using Recruit_Finder_AI.Data;
+using Recruit_Finder_AI.Models;
+using Recruit_Finder_AI.Services;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace Recruit_Finder_AI.Areas.Identity.Pages.Account
 {
     public class ResetPasswordModel : PageModel
     {
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly Recruit_Finder_AIContext _context;
+        private readonly SettingsService _settingsService;
 
-        public ResetPasswordModel(UserManager<IdentityUser> userManager)
+        public ResetPasswordModel(UserManager<ApplicationUser> userManager, Recruit_Finder_AIContext context, SettingsService settingsService)
         {
             _userManager = userManager;
+            _context = context;
+            _settingsService = settingsService;
         }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         [BindProperty]
         public InputModel Input { get; set; }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         public class InputModel
         {
-            /// <summary>
-            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-            ///     directly from your code. This API may change or be removed in future releases.
-            /// </summary>
             [Required]
             [EmailAddress]
             public string Email { get; set; }
 
-            /// <summary>
-            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-            ///     directly from your code. This API may change or be removed in future releases.
-            /// </summary>
             [Required]
             [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
             [DataType(DataType.Password)]
             public string Password { get; set; }
 
-            /// <summary>
-            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-            ///     directly from your code. This API may change or be removed in future releases.
-            /// </summary>
             [DataType(DataType.Password)]
             [Display(Name = "Confirm password")]
             [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
             public string ConfirmPassword { get; set; }
 
-            /// <summary>
-            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-            ///     directly from your code. This API may change or be removed in future releases.
-            /// </summary>
             [Required]
             public string Code { get; set; }
-
         }
 
         public IActionResult OnGet(string code = null)
@@ -94,22 +79,57 @@ namespace Recruit_Finder_AI.Areas.Identity.Pages.Account
                 return Page();
             }
 
+            var settings = await _settingsService.GetAdminSettingsAsync();
+
             var user = await _userManager.FindByEmailAsync(Input.Email);
             if (user == null)
             {
                 return RedirectToPage("./ResetPasswordConfirmation");
             }
 
+            if (Input.Password.Length < settings.MinPasswordLength)
+            {
+                ModelState.AddModelError(string.Empty, $"Password must be at least {settings.MinPasswordLength} characters long.");
+                return Page();
+            }
+
+            var passwordHistory = await _context.PasswordHistories
+                .Where(ph => ph.ApplicationUserId == user.Id)
+                .OrderByDescending(ph => ph.CreatedAt)
+                .Take(settings.PasswordHistoryDepth)
+                .ToListAsync();
+
+            foreach (var entry in passwordHistory)
+            {
+                var verificationResult = _userManager.PasswordHasher.VerifyHashedPassword(user, entry.PasswordHash, Input.Password);
+                if (verificationResult != PasswordVerificationResult.Failed)
+                {
+                    ModelState.AddModelError(string.Empty, $"You cannot use any of your last {settings.PasswordHistoryDepth} passwords.");
+                    return Page();
+                }
+            }
+
             var result = await _userManager.ResetPasswordAsync(user, Input.Code, Input.Password);
             if (result.Succeeded)
             {
+                user.PasswordExpiration = DateTime.UtcNow.AddDays(settings.PasswordExpirationDays);
+                user.ResetPasswordAttemptCount = 0;
+                user.LastResetAttempt = DateTime.UtcNow;
+
+                _context.PasswordHistories.Add(new PasswordHistory
+                {
+                    ApplicationUserId = user.Id,
+                    PasswordHash = user.PasswordHash,
+                    CreatedAt = DateTime.UtcNow
+                });
+
+                await _userManager.UpdateAsync(user);
+                await _context.SaveChangesAsync();
+
                 return RedirectToPage("./ResetPasswordConfirmation");
             }
 
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
+            foreach (var error in result.Errors) ModelState.AddModelError(string.Empty, error.Description);
             return Page();
         }
     }

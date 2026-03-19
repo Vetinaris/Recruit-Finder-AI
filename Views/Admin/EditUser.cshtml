@@ -1,0 +1,70 @@
+﻿@model Recruit_Finder_AI.ViewModels.EditUserViewModel
+
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h2 class="mb-0">Edit User: @Model.UserName</h2>
+        </div>
+        <div class="card-body">
+            <form asp-action="EditUser" method="post">
+                <div asp-validation-summary="All" class="text-danger"></div>
+
+                <input type="hidden" asp-for="Id" />
+                <input type="hidden" asp-for="UserName" />
+                <input type="hidden" asp-for="Email" />
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="fw-bold">Username</label>
+                        <p class="form-control-plaintext border-bottom">@Model.UserName</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="fw-bold">Email Address</label>
+                        <p class="form-control-plaintext border-bottom">@Model.Email</p>
+                    </div>
+                </div>
+
+                <hr />
+                <h4 class="text-secondary"><i class="bi bi-shield-lock"></i> Security & Access</h4>
+
+                <div class="form-check mb-2">
+                    <input asp-for="IsLocked" class="form-check-input" />
+                    <label asp-for="IsLocked" class="form-check-label">Lock Account Permanently</label>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input asp-for="ForcePasswordReset" class="form-check-input" />
+                    <label asp-for="ForcePasswordReset" class="form-check-label">Force password reset on next login</label>
+                </div>
+
+                <div class="form-group mb-4">
+                    <label asp-for="PasswordExpiration" class="form-label fw-bold">Password Expiration Date</label>
+                    <input asp-for="PasswordExpiration" type="datetime-local" class="form-control" />
+                    <small class="text-muted">Leave empty if password never expires.</small>
+                </div>
+
+                <hr />
+                <h4 class="text-secondary"><i class="bi bi-person-badge"></i> Assigned Roles</h4>
+                <div class="row ps-3">
+                    @for (int i = 0; i < Model.AvailableRoles.Count; i++)
+                    {
+                        <div class="form-check col-md-4 mb-2">
+                            <input type="hidden" asp-for="@Model.AvailableRoles[i].RoleName" />
+                            <input asp-for="@Model.AvailableRoles[i].IsSelected" class="form-check-input" />
+                            <label class="form-check-label">@Model.AvailableRoles[i].RoleName</label>
+                        </div>
+                    }
+                </div>
+
+                <div class="mt-4 pt-3 border-top">
+                    <button type="submit" class="btn btn-success px-4">
+                        <i class="bi bi-check-circle"></i> Save Changes
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary px-4">
+                        <i class="bi bi-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

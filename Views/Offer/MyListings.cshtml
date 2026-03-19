@@ -1,52 +1,68 @@
 ﻿@model IEnumerable<Recruit_Finder_AI.Models.JobOffer>
-
 @{
     ViewData["Title"] = "My Job Listings";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1>My Job Listings</h1>
-    <a asp-action="Create" class="btn btn-success">Post New Offer</a>
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="fw-bold">My Job Listings</h1>
+            <p class="text-muted">Manage your active offers and track AI candidate matching.</p>
+        </div>
+        <a asp-action="Create" class="btn btn-primary btn-lg rounded-pill shadow-sm">
+            <i class="bi bi-plus-lg me-2"></i>Post New Offer
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4 py-3">Job Title</th>
+                        <th class="py-3">Category</th>
+                        <th class="py-3">Location</th>
+                        <th class="py-3 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model) {
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold text-dark">@item.Title</div>
+                                <div class="small text-muted">@item.Company</div>
+                            </td>
+                            <td>
+                                <span class="badge bg-soft-primary text-primary rounded-pill px-3">@item.Category</span>
+                            </td>
+                            <td>
+                                <i class="bi bi-geo-alt me-1 text-muted"></i>@item.Location
+                            </td>
+                            <td class="text-center pe-4">
+                                <div class="btn-group shadow-sm rounded-pill overflow-hidden">
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-white btn-sm px-3" title="Edit">
+                                        <i class="bi bi-pencil text-primary"></i>
+                                    </a>
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-white btn-sm px-3" title="Details">
+                                        <i class="bi bi-eye text-info"></i>
+                                    </a>
+                                    <form asp-action="Delete" asp-route-id="@item.Id" method="post" onsubmit="return confirm('Are you sure you want to delete this offer?');" style="display:inline;">
+                                        <button type="submit" class="btn btn-white btn-sm px-3" title="Delete">
+                                            <i class="bi bi-trash text-danger"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
-@if (!Model.Any())
-{
-    <div class="alert alert-warning">
-        You haven't posted any job offers yet.
-    </div>
-}
-else
-{
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Job Title</th>
-                <th>Company</th>
-                <th>Category</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var item in Model)
-            {
-                <tr>
-                    <td>@item.Title</td>
-                    <td>@item.Company</td>
-                    <td><span class="badge bg-secondary">@item.Category</span></td>
-                    <td>
-                        <div class="btn-group">
-                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">Edit</a>
-                            <form asp-action="Delete" asp-route-id="@item.Id" method="post"
-                                  onsubmit="return confirm('Are you sure you want to delete this listing?');" style="display:inline">
-                                @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
-
-<a asp-controller="Home" asp-action="Index" class="btn btn-link">Back to Home</a>
+<style>
+    .bg-soft-primary { background-color: rgba(67, 97, 238, 0.1); }
+    .btn-white { background: #fff; border: 1px solid #f0f0f0; }
+    .btn-white:hover { background: #f8f9fa; }
+</style>
