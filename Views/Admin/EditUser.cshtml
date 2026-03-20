@@ -1,0 +1,135 @@
+﻿@model Recruit_Finder_AI.ViewModels.EditUserViewModel
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="d-flex align-items-center mb-4">
+                <a asp-action="Index" class="btn btn-outline-secondary rounded-circle me-3 shadow-sm" title="Back">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <div>
+                    <h2 class="fw-bold mb-0">Edit User Account</h2>
+                    <p class="text-muted mb-0">Manage permissions and security for <strong>@Model.UserName</strong></p>
+                </div>
+            </div>
+
+            <form asp-action="EditUser" method="post">
+                <div asp-validation-summary="All" class="text-danger small mb-4"></div>
+                
+                <input type="hidden" asp-for="Id" />
+                <input type="hidden" asp-for="UserName" />
+                <input type="hidden" asp-for="Email" />
+
+                <div class="row g-4">
+                    <div class="col-md-7">
+                        <div class="card border-0 shadow-sm rounded-4 h-100">
+                            <div class="card-body p-4">
+                                <h5 class="fw-bold mb-4 border-bottom pb-2">
+                                    <i class="bi bi-person-lines-fill text-primary me-2"></i>Account Details
+                                </h5>
+                                
+                                <div class="row mb-4">
+                                    <div class="col-6">
+                                        <label class="small text-muted text-uppercase fw-bold">Username</label>
+                                        <p class="fs-6 fw-semibold">@Model.UserName</p>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="small text-muted text-uppercase fw-bold">Email Address</label>
+                                        <p class="fs-6 fw-semibold">@Model.Email</p>
+                                    </div>
+                                </div>
+
+                                <h5 class="fw-bold mb-3 mt-4">
+                                    <i class="bi bi-person-badge text-primary me-2"></i>Assigned Roles
+                                </h5>
+                                <div class="bg-light rounded-4 p-3 border">
+                                    <div class="row g-3">
+                                        @for (int i = 0; i < Model.AvailableRoles.Count; i++)
+                                        {
+                                            <div class="col-md-8">
+                                                <div class="form-check custom-role-check p-2 rounded-3 transition-hover">
+                                                    <input type="hidden" asp-for="@Model.AvailableRoles[i].RoleName" />
+                                                    <input asp-for="@Model.AvailableRoles[i].IsSelected" class="form-check-input ms-0 me-2" />
+                                                    <label class="form-check-label fw-medium cursor-pointer">@Model.AvailableRoles[i].RoleName</label>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-5">
+                        <div class="card border-0 shadow-sm rounded-4 h-100">
+                            <div class="card-body p-4">
+                                <h5 class="fw-bold mb-4 border-bottom pb-2">
+                                    <i class="bi bi-shield-lock text-primary me-2"></i>Security Actions
+                                </h5>
+
+                                <div class="form-check form-switch p-4 border rounded-3 mb-3 bg-white shadow-sm d-flex align-items-center">
+                                    <input asp-for="IsLocked" class="form-check-input me-3" type="checkbox" role="switch" style="margin-left: 0;">
+                                        <div>
+                                            <label asp-for="IsLocked" class="form-check-label fw-bold text-dark">Lock Account</label>
+                                            <div class="form-text small m-0">Prevent user from logging in.</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-check form-switch p-4 border rounded-3 mb-4 bg-white shadow-sm d-flex align-items-center">
+                                        <input asp-for="ForcePasswordReset" class="form-check-input me-3" type="checkbox" role="switch" style="margin-left: 0;">
+                                            <div>
+                                                <label asp-for="ForcePasswordReset" class="form-check-label fw-bold text-dark">Force Pass Reset</label>
+                                                <div class="form-text small m-0">User must change password on next login.</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label asp-for="PasswordExpiration" class="form-label fw-bold small">Password Expiration Date</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-white border-end-0 rounded-start-3">
+                                                    <i class="bi bi-calendar-event text-muted"></i>
+                                                </span>
+                                                <input asp-for="PasswordExpiration" type="datetime-local" class="form-control border-start-0 rounded-end-3" />
+                                            </div>
+                                            <div class="form-text">Leave blank for no expiration.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-5 p-4 bg-white shadow-sm rounded-4 d-flex justify-content-between align-items-center">
+                                <span class="text-muted small"><i class="bi bi-info-circle me-1"></i> Changes will take effect immediately.</span>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5 shadow-sm">
+                                        <i class="bi me-2"></i>Save All Changes
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <style>
+                .transition-hover:hover {
+                    background-color: rgba(67, 97, 238, 0.05);
+                }
+    
+                .cursor-pointer {
+                    cursor: pointer;
+                }
+
+                .form-switch .form-check-input {
+                    width: 3em;
+                    height: 1.5em;
+                    cursor: pointer;
+                }
+
+                .input-group-text {
+                    border-color: #dee2e6;
+                }
+            </style>
+
+            @section Scripts {
+                <partial name="_ValidationScriptsPartial" />
+            }

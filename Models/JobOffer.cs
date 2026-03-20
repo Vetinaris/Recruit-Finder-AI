@@ -16,9 +16,18 @@ namespace Recruit_Finder_AI.Models
         [Required]
         public string Category { get; set; } = string.Empty;
 
+        [Required]
+        [Display(Name = "Job Type")]
+        public string JobType { get; set; } = string.Empty;
+
         public string Location { get; set; } = string.Empty;
 
+        [Required]
         public string Description { get; set; } = string.Empty;
+
+        public string SalaryType { get; set; } = "Undisclosed";
+        public decimal? MinimumSalary { get; set; }
+        public decimal? MaximumSalary { get; set; }
 
         public string? RecruiterId { get; set; }
     }

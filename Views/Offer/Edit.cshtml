@@ -1,35 +1,99 @@
 ﻿@model Recruit_Finder_AI.Models.JobOffer
 
 @{
-    ViewData["Title"] = "Edit Job Offer";
+    ViewData["Title"] = "Edit Offer";
+    var categories = new List<string> { "IT", "Marketing", "Finance", "Healthcare", "Education", "Engineering", "Sales", "Customer Service", "Human Resources" };
+    var jobTypes = new List<string> { "Full-time", "Part-time", "Contract", "Freelance", "B2B", "Internship" };
 }
 
-<div class="container py-4">
+<div class="container py-5">
     <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow border-0">
-                <div class="card-header bg-warning py-3">
-                    <h2 class="h4 mb-0"><i class="bi bi-pencil-square me-2"></i>Edit Your Job Listing</h2>
-                </div>
-                <div class="card-body p-4">
+        <div class="col-lg-10">
+            <div class="d-flex align-items-center mb-4">
+                <a asp-action="MyListings" class="btn btn-outline-secondary rounded-circle me-3 shadow-sm">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <h2 class="fw-bold mb-0">Update Job Listing</h2>
+            </div>
+
+            <div class="card border-0 shadow-lg rounded-4">
+                <div class="card-body p-4 p-md-5">
                     <form asp-action="Edit">
-                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
                         <input type="hidden" asp-for="Id" />
                         <input type="hidden" asp-for="RecruiterId" />
+                        <input type="hidden" asp-for="Company" />
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="Title" class="form-label fw-bold">Job Title</label>
-                                <input asp-for="Title" class="form-control" />
+                        <div class="row g-4">
+                            <div class="col-md-7">
+                                <h5 class="fw-bold mb-4 text-primary border-bottom pb-2">Information</h5>
+                                <div class="mb-3">
+                                    <label asp-for="Title" class="form-label fw-bold">Job Title</label>
+                                    <input asp-for="Title" class="form-control rounded-3" />
+                                    <span asp-validation-for="Title" class="text-danger"></span>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="Category" class="form-label fw-bold">Category</label>
+                                        <select asp-for="Category" class="form-select rounded-3">
+                                            @foreach (var cat in categories)
+                                            {
+                                                <option value="@cat">@cat</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="JobType" class="form-label fw-bold">Job Type</label>
+                                        <select asp-for="JobType" class="form-select rounded-3">
+                                            @foreach (var type in jobTypes)
+                                            {
+                                                <option value="@type">@type</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label asp-for="Location" class="form-label fw-bold">Location</label>
+                                    <input asp-for="Location" class="form-control rounded-3" />
+                                </div>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="Company" class="form-label fw-bold">Company Name</label>
-                                <input asp-for="Company" class="form-control bg-light" readonly />
+
+                            <div class="col-md-5">
+                                <div class="p-4 bg-light rounded-4 border h-100 shadow-sm">
+                                    <h5 class="fw-bold mb-3">Compensation</h5>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Display Mode</label>
+                                        <select id="salaryTypeEdit" asp-for="SalaryType" class="form-select rounded-3 border-primary-subtle">
+                                            <option value="none">Undisclosed</option>
+                                            <option value="negotiable">Negotiable</option>
+                                            <option value="Fixed">Fixed Monthly</option>
+                                            <option value="Range">Salary Range</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div id="salaryInputsArea" class="@((Model.SalaryType == "none" || Model.SalaryType == "negotiable") ? "d-none" : "")">
+                                        <div class="mb-3">
+                                            <label id="minLabel" class="small fw-bold">@(Model.SalaryType == "Fixed" ? "Amount (PLN)" : "Min Salary")</label>
+                                            <input asp-for="MinimumSalary" class="form-control rounded-3" type="number" />
+                                        </div>
+                                        <div id="maxSalBox" class="@(Model.SalaryType != "Range" ? "d-none" : "")">
+                                            <label class="small fw-bold">Max Salary</label>
+                                            <input asp-for="MaximumSalary" class="form-control rounded-3" type="number" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <label asp-for="Description" class="form-label fw-bold text-primary">Full Description</label>
+                                <textarea asp-for="Description" class="form-control rounded-4 shadow-sm" rows="10"></textarea>
+                                <span asp-validation-for="Description" class="text-danger"></span>
                             </div>
                         </div>
-                        <div class="d-flex justify-content-between mt-3">
-                            <a asp-action="MyListings" class="btn btn-outline-secondary">Discard</a>
-                            <button type="submit" class="btn btn-warning fw-bold">Update Listing</button>
+
+                        <div class="d-flex gap-2 mt-5 pt-4 border-top">
+                            <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5 shadow">Update Listing</button>
+                            <a asp-action="MyListings" class="btn btn-light btn-lg rounded-pill px-4">Cancel</a>
                         </div>
                     </form>
                 </div>
@@ -37,3 +101,32 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const sType = document.getElementById("salaryTypeEdit");
+            const inputsArea = document.getElementById("salaryInputsArea");
+            const maxBox = document.getElementById("maxSalBox");
+            const minLabel = document.getElementById("minLabel");
+
+            sType.addEventListener("change", function() {
+                const val = sType.value;
+                
+                if (val === "none" || val === "negotiable") {
+                    inputsArea.classList.add("d-none");
+                } else {
+                    inputsArea.classList.remove("d-none");
+                }
+
+                if (val === "Range") {
+                    maxBox.classList.remove("d-none");
+                    minLabel.innerText = "Min Salary";
+                } else {
+                    maxBox.classList.add("d-none");
+                    minLabel.innerText = "Amount (PLN)";
+                }
+            });
+        });
+    </script>
+}

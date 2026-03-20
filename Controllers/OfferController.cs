@@ -37,6 +37,10 @@ namespace Recruit_Finder_AI.Controllers
                 return RedirectToPage("/Account/Manage/Index", new { area = "Identity" });
             }
 
+            ViewBag.Categories = new List<string> { "IT", "Marketing", "Finance", "Healthcare", "Education", "Engineering", "Sales", "Customer Service", "Human Resources" };
+
+            ViewBag.JobTypes = new List<string> { "Full-time", "Part-time", "Contract", "Freelance", "Internship" };
+
             var model = new JobOffer { Company = user.CompanyName };
             return View(model);
         }

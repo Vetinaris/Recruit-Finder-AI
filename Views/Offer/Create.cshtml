@@ -4,68 +4,190 @@
 
 @{
     ViewData["Title"] = "Post New Job Offer";
+    var categories = ViewBag.Categories as List<string> ?? new List<string>();
+    var jobTypes = new List<string> { "Full-time", "Part-time", "Contract", "Freelance", "B2B", "Internship" };
     var user = await UserManager.GetUserAsync(User);
-    bool hasCompanyData = !string.IsNullOrEmpty(user?.CompanyName);
 }
 
-<div class="container py-4">
+<div class="container py-5">
     <div class="row justify-content-center">
-        <div class="col-lg-8">
-            @if (!hasCompanyData)
-            {
-                <div class="card shadow border-0 text-center p-5">
-                    <div class="card-body">
-                        <i class="bi bi-building-exclamation text-warning mb-3" style="font-size: 3rem;"></i>
-                        <h2 class="h4">Profile Incomplete</h2>
-                        <p class="text-muted">You must set your Company Name in your profile before posting an offer.</p>
-                        <a href="/Identity/Account/Manage" class="btn btn-primary mt-3">Complete Profile</a>
-                    </div>
+        <div class="col-lg-9">
+            <div class="d-flex align-items-center mb-4">
+                <a asp-action="MyListings" class="btn btn-outline-secondary rounded-circle me-3 shadow-sm">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <div>
+                    <h2 class="fw-bold mb-0">Post a New Job Offer</h2>
+                    <p class="text-muted mb-0">Fill in the details to find your perfect candidate with AI matching.</p>
                 </div>
-            }
-            else
-            {
-                <div class="card shadow border-0">
-                    <div class="card-header bg-primary text-white py-3">
-                        <h2 class="h4 mb-0"><i class="bi bi-plus-circle me-2"></i>Post a New Job Opportunity</h2>
-                    </div>
-                    <div class="card-body p-4">
-                        <form asp-action="Create">
-                            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label asp-for="Title" class="form-label fw-bold">Job Title</label>
-                                    <input asp-for="Title" class="form-control" placeholder="e.g. Senior C# Developer" />
-                                    <span asp-validation-for="Title" class="text-danger small"></span>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label asp-for="Company" class="form-label fw-bold">Company Name</label>
-                                    <input asp-for="Company" class="form-control bg-light" value="@user.CompanyName" readonly />
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label asp-for="Category" class="form-label fw-bold">Category</label>
-                                    <select asp-for="Category" class="form-select">
-                                        <option value="IT">IT</option>
-                                        <option value="Marketing">Marketing</option>
-                                        <option value="Finance">Finance</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label asp-for="Location" class="form-label fw-bold">Location</label>
-                                    <input asp-for="Location" class="form-control" placeholder="e.g. Remote" />
-                                </div>
-                                <div class="col-12 mb-4">
-                                    <label asp-for="Description" class="form-label fw-bold">Job Description</label>
-                                    <textarea asp-for="Description" class="form-control" rows="8"></textarea>
+            </div>
+
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-body p-4 p-md-5">
+                    <form asp-action="Create" id="createOfferForm">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger rounded-3 small" role="alert"></div>
+
+                        <h5 class="fw-bold mb-4 text-primary">
+                            <i class="bi bi-info-circle me-2"></i>Basic Information
+                        </h5>
+                        <div class="row g-3 mb-5">
+                            <div class="col-md-12">
+                                <label asp-for="Title" class="form-label fw-semibold">Job Title</label>
+                                <input asp-for="Title" class="form-control rounded-3" placeholder="e.g. Senior Fullstack Developer" />
+                                <span asp-validation-for="Title" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="Category" class="form-label fw-semibold">Category</label>
+                                <select asp-for="Category" class="form-select rounded-3">
+                                    <option value="">-- Select Category --</option>
+                                    @foreach (var cat in categories)
+                                    {
+                                        <option value="@cat">@cat</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="Category" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="JobType" class="form-label fw-semibold">Employment Type</label>
+                                <select asp-for="JobType" class="form-select rounded-3">
+                                    <option value="">-- Select Type --</option>
+                                    @foreach (var type in jobTypes)
+                                    {
+                                        <option value="@type">@type</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="Location" class="form-label fw-semibold">Location</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0 rounded-start-3"><i class="bi bi-geo-alt"></i></span>
+                                    <input asp-for="Location" class="form-control border-start-0 rounded-end-3" placeholder="Remote / City, Country" />
                                 </div>
                             </div>
-                            <div class="d-flex justify-content-between">
-                                <a asp-action="MyListings" class="btn btn-outline-secondary">Cancel</a>
-                                <button type="submit" class="btn btn-success px-5">Publish Offer</button>
+
+                            <div class="col-md-6">
+                                <label asp-for="Company" class="form-label fw-semibold">Company Name</label>
+                                <input asp-for="Company" class="form-control rounded-3 bg-light" readonly value="@user?.CompanyName" />
                             </div>
-                        </form>
-                    </div>
+                        </div>
+
+                        <h5 class="fw-bold mb-4 text-primary">
+                            <i class="bi bi-cash-stack me-2"></i>Compensation
+                        </h5>
+                        <div class="row g-3 mb-5 p-3 rounded-4 bg-light mx-0 border">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Salary Type</label>
+                                <select id="salaryType" name="SalaryType" class="form-select rounded-3 border-primary-subtle">
+                                    <option value="none">Not Disclosed</option>
+                                    <option value="negotiable">Negotiable</option>
+                                    <option value="fixed">Fixed Monthly</option>
+                                    <option value="range">Salary Range</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-8 d-none" id="fixedSalaryGroup">
+                                <label class="form-label fw-semibold">Monthly Amount (Gross)</label>
+                                <div class="input-group">
+                                    <input type="number" name="MinimumSalary" class="form-control rounded-3" placeholder="0.00" />
+                                    <span class="input-group-text bg-white">PLN</span>
+                                </div>
+                            </div>
+
+                            <div class="col-md-8 d-none" id="rangeSalaryGroup">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <label class="form-label fw-semibold">Min Salary</label>
+                                        <input type="number" id="minSalary" name="MinimumSalary" class="form-control rounded-3" placeholder="From" />
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label fw-semibold">Max Salary</label>
+                                        <input type="number" id="maxSalary" name="MaximumSalary" class="form-control rounded-3" placeholder="To" />
+                                    </div>
+                                </div>
+                                <div id="salaryError" class="text-danger small mt-2 d-none">
+                                    <i class="bi bi-exclamation-circle me-1"></i>Max salary must be greater than min salary.
+                                </div>
+                            </div>
+                        </div>
+
+                        <h5 class="fw-bold mb-3 text-primary">
+                            <i class="bi bi-file-text me-2"></i>Job Description
+                        </h5>
+                        <div class="mb-4">
+                            <textarea asp-for="Description" class="form-control rounded-4 shadow-sm" rows="8" placeholder="Describe the role, requirements and what your company offers..."></textarea>
+                            <span asp-validation-for="Description" class="text-danger small"></span>
+                        </div>
+
+                        <div class="d-flex gap-3 pt-4 border-top">
+                            <button type="submit" id="submitBtn" class="btn btn-primary btn-lg rounded-pill px-5 shadow">
+                                <i class="bi me-2"></i>Publish Listing
+                            </button>
+                            <a asp-action="MyListings" class="btn btn-light btn-lg rounded-pill px-4">Cancel</a>
+                        </div>
+                    </form>
                 </div>
-            }
+            </div>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const salaryType = document.getElementById("salaryType");
+            const fixedGroup = document.getElementById("fixedSalaryGroup");
+            const rangeGroup = document.getElementById("rangeSalaryGroup");
+            const minSal = document.getElementById("minSalary");
+            const maxSal = document.getElementById("maxSalary");
+            const errorMsg = document.getElementById("salaryError");
+            const submitBtn = document.getElementById("submitBtn");
+
+            function updateUI() {
+                const val = salaryType.value;
+                fixedGroup.classList.add("d-none");
+                rangeGroup.classList.add("d-none");
+                errorMsg.classList.add("d-none");
+                submitBtn.disabled = false;
+
+                if (val === "fixed") fixedGroup.classList.remove("d-none");
+                if (val === "range") rangeGroup.classList.remove("d-none");
+            }
+
+            function validateRange() {
+                if (salaryType.value === "range") {
+                    const min = parseFloat(minSal.value) || 0;
+                    const max = parseFloat(maxSal.value) || 0;
+
+                    if (max > 0 && max <= min) {
+                        errorMsg.classList.remove("d-none");
+                        submitBtn.disabled = true;
+                    } else {
+                        errorMsg.classList.add("d-none");
+                        submitBtn.disabled = false;
+                    }
+                }
+            }
+
+            salaryType.addEventListener("change", updateUI);
+            minSal.addEventListener("input", validateRange);
+            maxSal.addEventListener("input", validateRange);
+        });
+    </script>
+}
+
+<style>
+    .form-control:focus, .form-select:focus {
+        border-color: #4361ee;
+        box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.15);
+    }
+    .input-group-text {
+        border-color: #dee2e6;
+    }
+    .bg-light {
+        background-color: #f8f9fa !important;
+    }
+</style>

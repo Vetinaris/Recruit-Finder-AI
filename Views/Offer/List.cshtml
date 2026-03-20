@@ -1,37 +1,71 @@
 ﻿@model IEnumerable<Recruit_Finder_AI.Models.JobOffer>
 @{
-    ViewData["Title"] = "Job Offers";
+    ViewData["Title"] = ViewBag.CategoryName + " Jobs";
 }
 
-<div class="container mt-5">
-    <div class="d-flex justify-content-between align-items-end mb-4">
-        <div>
-            <h2 class="fw-bold text-dark">Available Roles</h2>
-            <p class="text-muted">Found @Model.Count() opportunities in @ViewBag.CategoryName</p>
+<div class="container py-5">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-5 gap-3">
+        <div class="text-center text-md-start">
+            <h1 class="fw-bold display-6 mb-1">Opportunities in <span class="text-primary">@ViewBag.CategoryName</span></h1>
+            <p class="text-muted fs-5 mb-0">Discover your next career move with AI match analysis.</p>
         </div>
-        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary rounded-pill">
-            <i class="bi bi-chevron-left"></i> Categories
+        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-primary rounded-pill px-4 shadow-sm transition-hover">
+            <i class="bi bi-grid-3x3-gap me-2"></i>Browse Categories
         </a>
     </div>
 
     <div class="row g-4">
+        @if (!Model.Any())
+        {
+            <div class="col-12 text-center py-5">
+                <div class="bg-light rounded-4 p-5 border shadow-sm">
+                    <i class="bi bi-search text-muted display-1 mb-4 d-block"></i>
+                    <h3 class="fw-bold">No offers found yet</h3>
+                    <p class="text-muted">Check back later or try a different category.</p>
+                </div>
+            </div>
+        }
+
         @foreach (var item in Model)
         {
             <div class="col-lg-4 col-md-6">
-                <div class="card h-100 border-0 shadow-sm job-card">
+                <div class="card h-100 border-0 shadow-sm job-card rounded-4">
                     <div class="card-body p-4">
-                        <div class="d-flex justify-content-between mb-3">
-                            <span class="badge bg-soft-primary text-primary rounded-pill">@item.Location</span>
-                            <small class="text-muted">Full-time</small>
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <span class="badge bg-soft-primary text-primary rounded-pill px-3 py-2">
+                                <i class="bi bi-geo-alt me-1"></i>@(string.IsNullOrEmpty(item.Location) ? "Remote" : item.Location)
+                            </span>
+                            <small class="text-muted fw-bold">@(string.IsNullOrEmpty(item.JobType) ? "Full-time" : item.JobType)</small>
                         </div>
-                        <h4 class="card-title fw-bold mb-1">@item.Title</h4>
-                        <p class="text-primary fw-medium mb-3">@item.Company</p>
-                        <p class="text-muted small">
-                            @(item.Description?.Length > 100 ? item.Description.Substring(0, 100) + "..." : item.Description)
-                        </p>
-                    </div>
-                    <div class="card-footer bg-white border-0 p-4 pt-0">
-                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-primary w-100 rounded-pill">View Details</a>
+                        
+                        <h4 class="card-title fw-bold mb-1 text-dark">@item.Title</h4>
+                        <p class="text-primary fw-bold mb-3">@item.Company</p>
+                        
+                        <div class="mb-4">
+                            <p class="text-muted small mb-0 line-clamp-3">
+                                @(item.Description?.Length > 120 ? item.Description.Substring(0, 120) + "..." : item.Description)
+                            </p>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mt-auto pt-3 border-top">
+                            <div class="text-success fw-bold small">
+                                @if (item.SalaryType == "Fixed")
+                                {
+                                    @:PLN @item.MinimumSalary?.ToString("N0")
+                                }
+                                else if (item.SalaryType == "Range")
+                                {
+                                    @:PLN @item.MinimumSalary?.ToString("N0")+
+                                }
+                                else
+                                {
+                                    @:Negotiable
+                                }
+                            </div>
+                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                                View Details
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -40,7 +74,32 @@
 </div>
 
 <style>
-    .bg-soft-primary { background-color: rgba(67, 97, 238, 0.1); }
-    .job-card { border-radius: 16px; transition: transform 0.2s; }
-    .job-card:hover { transform: scale(1.02); }
+    .job-card {
+        transition: all 0.3s cubic-bezier(.25,.8,.25,1);
+        border-radius: 24px;
+        border: 1px solid #f0f0f0 !important;
+    }
+
+        .job-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 1rem 3rem rgba(67, 97, 238, 0.15) !important;
+            border-color: #4361ee !important;
+        }
+
+        .job-card .badge {
+            transition: 0.3s;
+        }
+
+        .job-card:hover .badge {
+            background-color: #4361ee !important;
+            color: white !important;
+        }
+
+        .job-card .btn {
+            transition: 0.3s;
+        }
+
+        .job-card:hover .btn {
+            transform: scale(1.05);
+        }
 </style>

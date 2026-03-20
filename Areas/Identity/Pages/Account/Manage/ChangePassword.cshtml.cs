@@ -1,11 +1,16 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Recruit_Finder_AI.Data;
 using Recruit_Finder_AI.Models;
+using Recruit_Finder_AI.Services;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Recruit_Finder_AI.Areas.Identity.Pages.Account.Manage
 {
@@ -14,15 +19,21 @@ namespace Recruit_Finder_AI.Areas.Identity.Pages.Account.Manage
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly ILogger<ChangePasswordModel> _logger;
+        private readonly Recruit_Finder_AIContext _context;
+        private readonly SettingsService _settingsService;
+
 
         public ChangePasswordModel(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<ChangePasswordModel> logger)
+            ILogger<ChangePasswordModel> logger,
+            Recruit_Finder_AIContext context,
+            SettingsService settingsService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
+            _context = context;
         }
 
         [BindProperty]
@@ -69,31 +80,55 @@ namespace Recruit_Finder_AI.Areas.Identity.Pages.Account.Manage
 
         public async Task<IActionResult> OnPostAsync()
         {
-            if (!ModelState.IsValid)
+            if (!ModelState.IsValid) return Page();
+
+            var settings = await _settingsService.GetAdminSettingsAsync();
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return NotFound("User not found.");
+
+            if (Input.NewPassword.Length < settings.MinPasswordLength)
             {
+                ModelState.AddModelError(string.Empty, $"New password must be at least {settings.MinPasswordLength} characters.");
                 return Page();
             }
 
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
+            var passwordHistory = await _context.PasswordHistories
+                .Where(ph => ph.ApplicationUserId == user.Id)
+                .OrderByDescending(ph => ph.CreatedAt)
+                .Take(settings.PasswordHistoryDepth)
+                .ToListAsync();
+
+            foreach (var entry in passwordHistory)
             {
-                return NotFound($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
+                var result = _userManager.PasswordHasher.VerifyHashedPassword(user, entry.PasswordHash, Input.NewPassword);
+                if (result != PasswordVerificationResult.Failed)
+                {
+                    ModelState.AddModelError(string.Empty, $"You cannot reuse any of your last {settings.PasswordHistoryDepth} passwords.");
+                    return Page();
+                }
             }
 
             var changePasswordResult = await _userManager.ChangePasswordAsync(user, Input.OldPassword, Input.NewPassword);
             if (!changePasswordResult.Succeeded)
             {
-                foreach (var error in changePasswordResult.Errors)
-                {
-                    ModelState.AddModelError(string.Empty, error.Description);
-                }
+                foreach (var error in changePasswordResult.Errors) ModelState.AddModelError(string.Empty, error.Description);
                 return Page();
             }
 
-            await _signInManager.RefreshSignInAsync(user);
-            _logger.LogInformation("User changed their password successfully.");
-            StatusMessage = "Your password has been changed.";
+            user.PasswordExpiration = DateTime.UtcNow.AddDays(settings.PasswordExpirationDays);
 
+            _context.PasswordHistories.Add(new PasswordHistory
+            {
+                ApplicationUserId = user.Id,
+                PasswordHash = user.PasswordHash,
+                CreatedAt = DateTime.UtcNow
+            });
+
+            await _userManager.UpdateAsync(user);
+            await _context.SaveChangesAsync();
+
+            await _signInManager.RefreshSignInAsync(user);
+            StatusMessage = "Your password has been changed.";
             return RedirectToPage();
         }
     }

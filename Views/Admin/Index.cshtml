@@ -1,0 +1,98 @@
+﻿@model Recruit_Finder_AI.ViewModels.AdminIndexViewModel
+@{
+    ViewData["Title"] = "User Management";
+}
+
+<div class="container-fluid py-4">
+    <div class="mb-4">
+        <h2 class="fw-bold"><i class="bi bi-people-fill text-primary me-2"></i>User Management</h2>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success border-0 shadow-sm rounded-4 alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">Account</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in Model.Users)
+                    {
+                        bool isLocked = user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow;
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold">@user.UserName</div>
+                                <div class="small text-muted">@user.Email</div>
+                            </td>
+                            <td><span class="badge bg-soft-primary text-primary rounded-pill px-3">@user.PrimaryRole</span></td>
+                            <td>
+                                @if (isLocked)
+                                {
+                                    <span class="badge bg-danger text-white rounded-pill px-3">Locked</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success text-white rounded-pill px-3">Active</span>
+                                }
+                            </td>
+                            <td class="text-end pe-4">
+                                <div class="btn-group shadow-sm rounded-pill overflow-hidden">
+                                    <a asp-action="EditUser" asp-route-id="@user.Id" class="btn btn-white btn-sm px-3" title="Edit User">
+                                        <i class="bi bi-pencil text-primary"></i>
+                                    </a>
+
+                                    @if (isLocked)
+                                    {
+                                        <form asp-action="UnlockUser" asp-route-id="@user.Id" method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-white btn-sm px-3" title="Unlock" onclick="return confirm('Unlock account?')">
+                                                <i class="bi bi-unlock text-info"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form asp-action="LockUser" asp-route-id="@user.Id" method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-white btn-sm px-3" title="Lock" onclick="return confirm('Lock account?')">
+                                                <i class="bi bi-lock text-secondary"></i>
+                                            </button>
+                                        </form>
+                                    }
+
+                                    <form asp-action="ForcePasswordReset" asp-route-id="@user.Id" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-white btn-sm px-3" title="Force Password Reset" onclick="return confirm('Force user to reset password on next login?')">
+                                            <i class="bi bi-key text-warning"></i>
+                                        </button>
+                                    </form>
+
+                                    <form asp-action="DeleteUser" asp-route-id="@user.Id" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-white btn-sm px-3" title="Delete" onclick="return confirm('Permanently delete user?')">
+                                            <i class="bi bi-trash text-danger"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-soft-primary { background-color: rgba(67, 97, 238, 0.1); }
+    .btn-white { background: #fff; border: 1px solid #eee; }
+    .btn-white:hover { background: #f8f9fa; }
+</style>

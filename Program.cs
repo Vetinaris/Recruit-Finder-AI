@@ -2,25 +2,52 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Recruit_Finder_AI.Data;
 using Recruit_Finder_AI.Models;
+using Recruit_Finder_AI.Services;
+using Recruit_Finder_AI.Extensions;
+
+using Recruit_Finder_AI.Areas.Identity.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+    ?? throw new InvalidOperationException("Connection string not found.");
 
 builder.Services.AddDbContext<Recruit_Finder_AIContext>(options =>
     options.UseSqlServer(connectionString));
-builder.Services.AddDefaultIdentity<ApplicationUser>(options => {
+
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
     options.SignIn.RequireConfirmedAccount = false;
     options.Password.RequireDigit = false;
     options.Password.RequiredLength = 6;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequireUppercase = false;
 })
-    .AddEntityFrameworkStores<Recruit_Finder_AIContext>();
+.AddEntityFrameworkStores<Recruit_Finder_AIContext>()
+.AddDefaultTokenProviders()
+.AddDefaultUI();
 
+builder.Services.AddScoped<AuditService>();
+builder.Services.AddIdentityServices(builder.Configuration);
+builder.Services.AddScoped<SettingsService>();
+builder.Services.AddScoped<AuditService>();
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        await Seed.SeedData(services);
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred during seeding.");
+    }
+}
 
 if (!app.Environment.IsDevelopment())
 {
@@ -30,15 +57,13 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseRouting();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();
-
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
-    .WithStaticAssets();
-
+app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}").WithStaticAssets();
 app.MapRazorPages();
+app.MapControllers();
+
 app.Run();
