@@ -4,7 +4,6 @@ using Recruit_Finder_AI.Data;
 using Recruit_Finder_AI.Models;
 using Recruit_Finder_AI.Services;
 using Recruit_Finder_AI.Extensions;
-
 using Recruit_Finder_AI.Areas.Identity.Data;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,7 +13,6 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 builder.Services.AddDbContext<Recruit_Finder_AIContext>(options =>
     options.UseSqlServer(connectionString));
-
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
     options.SignIn.RequireConfirmedAccount = false;
     options.Password.RequireDigit = false;
@@ -26,10 +24,18 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
 .AddDefaultTokenProviders()
 .AddDefaultUI();
 
-builder.Services.AddScoped<AuditService>();
 builder.Services.AddIdentityServices(builder.Configuration);
-builder.Services.AddScoped<SettingsService>();
+
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/Identity/Account/Login";
+    options.AccessDeniedPath = "/Identity/Account/AccessDenied";
+    options.Cookie.Name = "RecruitFinderAuth";
+});
+
 builder.Services.AddScoped<AuditService>();
+builder.Services.AddScoped<SettingsService>();
+builder.Services.AddScoped<NotificationService>();
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 

@@ -1,0 +1,89 @@
+﻿@model IEnumerable<Recruit_Finder_AI.Models.ApplicationUser>
+@{
+    ViewData["Title"] = "Moderator Panel";
+}
+
+<div class="container mt-4">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 text-primary"><i class="bi bi-shield-check me-2"></i>Pending Business Verifications</h5>
+        </div>
+        <div class="card-body">
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    @TempData["SuccessMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            @if (!Model.Any())
+            {
+                <p class="text-muted text-center my-4">No companies are currently waiting for approval.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>User</th>
+                                <th>Company Details</th>
+                                <th>NIP</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var user in Model)
+                            {
+                                <tr>
+                                    <td>@user.Email</td>
+                                    <td>
+                                        <strong>@user.CompanyName</strong><br />
+                                        <small class="text-muted">@user.CompanyAddress</small>
+                                    </td>
+                                    <td><code class="fw-bold">@user.NIP</code></td>
+                                    <td class="text-end">
+                                        <form asp-action="Approve" method="post">
+                                            <input type="hidden" name="userId" value="@user.Id" />
+                                            <button type="submit" class="btn btn-outline-success btn-sm px-4">
+                                                Approve
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                            @foreach (var user in Model)
+                            {
+                                <tr>
+                                    <td>@user.Email</td>
+                                    <td>@user.CompanyName (NIP: @user.NIP)</td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <form asp-action="Approve" method="post" class="d-inline">
+                                                <input type="hidden" name="userId" value="@user.Id" />
+                                                <button class="btn btn-sm btn-success">Approve</button>
+                                            </form>
+
+                                            <form asp-action="Decline" method="post" class="d-inline ms-1">
+                                                <input type="hidden" name="userId" value="@user.Id" />
+                                                <button class="btn btn-sm btn-warning">Decline</button>
+                                            </form>
+
+                                            <form asp-action="ReportFakeCompany" method="post" class="d-inline ms-1">
+                                                <input type="hidden" name="userId" value="@user.Id" />
+                                                <button class="btn btn-sm btn-danger" onclick="return confirm('Report this user to Admin as fraud?')">
+                                                    Report Fraud
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

@@ -1,117 +1,150 @@
 ﻿@model Recruit_Finder_AI.Models.JobOffer
+@using System.Security.Claims
 
 @{
-    ViewData["Title"] = "Job Details";
+    ViewData["Title"] = Model.Title + " | Recruit Finder AI";
+    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    var isActualOwner = User.Identity.IsAuthenticated && Model.RecruiterId == userId;
 }
 
 <div class="container py-5">
     <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow border-0">
-                <div class="card-header bg-primary text-white py-4">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <span class="badge bg-white text-primary mb-2">@Model.Category</span>
-                            <h1 class="h2 mb-1 fw-bold">@Model.Title</h1>
-                            <p class="mb-0 opacity-75">
-                                <i class="bi bi-building me-1"></i> @Model.Company
-                                <span class="mx-2">|</span>
-                                <i class="bi bi-geo-alt me-1"></i> @Model.Location
-                            </p>
-                        </div>
-                        <a asp-action="List" asp-route-category="@Model.Category" class="btn btn-sm btn-light text-primary shadow-sm">
-                            <i class="bi bi-arrow-left"></i> Back
+        <div class="col-xl-10">
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <a asp-action="List" asp-route-category="@Model.Category" class="btn btn-link text-decoration-none p-0 text-secondary">
+                    <i class="bi bi-chevron-left"></i> Back to @Model.Category Offers
+                </a>
+
+                @if (isActualOwner)
+                {
+                    <div class="btn-group shadow-sm rounded-pill overflow-hidden">
+                        <a asp-action="Edit" asp-route-id="@Model.Id"
+                           class="btn btn-light btn-sm px-3 fw-semibold">
+                            <i class="bi bi-pencil me-1"></i> Edit
+                        </a>
+                        <a asp-action="MyListings"
+                           class="btn btn-light btn-sm px-3 fw-semibold border-start">
+                            <i class="bi bi-list-ul me-1"></i> Manage
                         </a>
                     </div>
+                }
+            </div>
+
+            @if ((User.IsInRole("ADMIN") || User.IsInRole("MODERATOR")) && (!Model.IsVisible || (Model.User?.LockoutEnd > DateTimeOffset.UtcNow)))
+            {
+                <div class="alert alert-warning rounded-4 mb-4 shadow-sm border-0">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>Staff View:</strong> This offer is currently <strong>hidden</strong> or the author is <strong>banned</strong>.
+                    Only staff and the owner can see this page.
                 </div>
+            }
 
-                <div class="card-body p-4 p-md-5">
-                    <div class="row mb-4">
-                        <div class="col-sm-4 mb-3 mb-sm-0">
-                            <div class="p-3 bg-light rounded text-center h-100">
-                                <i class="bi bi-briefcase text-primary mb-2 d-block fs-4"></i>
-                                <small class="text-muted d-block text-uppercase fw-bold">Type</small>
-                                <span>Full-Time</span>
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+                <div class="card-body p-0">
+                    <div class="row g-0">
+                        <div class="col-lg-8 p-4 p-md-5 border-end">
+                            <div class="mb-4">
+                                <span class="badge bg-primary-subtle text-primary rounded-pill px-3 mb-2">@Model.Category</span>
+                                <h1 class="fw-bold text-dark display-6 mb-2">@Model.Title</h1>
+                                <div class="d-flex flex-wrap gap-3 text-muted">
+                                    <span><i class="bi bi-building me-1"></i> @Model.Company</span>
+                                    <span><i class="bi bi-geo-alt me-1"></i> @(string.IsNullOrEmpty(Model.Location) ? "Remote" : Model.Location)</span>
+                                    <span><i class="bi bi-clock me-1"></i> Added @Model.CreatedAt.ToString("dd.MM.yyyy")</span> @* Poprawiłem DateTime.Now na CreatedAt *@
+                                </div>
+                            </div>
+
+                            <h5 class="fw-bold mb-3 mt-5">Job Description</h5>
+                            <div class="job-content text-secondary" style="line-height: 1.8; white-space: pre-wrap;">
+                                @Model.Description
                             </div>
                         </div>
-                        <div class="col-sm-4 mb-3 mb-sm-0">
-                            <div class="p-3 bg-light rounded text-center h-100">
-                                <i class="bi bi-calendar-event text-primary mb-2 d-block fs-4"></i>
-                                <small class="text-muted d-block text-uppercase fw-bold">Posted</small>
-                                <span>@DateTime.Now.ToString("dd MMM yyyy")</span>
+
+                        <div class="col-lg-4 bg-light p-4 p-md-5">
+                            <div class="sticky-top" style="top: 20px;">
+                                <h5 class="fw-bold mb-4">Offer Details</h5>
+
+                                <div class="mb-4">
+                                    <label class="text-muted small text-uppercase fw-bold d-block mb-1">Salary</label>
+                                    <h4 class="text-success fw-bold">
+                                        @if (Model.SalaryType == "Fixed")
+                                        {
+                                            @Model.MinimumSalary?.ToString("N0") <text> PLN</text>
+                                        }
+                                        else if (Model.SalaryType == "Range")
+                                        {
+                                            @Model.MinimumSalary?.ToString("N0")
+                                            <span> - </span>
+ 
+                                            @Model.MaximumSalary?.ToString("N0") <text> PLN</text>
+                                        }
+                                        else if (Model.SalaryType == "negotiable")
+                                        {
+                                            <span class="text-muted">Negotiable</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Undisclosed</span>
+                                        }
+                                    </h4>
+                                    <small class="text-muted">Monthly Gross</small>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="text-muted small text-uppercase fw-bold d-block mb-1">Employment Type</label>
+                                    <p class="fw-semibold mb-0"><i class="bi bi-briefcase me-2"></i>@(string.IsNullOrEmpty(Model.JobType) ? "Full-time" : Model.JobType)</p>
+                                </div>
+
+                                <div class="mb-5">
+                                    <label class="text-muted small text-uppercase fw-bold d-block mb-1">AI Matching</label>
+                                    <p class="text-primary mb-0"><i class="bi bi-robot me-2"></i> Verified by AI Recruit</p>
+                                </div>
+
+                                @if (User.Identity.IsAuthenticated && !User.IsInRole("ADMIN") && !User.IsInRole("MODERATOR"))
+                                {
+                                    <a href="mailto:careers@@recruitfinder.ai?subject=Application: @Model.Title" class="btn btn-primary btn-lg w-100 rounded-pill shadow-sm mb-3">
+                                        Apply Now
+                                    </a>
+                                }
+                                else if (!User.Identity.IsAuthenticated)
+                                {
+                                    <a asp-area="Identity" asp-page="/Account/Login" class="btn btn-primary btn-lg w-100 rounded-pill shadow-sm mb-3">
+                                        Login to Apply
+                                    </a>
+                                }
+                                <p class="text-center small text-muted">Please mention Recruit Finder AI in your application.</p>
                             </div>
-                        </div>
-                        <div class="col-sm-4">
-                            <div class="p-3 bg-light rounded text-center h-100">
-                                <i class="bi bi-cash-stack text-primary mb-2 d-block fs-4"></i>
-                                <small class="text-muted d-block text-uppercase fw-bold">Salary</small>
-                                <span>Negotiable</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <h5 class="fw-bold mb-3 border-bottom pb-2">
-                        <i class="bi bi-file-text me-2"></i>Job Description
-                    </h5>
-
-                    <div class="job-description text-secondary mb-4" style="white-space: pre-wrap; line-height: 1.8; font-size: 1.1rem;">
-                        @Model.Description
-                    </div>
-                </div>
-
-                <div class="card-footer bg-white border-top p-4">
-                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
-
-                        <div class="w-100 w-md-auto text-center">
-                            @if (User.Identity.IsAuthenticated)
-                            {
-                                <a href="mailto:contact@recruitfinder.ai?subject=Application for @Model.Title" class="btn btn-success btn-lg px-5 shadow-sm">
-                                    <i class="bi bi-send-fill me-2"></i>Apply for this position
-                                </a>
-                            }
-                            else
-                            {
-                                <a asp-area="Identity" asp-page="/Account/Login" class="btn btn-primary btn-lg px-5 shadow-sm">
-                                    Login to Apply
-                                </a>
-                            }
-                        </div>
-
-                        <div class="btn-group shadow-sm">
-                            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">
-                                <i class="bi bi-pencil me-1"></i> Edit
-                            </a>
-                            <a asp-action="MyListings" class="btn btn-outline-secondary">
-                                <i class="bi bi-list-task me-1"></i> Manage All
-                            </a>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <p class="text-center text-muted mt-4 small">
-                Referenced Offer ID: @Model.Id • Please mention Recruit_Finder_AI when applying.
-            </p>
         </div>
     </div>
 </div>
 
 <style>
+    body {
+        background-color: #f4f7f9;
+    }
+
     .card {
-        border-radius: 12px;
-        overflow: hidden;
+        background: #ffffff;
     }
 
-    .card-header {
-        border-radius: 0 !important;
+    .bg-primary-subtle {
+        background-color: rgba(13, 110, 253, 0.1) !important;
     }
 
-    .job-description {
-        color: #4a4a4a !important;
+    .job-content {
+        font-size: 1.05rem;
+        color: #444 !important;
     }
 
-    .bg-light {
-        background-color: #f8f9fa !important;
-        border: 1px solid #eee;
+    .sticky-top {
+        z-index: 10;
+    }
+    
+    span, text {
+        display: inline;
     }
 </style>

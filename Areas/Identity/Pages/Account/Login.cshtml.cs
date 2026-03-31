@@ -74,6 +74,18 @@ public class LoginModel : PageModel
                 return Page();
             }
 
+            if (user.IsPermanentBan)
+            {
+                await _auditService.LogAsync(user.UserName, "LOGIN", "Login blocked: PERMANENT BAN", false, user.Id);
+
+                string reasonText = !string.IsNullOrEmpty(user.BanReason)
+                    ? $"Reason: {user.BanReason}"
+                    : "Violation of service terms.";
+
+                ModelState.AddModelError(string.Empty, $"Your account has been permanently banned. {reasonText}");
+                return Page();
+            }
+
             if (user.PasswordExpiration.HasValue && user.PasswordExpiration.Value <= DateTime.UtcNow)
             {
                 await _auditService.LogAsync(user.UserName, "LOGIN", "Login blocked: Password expired", false, user.Id);
@@ -84,33 +96,33 @@ public class LoginModel : PageModel
 
             if (result.Succeeded)
             {
-                await _auditService.LogAsync(user.UserName, "LOGIN", "User logged in successfully via Web UI", true, user.Id);
-                _logger.LogInformation("User logged in.");
+                await _auditService.LogAsync(user.UserName, "LOGIN", "User logged in successfully", true, user.Id);
 
                 var roles = await _userManager.GetRolesAsync(user);
-
-                if (roles.Contains("ADMIN"))
-                {
-                    return RedirectToAction("Index", "Admin");
-                }
-
-                if (roles.Contains("MODERATOR"))
-                {
-                    return RedirectToAction("Index", "Admin");
-                }
+                if (roles.Contains("ADMIN")) return RedirectToAction("Index", "Admin");
+                if (roles.Contains("MODERATOR")) return RedirectToAction("Index", "Moderator");
 
                 return LocalRedirect(returnUrl);
             }
 
             if (result.IsLockedOut)
             {
-                await _auditService.LogAsync(user.UserName, "LOGIN", "Account locked out", false, user.Id);
-                return RedirectToPage("./Lockout");
+                await _auditService.LogAsync(user.UserName, "LOGIN", "Account locked out (Temporary)", false, user.Id);
+
+                var lockoutDate = user.LockoutEnd;
+                string dateMsg = lockoutDate.HasValue ? lockoutDate.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm") : "an unspecified time";
+
+                string reasonText = !string.IsNullOrEmpty(user.BanReason)
+                    ? $"Suspension reason: {user.BanReason}."
+                    : "Account requires verification.";
+
+                ModelState.AddModelError(string.Empty, $"Account suspended until {dateMsg}. {reasonText} Contact: +48 123 456 789.");
+                return Page();
             }
             else
             {
                 await _auditService.LogAsync(Input.Email, "LOGIN", "Invalid password attempt", false, user.Id);
-                ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+                ModelState.AddModelError(string.Empty, "Invalid email or password.");
                 return Page();
             }
         }

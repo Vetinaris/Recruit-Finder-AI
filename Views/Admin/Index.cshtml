@@ -1,93 +1,116 @@
 ﻿@model Recruit_Finder_AI.ViewModels.AdminIndexViewModel
-
 @{
     ViewData["Title"] = "User Management";
 }
 
-<div class="container-fluid mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="bi bi-people-fill me-2"></i>User Management</h2>
+<div class="container-fluid py-4">
+    <div class="mb-4 d-flex justify-content-between align-items-center">
+        <h2 class="fw-bold"><i class="bi bi-people-fill text-primary me-2"></i>User Management</h2>
     </div>
 
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            @TempData["SuccessMessage"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    }
-    @if (TempData["ErrorMessage"] != null)
-    {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            @TempData["ErrorMessage"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <div class="alert alert-success border-0 shadow-sm rounded-4 alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     }
 
-    <div class="card shadow-sm">
+    <div class="row g-3 mb-4">
+        <div class="col-md-6 col-lg-4">
+            <div class="input-group shadow-sm rounded-pill overflow-hidden bg-white border">
+                <span class="input-group-text bg-white border-0 ps-3">
+                    <i class="bi bi-search text-muted"></i>
+                </span>
+                <input type="text" id="userSearch" class="form-control border-0 py-2" placeholder="Search by name or email...">
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <div class="d-flex gap-2 h-100">
+                <button class="btn btn-white shadow-sm rounded-pill px-3 filter-btn active" onclick="filterUsers('all', this)">
+                    All
+                </button>
+                <button class="btn btn-white shadow-sm rounded-pill px-3 filter-btn" onclick="filterUsers('active', this)">
+                    Active
+                </button>
+                <button class="btn btn-white shadow-sm rounded-pill px-3 filter-btn" onclick="filterUsers('banned', this)">
+                    Blocked
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
+            <table class="table table-hover align-middle mb-0" id="userTable">
+                <thead class="bg-light">
                     <tr>
-                        <th>Username</th>
-                        <th>Email</th>
+                        <th class="ps-4">Account</th>
                         <th>Role</th>
                         <th>Status</th>
-                        <th class="text-end px-4">Actions</th>
+                        <th class="text-end pe-4">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var user in Model.Users)
                     {
                         bool isLocked = user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow;
-                        <tr>
-                            <td class="fw-bold">@user.UserName</td>
-                            <td>@user.Email</td>
-                            <td>
-                                <span class="badge border text-dark">@user.PrimaryRole</span>
+                        string rowClass = isLocked ? "user-banned opacity-75 bg-light" : "user-active";
+                        string statusTag = isLocked ? "banned" : "active";
+
+                        <tr class="user-row @rowClass" data-status="@statusTag" data-search="@user.UserName.ToLower() @user.Email.ToLower()">
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle me-3 @(isLocked ? "bg-secondary" : "bg-primary")">
+                                        @user.UserName.Substring(0, 1).ToUpper()
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold @(isLocked ? "text-decoration-line-through text-muted" : "")">@user.UserName</div>
+                                        <div class="small text-muted">@user.Email</div>
+                                    </div>
+                                </div>
                             </td>
+                            <td><span class="badge bg-soft-primary text-primary rounded-pill px-3">@user.PrimaryRole</span></td>
                             <td>
                                 @if (isLocked)
                                 {
-                                    <span class="badge bg-danger-subtle text-danger border border-danger">Locked</span>
+                                    <span class="badge bg-danger text-white rounded-pill px-3" data-bs-toggle="tooltip" title="Reason: @(user.BanReason ?? "Unspecified")">
+                                        <i class="bi bi-shield-lock-fill me-1"></i> Locked
+                                    </span>
                                 }
                                 else
                                 {
-                                    <span class="badge bg-success-subtle text-success border border-success">Active</span>
+                                    <span class="badge bg-success text-white rounded-pill px-3">
+                                        <i class="bi bi-check-circle-fill me-1"></i> Active
+                                    </span>
                                 }
                             </td>
-                            <td class="text-end px-4">
-                                <div class="btn-group">
-                                    <a asp-action="EditUser" asp-route-id="@user.Id" class="btn btn-sm btn-outline-primary" title="Edit User">
-                                        <i class="bi bi-pencil"></i> Edit
+                            <td class="text-end pe-4">
+                                <div class="btn-group shadow-sm rounded-pill overflow-hidden bg-white border">
+                                    <a asp-action="EditUser" asp-route-id="@user.Id" class="btn btn-white border-0 btn-sm px-3" title="Edit User">
+                                        <i class="bi bi-pencil text-primary"></i>
                                     </a>
 
                                     @if (isLocked)
                                     {
                                         <form asp-action="UnlockUser" asp-route-id="@user.Id" method="post" class="d-inline">
-                                            <button type="submit" class="btn btn-sm btn-outline-info" onclick="return confirm('Unlock user account?')">
-                                                <i class="bi bi-unlock"></i> Unlock
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-white border-0 btn-sm px-3" title="Unlock" onclick="return confirm('Unlock account?')">
+                                                <i class="bi bi-unlock text-info"></i>
                                             </button>
                                         </form>
                                     }
                                     else
                                     {
-                                        <form asp-action="LockUser" asp-route-id="@user.Id" method="post" class="d-inline">
-                                            <button type="submit" class="btn btn-sm btn-outline-secondary" onclick="return confirm('Lock user account?')">
-                                                <i class="bi bi-lock"></i> Lock
-                                            </button>
-                                        </form>
+                                        <button type="button" class="btn btn-white border-0 btn-sm px-3" onclick="openBanModal('@user.Id', '@user.UserName')" title="Block">
+                                            <i class="bi bi-slash-circle text-danger"></i>
+                                        </button>
                                     }
 
                                     <form asp-action="ForcePasswordReset" asp-route-id="@user.Id" method="post" class="d-inline">
-                                        <button type="submit" class="btn btn-sm btn-outline-warning" title="Force Password Reset">
-                                            <i class="bi bi-key"></i> Reset
-                                        </button>
-                                    </form>
-
-                                    <form asp-action="DeleteUser" asp-route-id="@user.Id" method="post" class="d-inline">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Permanently delete this user?')">
-                                            <i class="bi bi-trash"></i>
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-white border-0 btn-sm px-3" title="Force Password Reset" onclick="return confirm('Force user to reset password?')">
+                                            <i class="bi bi-key text-warning"></i>
                                         </button>
                                     </form>
                                 </div>
@@ -99,3 +122,176 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="banModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <form id="banForm" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="modalUserId" />
+
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Ban: <span id="modalUserName" class="text-primary"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Ban Type</label>
+                        <select class="form-select border-2 shadow-sm rounded-3" name="type" id="banType" onchange="updateBanUI()">
+                            <option value="temp">Temporary (Months)</option>
+                            <option value="perma">Permanent (Permanent Ban)</option>
+                        </select>
+                    </div>
+
+                    <div id="monthsContainer" class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Ban Duration</label>
+                        <select class="form-select border-2 shadow-sm rounded-3" name="months">
+                            <option value="1">1 month</option>
+                            <option value="3">3 months</option>
+                            <option value="6">6 months</option>
+                            <option value="12">1 year</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Ban Reason</label>
+                        <select class="form-select border-2 shadow-sm rounded-3" name="reason" id="banReason" onchange="toggleCustomReason()">
+                            <option value="Violation of service terms">Violation of service terms</option>
+                            <option value="Spam and unwanted content">Spam and unwanted content</option>
+                            <option value="Attempted data theft (Phishing)">Attempted data theft (Phishing)</option>
+                            <option value="Hate speech / Profanity">Hate speech / Profanity</option>
+                            <option value="Other (requires description)">Other (requires description)</option>
+                        </select>
+                    </div>
+
+                    <div id="customReasonContainer" class="mb-3 d-none animate__animated animate__fadeIn">
+                        <label class="form-label small fw-bold text-uppercase text-muted text-danger">Describe the reason</label>
+                        <textarea name="customReason" class="form-control border-danger shadow-sm rounded-3" rows="3" placeholder="Explanation required..."></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="submitBanBtn" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm">Apply Ban</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('userSearch').addEventListener('input', function (e) {
+            const term = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('.user-row');
+            rows.forEach(row => {
+                const text = row.getAttribute('data-search');
+                row.style.display = text.includes(term) ? '' : 'none';
+            });
+        });
+
+        function filterUsers(status, btn) {
+            document.querySelectorAll('.filter-btn').forEach(b => {
+                b.classList.remove('active', 'btn-primary', 'text-white');
+                b.classList.add('btn-white');
+            });
+            btn.classList.add('active', 'btn-primary', 'text-white');
+            btn.classList.remove('btn-white');
+
+            const rows = document.querySelectorAll('.user-row');
+            rows.forEach(row => {
+                if (status === 'all') row.classList.remove('d-none');
+                else {
+                    row.getAttribute('data-status') === status
+                        ? row.classList.remove('d-none')
+                        : row.classList.add('d-none');
+                }
+            });
+        }
+
+        function openBanModal(userId, userName) {
+            document.getElementById('modalUserId').value = userId;
+            document.getElementById('modalUserName').innerText = userName;
+            updateBanUI();
+            new bootstrap.Modal(document.getElementById('banModal')).show();
+        }
+
+        function updateBanUI() {
+            const type = document.getElementById('banType').value;
+            const monthsContainer = document.getElementById('monthsContainer');
+            const form = document.getElementById('banForm');
+            const btn = document.getElementById('submitBanBtn');
+
+            if (type === 'perma') {
+                monthsContainer.style.display = 'none';
+                form.action = '@Url.Action("PermaBan", "Admin")';
+                btn.className = 'btn btn-dark rounded-pill px-4 fw-bold shadow-sm';
+                btn.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Apply Permanent Ban';
+            } else {
+                monthsContainer.style.display = 'block';
+                form.action = '@Url.Action("TemporaryBan", "Admin")';
+                btn.className = 'btn btn-danger rounded-pill px-4 fw-bold shadow-sm';
+                btn.innerHTML = 'Apply Ban';
+            }
+        }
+
+        function toggleCustomReason() {
+            const reason = document.getElementById('banReason').value;
+            const container = document.getElementById('customReasonContainer');
+            if (reason === 'Other (requires description)') {
+                container.classList.remove('d-none');
+            } else {
+                container.classList.add('d-none');
+            }
+        }
+
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+    </script>
+}
+
+<style>
+    .bg-soft-primary {
+        background-color: rgba(67, 97, 238, 0.1);
+    }
+
+    .btn-white {
+        background: #fff;
+        border: 1px solid #eee;
+    }
+
+        .btn-white:hover {
+            background: #f8f9fa;
+            border-color: #ddd;
+        }
+
+        .btn-white.active {
+            background: #4361ee !important;
+            color: white !important;
+            border-color: #4361ee;
+        }
+
+    .avatar-circle {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+
+    .user-banned .badge.bg-danger {
+        cursor: help;
+    }
+
+    .form-select:focus, .form-control:focus {
+        border-color: #4361ee;
+        box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.1);
+    }
+</style>

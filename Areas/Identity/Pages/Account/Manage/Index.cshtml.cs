@@ -80,20 +80,20 @@ namespace Recruit_Finder_AI.Areas.Identity.Pages.Account.Manage
         public async Task<IActionResult> OnPostAsync()
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return NotFound($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
+            if (user == null) return NotFound($"Unable to load user.");
 
             if (!ModelState.IsValid)
             {
                 await LoadAsync(user);
                 return Page();
             }
-            user.IsEmployer = Input.IsEmployer;
-            user.CompanyName = Input.CompanyName;
-            user.NIP = Input.NIP;
-            user.CompanyAddress = Input.CompanyAddress;
+
+            if (!user.IsEmployer)
+            {
+                user.CompanyName = Input.CompanyName;
+                user.NIP = Input.NIP;
+                user.CompanyAddress = Input.CompanyAddress;
+            }
 
             var phoneNumber = await _userManager.GetPhoneNumberAsync(user);
             if (Input.PhoneNumber != phoneNumber)
@@ -105,15 +105,28 @@ namespace Recruit_Finder_AI.Areas.Identity.Pages.Account.Manage
                     return RedirectToPage();
                 }
             }
+
             var updateResult = await _userManager.UpdateAsync(user);
             if (!updateResult.Succeeded)
             {
-                StatusMessage = "Unexpected error when updating profile.";
+                StatusMessage = "Error updating profile.";
                 return RedirectToPage();
             }
 
+            if (!user.IsEmployer && !string.IsNullOrEmpty(user.NIP))
+            {
+                StatusMessage = "Your company data has been saved and sent to Moderators for verification.";
+            }
+            else if (user.IsEmployer)
+            {
+                StatusMessage = "Your personal settings have been updated. Company data remains locked.";
+            }
+            else
+            {
+                StatusMessage = "Your profile has been updated.";
+            }
+
             await _signInManager.RefreshSignInAsync(user);
-            StatusMessage = "Your profile has been updated";
             return RedirectToPage();
         }
     }

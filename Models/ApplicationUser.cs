@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Recruit_Finder_AI.Models
@@ -14,6 +15,9 @@ namespace Recruit_Finder_AI.Models
         public virtual ICollection<PasswordHistory> PasswordHistories { get; set; } = new List<PasswordHistory>();
         public int ResetPasswordAttemptCount { get; set; } = 0;
         public DateTime? LastResetAttempt { get; set; }
+        public bool IsPermanentBan { get; set; } = false;
+        [MaxLength(500)]
+        public string? BanReason { get; set; }
     }
     public class PasswordHistory
     {

@@ -86,6 +86,8 @@ public class RegisterModel : PageModel
 
             if (result.Succeeded)
             {
+                await _userManager.AddToRoleAsync(user, "USER");
+
                 _context.PasswordHistories.Add(new PasswordHistory
                 {
                     ApplicationUserId = user.Id,
@@ -108,4 +110,5 @@ public class RegisterModel : PageModel
 
         return Page();
     }
+
 }

@@ -22,5 +22,9 @@ namespace Recruit_Finder_AI.ViewModels
         [Display(Name = "Password Expires")]
         public DateTime? PasswordExpiration { get; set; }
         public List<UserRoleViewModel> AvailableRoles { get; set; }
+        public string? CompanyName { get; set; }
+        public string? NIP { get; set; }
+        public string? CompanyAddress { get; set; }
+        public bool IsEmployer { get; set; }
     }
 }

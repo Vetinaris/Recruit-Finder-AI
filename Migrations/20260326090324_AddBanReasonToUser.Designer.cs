@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Recruit_Finder_AI.Data;
 
@@ -11,9 +12,11 @@ using Recruit_Finder_AI.Data;
 namespace Recruit_Finder_AI.Migrations
 {
     [DbContext(typeof(Recruit_Finder_AIContext))]
-    partial class Recruit_Finder_AIContextModelSnapshot : ModelSnapshot
+    [Migration("20260326090324_AddBanReasonToUser")]
+    partial class AddBanReasonToUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -360,9 +363,6 @@ namespace Recruit_Finder_AI.Migrations
                     b.Property<string>("Company")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
                         .IsRequired()
