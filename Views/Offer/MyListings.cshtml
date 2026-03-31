@@ -1,6 +1,8 @@
-﻿@model IEnumerable<Recruit_Finder_AI.Models.JobOffer>
+﻿@using System.Text.Encodings.Web
+@model IEnumerable<Recruit_Finder_AI.Models.JobOffer>
 @{
     ViewData["Title"] = "My Job Listings";
+    bool isVerified = ViewBag.IsVerifiedEmployer ?? false;
 }
 
 <div class="container py-5">
@@ -9,10 +11,36 @@
             <h1 class="fw-bold">My Job Listings</h1>
             <p class="text-muted">Manage your active offers and track AI candidate matching.</p>
         </div>
-        <a asp-action="Create" class="btn btn-primary btn-lg rounded-pill shadow-sm">
-            <i class="bi bi-plus-lg me-2"></i>Post New Offer
-        </a>
+
+        @if (isVerified)
+        {
+            <a asp-action="Create" class="btn btn-primary btn-lg rounded-pill shadow-sm">
+                <i class="bi bi-plus-lg me-2"></i>Post New Offer
+            </a>
+        }
+        else
+        {
+            <button class="btn btn-secondary btn-lg rounded-pill shadow-sm" disabled>
+                <i class="bi bi-lock-fill me-2"></i>Post New Offer (Locked)
+            </button>
+        }
     </div>
+
+    @if (!isVerified)
+    {
+        <div class="alert alert-warning border-0 shadow-sm rounded-4 mb-4 d-flex align-items-center p-4">
+            <i class="bi bi-exclamation-diamond-fill fs-2 me-4 text-warning"></i>
+            <div>
+                <h5 class="alert-heading fw-bold">Verification Required</h5>
+                <p class="mb-2">Your account is not yet verified as an Employer. To post job offers, you must first complete your company profile.</p>
+                <hr>
+                <p class="mb-0 small fw-bold text-dark">
+                    <i class="bi bi-info-circle me-1"></i> Instruction:
+                    Click on your <strong>Email</strong> (top right) → go to <strong>Settings</strong> → select the <strong>Profile</strong> tab and fill in the company details.
+                </p>
+            </div>
+        </div>
+    }
 
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
         <div class="table-responsive">
@@ -26,7 +54,17 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var item in Model) {
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted">
+                                <i class="bi bi-folder2-open fs-1 d-block mb-2"></i>
+                                No job offers found.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var item in Model)
+                    {
                         <tr>
                             <td class="ps-4">
                                 <div class="fw-bold text-dark">@item.Title</div>
@@ -39,18 +77,17 @@
                                 <i class="bi bi-geo-alt me-1 text-muted"></i>@item.Location
                             </td>
                             <td class="text-center pe-4">
-                                <div class="btn-group shadow-sm rounded-pill overflow-hidden">
-                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-white btn-sm px-3" title="Edit">
+                                <div class="btn-group shadow-sm rounded-pill overflow-hidden bg-white border">
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-white border-0 btn-sm px-3" title="Edit">
                                         <i class="bi bi-pencil text-primary"></i>
                                     </a>
-                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-white btn-sm px-3" title="Details">
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-white border-0 btn-sm px-3" title="Details">
                                         <i class="bi bi-eye text-info"></i>
                                     </a>
-                                    <form asp-action="Delete" asp-route-id="@item.Id" method="post" onsubmit="return confirm('Are you sure you want to delete this offer?');" style="display:inline;">
-                                        <button type="submit" class="btn btn-white btn-sm px-3" title="Delete">
-                                            <i class="bi bi-trash text-danger"></i>
-                                        </button>
-                                    </form>
+                                    <button type="button" class="btn btn-white border-0 btn-sm px-3" 
+                                            onclick="openDeleteModal('@item.Id', '@(JavaScriptEncoder.Default.Encode(item.Title))')" title="Delete">
+                                        <i class="bi bi-trash text-danger"></i>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -61,8 +98,62 @@
     </div>
 </div>
 
+<div class="modal fade" id="deleteOfferModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4 text-center">
+                <div class="icon-shape bg-soft-danger text-danger rounded-circle mb-3 mx-auto" 
+                     style="width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; font-size: 2.2rem;">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <h4 class="fw-bold">Delete Offer?</h4>
+                <p class="text-muted mb-4">Are you sure you want to delete <strong id="deleteOfferTitle" class="text-dark"></strong>? This action cannot be undone.</p>
+                
+                <form id="deleteOfferForm" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-danger btn-lg rounded-pill fw-bold shadow-sm">Delete Permanently</button>
+                        <button type="button" class="btn btn-light btn-lg rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openDeleteModal(offerId, offerTitle) {
+        document.getElementById('deleteOfferTitle').innerText = offerTitle;
+    
+        const form = document.getElementById('deleteOfferForm');
+    
+        form.action = '@Url.Action("Delete", "Offer")/' + offerId; 
+    
+        new bootstrap.Modal(document.getElementById('deleteOfferModal')).show();
+    }
+    </script>
+}
+
 <style>
     .bg-soft-primary { background-color: rgba(67, 97, 238, 0.1); }
-    .btn-white { background: #fff; border: 1px solid #f0f0f0; }
-    .btn-white:hover { background: #f8f9fa; }
+    .bg-soft-danger { background-color: rgba(220, 53, 69, 0.1); }
+
+    .btn-white {
+        background: #fff;
+        border: 1px solid #f0f0f0;
+        transition: 0.2s;
+    }
+
+    .btn-white:hover {
+        background: #f8f9fa;
+        border-color: #ddd;
+    }
+
+    .alert-warning {
+        background-color: #fffcf0;
+        border-left: 5px solid #ffc107 !important;
+    }
+    
+    .icon-shape { display: flex; align-items: center; justify-content: center; }
 </style>

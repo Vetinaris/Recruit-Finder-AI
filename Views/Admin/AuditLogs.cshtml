@@ -9,9 +9,9 @@
             <h2 class="fw-bold"><i class="bi bi-journal-text text-primary me-2"></i>System Audit Logs</h2>
             <p class="text-muted">Review full details of security events and AI system operations.</p>
         </div>
-        <button class="btn btn-outline-secondary rounded-pill shadow-sm">
+        <a asp-action="ExportAuditLogs" class="btn btn-outline-primary rounded-pill shadow-sm transition-hover">
             <i class="bi bi-download me-2"></i>Export Logs
-        </button>
+        </a>
     </div>
 
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
@@ -57,3 +57,16 @@
         </div>
     </div>
 </div>
+
+<style>
+    .transition-hover {
+        transition: all 0.2s ease-in-out;
+    }
+    .transition-hover:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+    }
+    .bg-light {
+        background-color: #f8f9fa !important;
+    }
+</style>

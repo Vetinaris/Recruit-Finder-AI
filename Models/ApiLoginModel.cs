@@ -4,7 +4,7 @@ namespace Recruit_Finder_AI.Models
 {
     public class ApiLoginModel
     {
-        [Required(ErrorMessage = "Pole Email lub Nazwa użytkownika jest wymagane.")]
+        [Required(ErrorMessage = "Email or Username field is required.")]
 
         [JsonPropertyName("emailOrUsername")]
         public string EmailOrUsername { get; set; }

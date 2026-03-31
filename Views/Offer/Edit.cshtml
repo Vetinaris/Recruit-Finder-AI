@@ -66,19 +66,23 @@
                                         <select id="salaryTypeEdit" asp-for="SalaryType" class="form-select rounded-3 border-primary-subtle">
                                             <option value="none">Undisclosed</option>
                                             <option value="negotiable">Negotiable</option>
-                                            <option value="Fixed">Fixed Monthly</option>
-                                            <option value="Range">Salary Range</option>
+                                            <option value="fixed">Fixed Monthly</option>
+                                            <option value="range">Salary Range</option>
                                         </select>
                                     </div>
-                                    
+    
                                     <div id="salaryInputsArea" class="@((Model.SalaryType == "none" || Model.SalaryType == "negotiable") ? "d-none" : "")">
                                         <div class="mb-3">
-                                            <label id="minLabel" class="small fw-bold">@(Model.SalaryType == "Fixed" ? "Amount (PLN)" : "Min Salary")</label>
-                                            <input asp-for="MinimumSalary" class="form-control rounded-3" type="number" />
+                                            <label id="minLabel" class="small fw-bold">
+                                                @(Model.SalaryType == "range" ? "Min Salary" : "Amount (PLN)")
+                                            </label>
+                                            <input asp-for="MinimumSalary" class="form-control rounded-3" type="number" step="0.01" />
+                                            <span asp-validation-for="MinimumSalary" class="text-danger small"></span>
                                         </div>
-                                        <div id="maxSalBox" class="@(Model.SalaryType != "Range" ? "d-none" : "")">
+                                        <div id="maxSalBox" class="@(Model.SalaryType != "range" ? "d-none" : "")">
                                             <label class="small fw-bold">Max Salary</label>
-                                            <input asp-for="MaximumSalary" class="form-control rounded-3" type="number" />
+                                            <input asp-for="MaximumSalary" class="form-control rounded-3" type="number" step="0.01" />
+                                            <span asp-validation-for="MaximumSalary" class="text-danger small"></span>
                                         </div>
                                     </div>
                                 </div>
@@ -110,7 +114,7 @@
             const maxBox = document.getElementById("maxSalBox");
             const minLabel = document.getElementById("minLabel");
 
-            sType.addEventListener("change", function() {
+            function updateFields() {
                 const val = sType.value;
                 
                 if (val === "none" || val === "negotiable") {
@@ -119,14 +123,18 @@
                     inputsArea.classList.remove("d-none");
                 }
 
-                if (val === "Range") {
+                if (val === "range") {
                     maxBox.classList.remove("d-none");
                     minLabel.innerText = "Min Salary";
                 } else {
                     maxBox.classList.add("d-none");
                     minLabel.innerText = "Amount (PLN)";
                 }
-            });
+            }
+
+            sType.addEventListener("change", updateFields);
+            
+            updateFields();
         });
     </script>
 }

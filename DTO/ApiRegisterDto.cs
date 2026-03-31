@@ -26,10 +26,10 @@ namespace Recruit_Finder_AI.DTO
             public string ReCaptchaToken { get; set; }
 
             [DataType(DataType.Password)]
-            [Compare("Password", ErrorMessage = "Hasła nie pasują.")]
+            [Compare("Password", ErrorMessage = "Passwords do not match.")]
             public string ConfirmPassword { get; set; }
 
-            [Required(ErrorMessage = "Musisz zaakceptować warunki.")]
+            [Required(ErrorMessage = "You must accept the terms.")]
             public bool AcceptTerms { get; set; }
         }
     }

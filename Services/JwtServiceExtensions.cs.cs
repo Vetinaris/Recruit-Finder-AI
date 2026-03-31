@@ -15,8 +15,9 @@ namespace Recruit_Finder_AI.Extensions
                 throw new InvalidOperationException("Missing JWT Key in configuration (check secrets.json)");
             }
 
+          
             services.AddAuthentication()
-                .AddJwtBearer(options =>
+                .AddJwtBearer("JwtScheme", options =>
                 {
                     options.TokenValidationParameters = new TokenValidationParameters
                     {

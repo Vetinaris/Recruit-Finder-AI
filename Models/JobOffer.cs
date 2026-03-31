@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Recruit_Finder_AI.Models
 {
@@ -30,5 +31,13 @@ namespace Recruit_Finder_AI.Models
         public decimal? MaximumSalary { get; set; }
 
         public string? RecruiterId { get; set; }
+
+        [ForeignKey("RecruiterId")]
+        public virtual ApplicationUser? User { get; set; }
+
+        public bool IsVisible { get; set; } = true;
+
+        [Required]
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }
