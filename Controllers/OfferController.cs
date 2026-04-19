@@ -4,8 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Recruit_Finder_AI.Data;
 using Recruit_Finder_AI.Models;
-using System.Security.Claims;
 using Recruit_Finder_AI.Services;
+using System.Security.AccessControl;
+using System.Security.Claims;
 
 namespace Recruit_Finder_AI.Controllers
 {
@@ -25,18 +26,68 @@ namespace Recruit_Finder_AI.Controllers
             _notificationService = notificationService;
         }
 
-        public async Task<IActionResult> List(string category, string? jobType, string? salaryType, int? minSalary, string sortOrder = "newest")
+        public async Task<IActionResult> List(
+        string category,
+        string? subcategory,
+        string? searchString,
+        string? jobType,
+        string? salaryType,
+        int? minSalary,
+        string sortOrder,
+        string language,
+        bool showInactive = false)
         {
+            var allOffersInCategory = await _context.JobOffers
+                .Where(o => o.Category == category)
+                .ToListAsync();
+
+            var languages = allOffersInCategory
+                .Where(o => !string.IsNullOrEmpty(o.RequiredLanguages))
+                .SelectMany(o => o.RequiredLanguages.Split(','))
+                .Select(l => l.Trim())
+                .Distinct()
+                .OrderBy(l => l)
+                .ToList();
+
+            var subcategories = allOffersInCategory
+                .Where(o => !string.IsNullOrEmpty(o.Subcategory))
+                .Select(o => o.Subcategory)
+                .Distinct()
+                .OrderBy(s => s)
+                .ToList();
+
             ViewBag.CategoryName = category;
+            ViewBag.Subcategories = subcategories;
+            ViewBag.CurrentSubcategory = subcategory;
+            ViewBag.CurrentSearch = searchString;
+
             ViewBag.CurrentJobType = jobType;
             ViewBag.CurrentSalaryType = salaryType;
             ViewBag.CurrentMinSalary = minSalary;
             ViewBag.CurrentSort = sortOrder;
+            ViewBag.Languages = languages;
+            ViewBag.CurrentLanguage = language;
+            ViewBag.ShowInactive = showInactive;
 
             var query = _context.JobOffers.Include(o => o.User).Where(o => o.Category == category);
 
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                searchString = searchString.ToLower();
+                query = query.Where(o => o.Title.ToLower().Contains(searchString) ||
+                                         o.Company.ToLower().Contains(searchString));
+            }
+
+            if (!string.IsNullOrEmpty(subcategory))
+            {
+                query = query.Where(o => o.Subcategory == subcategory);
+            }
+
             if (!string.IsNullOrEmpty(jobType))
                 query = query.Where(o => o.JobType == jobType);
+
+            if (!string.IsNullOrEmpty(language))
+                query = query.Where(o => o.RequiredLanguages.Contains(language));
 
             if (!string.IsNullOrEmpty(salaryType))
                 query = query.Where(o => o.SalaryType == salaryType);
@@ -58,9 +109,16 @@ namespace Recruit_Finder_AI.Controllers
                 _ => query.OrderByDescending(o => o.CreatedAt)
             };
 
-            if (!(User.IsInRole("MODERATOR") || User.IsInRole("ADMIN")))
+            bool isStaff = User.IsInRole("MODERATOR") || User.IsInRole("ADMIN");
+
+            if (!isStaff || !showInactive)
             {
-                query = query.Where(o => o.IsVisible && (o.User.LockoutEnd == null || o.User.LockoutEnd <= DateTimeOffset.UtcNow));
+                var now = DateTime.UtcNow;
+                query = query.Where(o =>
+                    o.IsVisible &&
+                    (o.User.LockoutEnd == null || o.User.LockoutEnd <= DateTimeOffset.UtcNow) &&
+                    (o.ExpirationDate == null || o.ExpirationDate > now)
+                );
             }
 
             return View(await query.ToListAsync());
@@ -192,7 +250,19 @@ namespace Recruit_Finder_AI.Controllers
                 "Human Resources", "Design & Creative", "Logistics",
                 "Legal", "Education", "Construction", "Hospitality"
             }; ;
-            ViewBag.JobTypes = new List<string> { "Full-time", "Part-time", "Contract", "Freelance", "Internship" };
+            ViewBag.JobTypes = new List<string> { "Full-time", "Part-time", "Contract", "Freelance", "B2B", "Internship" };
+
+            var existingSubcats = await _context.JobOffers
+                .Select(o => new { o.Category, o.Subcategory })
+                .Where(o => !string.IsNullOrEmpty(o.Subcategory))
+                .Distinct()
+                .ToListAsync();
+
+            var subcatMap = existingSubcats
+                .GroupBy(x => x.Category)
+                .ToDictionary(g => g.Key, g => g.Select(x => x.Subcategory).ToList());
+
+            ViewBag.SubcategoryMap = subcatMap;
 
             var model = new JobOffer { Company = user.CompanyName };
             return View(model);
@@ -201,10 +271,34 @@ namespace Recruit_Finder_AI.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
-        public async Task<IActionResult> Create(JobOffer offer)
+        public async Task<IActionResult> Create(JobOffer offer, string duration, DateTime? customDate)
         {
             offer.RecruiterId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             offer.CreatedAt = DateTime.UtcNow;
+            if (!string.IsNullOrWhiteSpace(offer.RequiredLanguages))
+            {
+                var langList = offer.RequiredLanguages
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(l => char.ToUpper(l.Trim()[0]) + l.Trim().Substring(1).ToLower())
+                    .Distinct()
+                    .ToList();
+
+                offer.RequiredLanguages = string.Join(", ", langList);
+            }
+            if (!string.IsNullOrWhiteSpace(offer.Subcategory))
+            {
+                offer.Subcategory = char.ToUpper(offer.Subcategory.Trim()[0]) + offer.Subcategory.Trim().Substring(1).ToLower();
+            }
+            offer.ExpirationDate = duration switch
+            {
+                "1w" => DateTime.UtcNow.AddDays(7),
+                "1m" => DateTime.UtcNow.AddMonths(1),
+                "3m" => DateTime.UtcNow.AddMonths(3),
+                "1y" => DateTime.UtcNow.AddYears(1),
+                "custom" => customDate,
+                "manual" => null,
+                _ => null
+            };
 
             ModelState.Remove("RecruiterId");
             ModelState.Remove("User");
@@ -229,6 +323,24 @@ namespace Recruit_Finder_AI.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (offer.RecruiterId != userId) return Forbid();
 
+            ViewBag.Categories = new List<string>
+            {
+                "IT", "Data Science", "Marketing", "Finance",
+                "Healthcare", "Engineering", "Sales", "Customer Service",
+                "Human Resources", "Design & Creative", "Logistics",
+                "Legal", "Education", "Construction", "Hospitality"
+            };
+
+            var existingSubcats = await _context.JobOffers
+                .Select(o => new { o.Category, o.Subcategory })
+                .Where(o => !string.IsNullOrEmpty(o.Subcategory))
+                .Distinct()
+                .ToListAsync();
+
+            ViewBag.SubcategoryMap = existingSubcats
+                .GroupBy(x => x.Category)
+                .ToDictionary(g => g.Key, g => g.Select(x => x.Subcategory).ToList());
+
             return View(offer);
         }
 
@@ -241,6 +353,17 @@ namespace Recruit_Finder_AI.Controllers
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (offer.RecruiterId != userId) return Forbid();
+
+            if (!string.IsNullOrWhiteSpace(offer.RequiredLanguages))
+            {
+                var langList = offer.RequiredLanguages
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(l => char.ToUpper(l.Trim()[0]) + l.Trim().Substring(1).ToLower())
+                    .Distinct()
+                    .ToList();
+
+                offer.RequiredLanguages = string.Join(", ", langList);
+            }
 
             ModelState.Remove("RecruiterId");
             ModelState.Remove("User");
@@ -261,7 +384,46 @@ namespace Recruit_Finder_AI.Controllers
             }
             return View(offer);
         }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize]
+        public async Task<IActionResult> CloseOffer(int id)
+        {
+            var offer = await _context.JobOffers.FindAsync(id);
+            if (offer == null) return NotFound();
 
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (offer.RecruiterId != userId) return Forbid();
+
+            offer.ExpirationDate = DateTime.UtcNow;
+
+
+            _context.Update(offer);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Recruitment has been closed.";
+            return RedirectToAction(nameof(MyListings));
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize]
+        public async Task<IActionResult> ReopenOffer(int id)
+        {
+            var offer = await _context.JobOffers.FindAsync(id);
+            if (offer == null) return NotFound();
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (offer.RecruiterId != userId) return Forbid();
+
+            offer.ExpirationDate = null;
+            offer.IsVisible = true;
+
+            _context.Update(offer);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Offer has been reopened and is now live.";
+            return RedirectToAction(nameof(MyListings));
+        }
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         [Authorize]

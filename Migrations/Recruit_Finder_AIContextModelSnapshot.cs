@@ -17,7 +17,7 @@ namespace Recruit_Finder_AI.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.2")
+                .HasAnnotation("ProductVersion", "10.0.6")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -345,6 +345,87 @@ namespace Recruit_Finder_AI.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("Recruit_Finder_AI.Models.Cv", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("AiFeedback")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DateOfBirth")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Education")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Interests")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsVerified")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Languages")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Portfolio")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ProfessionalExperience")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Skills")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Surname")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Cvs");
+                });
+
             modelBuilder.Entity("Recruit_Finder_AI.Models.JobOffer", b =>
                 {
                     b.Property<int>("Id")
@@ -368,6 +449,9 @@ namespace Recruit_Finder_AI.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("ExpirationDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<bool>("IsVisible")
                         .HasColumnType("bit");
 
@@ -388,7 +472,14 @@ namespace Recruit_Finder_AI.Migrations
                     b.Property<string>("RecruiterId")
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("RequiredLanguages")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("SalaryType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Subcategory")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -491,6 +582,17 @@ namespace Recruit_Finder_AI.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Recruit_Finder_AI.Models.Cv", b =>
+                {
+                    b.HasOne("Recruit_Finder_AI.Models.ApplicationUser", "User")
+                        .WithMany("Cvs")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Recruit_Finder_AI.Models.JobOffer", b =>
                 {
                     b.HasOne("Recruit_Finder_AI.Models.ApplicationUser", "User")
@@ -513,6 +615,8 @@ namespace Recruit_Finder_AI.Migrations
 
             modelBuilder.Entity("Recruit_Finder_AI.Models.ApplicationUser", b =>
                 {
+                    b.Navigation("Cvs");
+
                     b.Navigation("PasswordHistories");
                 });
 #pragma warning restore 612, 618

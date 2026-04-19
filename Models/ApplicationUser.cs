@@ -18,6 +18,7 @@ namespace Recruit_Finder_AI.Models
         public bool IsPermanentBan { get; set; } = false;
         [MaxLength(500)]
         public string? BanReason { get; set; }
+        public virtual ICollection<Cv> Cvs { get; set; } = new List<Cv>();
     }
     public class PasswordHistory
     {

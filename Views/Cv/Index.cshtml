@@ -1,0 +1,537 @@
+﻿@using System.Text.Encodings.Web
+@model IEnumerable<Recruit_Finder_AI.Models.Cv>
+@{
+    ViewData["Title"] = "My Resumes";
+    int maxCvs = 5;
+    int currentCount = Model.Count();
+    int remaining = maxCvs - currentCount;
+}
+
+<div class="container py-5">
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show rounded-4 border-0 shadow-sm mb-4" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show rounded-4 border-0 shadow-sm mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="row align-items-center mb-5">
+        <div class="col-md-6">
+            <h1 class="fw-bold display-6 mb-1">My CV Portfolio</h1>
+            <p class="text-muted">
+                Manage your resumes. You can have up to <span class="fw-bold text-primary">@maxCvs</span> different versions.
+            </p>
+        </div>
+        <div class="col-md-6 text-md-end">
+            @if (currentCount < maxCvs)
+            {
+                <a asp-action="Create" class="btn btn-primary btn-lg rounded-pill shadow-sm hover-lift px-4">
+                    <i class="bi bi-file-earmark-plus-fill me-2"></i>Create New CV
+                </a>
+            }
+        </div>
+    </div>
+
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-end mb-2">
+                        <div>
+                            <h6 class="fw-bold text-uppercase mb-1" style="font-size: 0.75rem; letter-spacing: 1px; color: #6c757d;">
+                                Your Storage Space
+                            </h6>
+                            <h4 class="fw-black mb-0">
+                                @currentCount <span class="text-muted fw-normal fs-6">of</span> @maxCvs 
+                                <span class="ms-2 badge rounded-pill @(remaining == 0 ? "bg-danger" : "bg-primary-gradient") shadow-sm" style="font-size: 0.7rem; vertical-align: middle;">
+                                    @(remaining == 0 ? "FULL" : "SLOTS ACTIVE")
+                                </span>
+                            </h4>
+                        </div>
+                        <div class="text-end">
+                            <span class="d-block small fw-bold text-muted">Remaining</span>
+                            <span class="h5 fw-bold @(remaining == 0 ? "text-danger" : "text-primary")">@remaining</span>
+                        </div>
+                    </div>
+
+                    <div class="progress-container shadow-inner">
+                        <div class="progress custom-progress" style="height: 16px;">
+                            <div class="progress-bar-dopamine" 
+                                 role="progressbar" 
+                                 style="width: @(currentCount * 100 / maxCvs)%" 
+                                 aria-valuenow="@currentCount" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="@maxCvs">
+                                <div class="progress-glare"></div>
+                            </div>
+                        </div>
+                    </div>
+                
+                    @if(remaining == 1)
+                    {
+                    <div class="mt-2 animate-pulse text-danger small fw-bold">
+                        <i class="bi bi-exclamation-circle-fill me-1"></i> Only 1 slot left! Use it wisely.
+                    </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        @if (!Model.Any())
+        {
+            <div class="col-12 text-center py-5">
+                <div class="py-5">
+                    <i class="bi bi-file-earmark-text text-muted opacity-25" style="font-size: 5rem;"></i>
+                    <h3 class="mt-3 fw-bold text-muted">No CVs found</h3>
+                    <p class="text-muted">Create your first professional resume to start applying for jobs!</p>
+                    <a asp-action="Create" class="btn btn-outline-primary rounded-pill mt-2">Get Started</a>
+                </div>
+            </div>
+        }
+        else
+        {
+            @foreach (var cv in Model)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div class="card border-0 shadow-sm rounded-4 hover-lift h-100">
+                        <div class="card-body p-4 d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="icon-shape bg-soft-primary text-primary rounded-3" style="width: 50px; height: 50px;">
+                                    <i class="bi bi-person-badge fs-3"></i>
+                                </div>
+
+                                <div id="status-container-@cv.Id">
+                                    @if (cv.IsVerified)
+                                    {
+                                        <span class="badge rounded-pill bg-success-soft text-success border border-success border-opacity-25">
+                                            <i class="bi bi-patch-check-fill me-1"></i> Verified
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge rounded-pill bg-warning-soft text-warning border border-warning border-opacity-25 animate-pulse">
+                                            <i class="bi bi-cpu-fill me-1"></i> AI Processing
+                                        </span>
+                                    }
+                                </div>
+
+                                <div class="dropdown">
+                                    <button class="btn btn-link text-muted p-0" data-bs-toggle="dropdown">
+                                        <i class="bi bi-three-dots-vertical fs-5"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
+                                        <li><a class="dropdown-item" asp-action="Edit" asp-route-id="@cv.Id"><i class="bi bi-pencil me-2"></i>Edit</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <button type="button" class="dropdown-item text-danger"
+                                                    onclick="confirmDelete('@cv.Id', '@cv.Name @cv.Surname')">
+                                                <i class="bi bi-trash me-2"></i>Delete
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <h5 class="fw-bold mb-0 text-truncate">@cv.Name @cv.Surname</h5>
+
+                            <p class="text-muted small mb-3">
+                                <i class="bi bi-calendar3 me-1"></i>@cv.CreatedAt.ToString("dd MMM yyyy")
+                            </p>
+
+                            <div class="bg-light p-3 rounded-4 mb-4 flex-grow-1" style="border: 1px solid rgba(0,0,0,0.05);">
+                                <div class="experience-preview-container">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="preview-badge">
+                                            <i class="bi bi-briefcase-fill"></i>
+                                            <span>Experience Preview</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="experience-scroll-box">
+                                        @if(string.IsNullOrEmpty(cv.ProfessionalExperience))
+                                        {
+                                            <em class="small text-muted opacity-50">No experience details provided yet...</em>
+                                        }
+                                        else
+                                        {
+                                            <div class="experience-content">
+                                                @Html.Raw(cv.ProfessionalExperience
+                                                    .Replace("[", "").Replace("]", "")
+                                                    .Replace(";", "<br>")
+                                                    .Replace("\n", "<br>")) 
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <a asp-action="Details" asp-route-id="@cv.Id" class="btn btn-outline-primary rounded-pill btn-sm flex-grow-1 fw-bold">
+                                    <i class="bi bi-eye me-1"></i> Details
+                                </a>
+
+                                <form asp-action="Verify" asp-route-id="@cv.Id" method="post" class="flex-grow-1" onsubmit="startLoading(this, '@cv.Id')">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" id="verify-btn-@cv.Id"
+                                            class="btn btn-soft-info-ai rounded-pill btn-sm w-100 fw-bold"
+                                            @(cv.IsVerified ? "disabled" : "")>
+                                        <i class="bi bi-robot me-1"></i> @(cv.IsVerified ? "Verified" : "AI Verify")
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pt-4 px-4">
+                <div class="icon-shape bg-soft-danger text-danger rounded-circle mb-0" style="width: 45px; height: 45px;">
+                    <i class="bi bi-exclamation-octagon fs-4"></i>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body px-4 pb-4">
+                <h4 class="fw-bold">Delete Resume?</h4>
+                <p class="text-muted mb-0">Are you sure you want to delete the resume for <span id="deleteCvName" class="fw-bold text-dark"></span>? This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer border-0 pb-4 px-4">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" asp-action="Delete">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="deleteCvId" />
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 shadow-sm">Delete Forever</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function startLoading(form, cvId) {
+            const btn = document.getElementById(`verify-btn-${cvId}`);
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing...';
+            }
+        }
+
+        function checkPendingStatuses() {
+            const pendingBadges = document.querySelectorAll('[id^="status-container-"] .animate-pulse');
+
+            pendingBadges.forEach(badge => {
+                const container = badge.parentElement;
+                const cvId = container.id.replace('status-container-', '');
+
+                fetch(`/Cv/GetStatus/${cvId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.isVerified) {
+                            updateUiToVerified(cvId);
+                        }
+                    })
+                    .catch(err => console.error("Error polling status:", err));
+            });
+        }
+
+        function updateUiToVerified(cvId) {
+            const container = document.getElementById(`status-container-${cvId}`);
+            const btn = document.getElementById(`verify-btn-${cvId}`);
+
+            if (container) {
+                container.innerHTML = `
+                    <span class="badge rounded-pill bg-success-soft text-success border border-success border-opacity-25 animate-in">
+                        <i class="bi bi-patch-check-fill me-1"></i> Verified
+                    </span>`;
+            }
+            if (btn) {
+                btn.disabled = true;
+                btn.className = "btn btn-soft-info-ai rounded-pill btn-sm w-100 fw-bold";
+                btn.innerHTML = '<i class="bi bi-robot me-1"></i> Verified';
+            }
+        }
+
+        function confirmDelete(id, fullName) {
+            document.getElementById('deleteCvId').value = id;
+            document.getElementById('deleteCvName').innerText = fullName;
+    
+            const myModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            myModal.show();
+        }
+
+        setInterval(checkPendingStatuses, 3000);
+    </script>
+}
+
+<style>
+    .bg-success-soft {
+        background-color: rgba(25, 135, 84, 0.1);
+    }
+
+    .bg-warning-soft {
+        background-color: rgba(255, 193, 7, 0.1);
+    }
+
+    .bg-soft-primary {
+        background-color: rgba(67, 97, 238, 0.1);
+    }
+
+    .bg-soft-danger {
+        background-color: rgba(220, 53, 69, 0.1);
+    }
+
+    .animate-pulse {
+        animation: pulse-animation 2s infinite;
+    }
+
+    @@keyframes pulse-animation {
+        0% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.6;
+        }
+
+        100% {
+            opacity: 1;
+        }
+    }
+
+    .animate-in {
+        animation: slide-in 0.5s ease-out;
+    }
+
+    @@keyframes slide-in {
+        from {
+            transform: translateY(-5px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .btn-soft-info-ai {
+        background-color: rgba(13, 202, 240, 0.1);
+        color: #0dcaf0;
+        border: 1px solid rgba(13, 202, 240, 0.2);
+    }
+
+        .btn-soft-info-ai:hover:not(:disabled) {
+            background-color: #0dcaf0;
+            color: white;
+        }
+
+    .hover-lift {
+        transition: all 0.2s ease;
+    }
+
+        .hover-lift:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+        }
+
+    .icon-shape {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .bg-success-soft { background-color: rgba(25, 135, 84, 0.1); }
+    .bg-warning-soft { background-color: rgba(255, 193, 7, 0.1); }
+    .bg-soft-primary { background-color: rgba(67, 97, 238, 0.1); }
+    .bg-soft-danger { background-color: rgba(220, 53, 69, 0.1); }
+
+    .animate-pulse { animation: pulse-animation 2s infinite; }
+
+    @@keyframes pulse-animation {
+        0% { opacity: 1; }
+        50% { opacity: 0.6; }
+        100% { opacity: 1; }
+    }
+
+    .animate-in { animation: slide-in 0.5s ease-out; }
+
+    @@keyframes slide-in {
+        from { transform: translateY(-5px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    .btn-soft-info-ai {
+        background-color: rgba(13, 202, 240, 0.1);
+        color: #0dcaf0;
+        border: 1px solid rgba(13, 202, 240, 0.2);
+    }
+
+    .btn-soft-info-ai:hover:not(:disabled) {
+        background-color: #0dcaf0;
+        color: white;
+    }
+
+    .hover-lift { transition: all 0.2s ease; }
+    .hover-lift:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+    }
+
+    .icon-shape { display: flex; align-items: center; justify-content: center; }
+
+    .bg-primary-gradient { background: linear-gradient(45deg, #4361ee, #4cc9f0); }
+    .custom-progress { background-color: #f0f2f5; border-radius: 50px; overflow: hidden; position: relative; }
+    .shadow-inner { box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+
+    .progress-bar-dopamine {
+        height: 100%;
+        background: linear-gradient(90deg, #4361ee, #4cc9f0, #4361ee);
+        background-size: 200% 100%;
+        border-radius: 50px;
+        position: relative;
+        transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+        animation: gradient-move 3s ease infinite;
+        box-shadow: 0 0 15px rgba(76, 201, 240, 0.4);
+    }
+
+    @if (currentCount >= maxCvs) 
+    {
+        <text>
+        .progress-bar-dopamine {
+            background: linear-gradient(90deg, #ef476f, #ffd166, #ef476f) !important;
+            box-shadow: 0 0 15px rgba(239, 71, 111, 0.5) !important;
+        }
+        </text>
+    }
+
+    .progress-glare {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: linear-gradient(to bottom, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 50%, rgba(0,0,0,0.05) 100%);
+    }
+
+    @@keyframes gradient-move {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    .fw-black { font-weight: 900; }
+
+    .experience-preview-container {
+        position: relative;
+        min-height: 110px;
+    }
+
+    .preview-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(67, 97, 238, 0.05);
+        color: #4361ee;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 0.65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .experience-text-mask {
+        position: relative;
+        height: 80px;
+        overflow: hidden;
+        mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+    }
+
+    .experience-text-mask p {
+        display: -webkit-box;
+        -webkit-line-clamp: 4;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-align: justify;
+        font-size: 0.8rem !important;
+    }
+
+    .card {
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+    }
+
+    .bg-success-soft {
+        background-color: rgba(46, 196, 182, 0.1) !important;
+        color: #2ec4b6 !important;
+    }
+
+    .icon-shape.bg-soft-primary {
+        background: linear-gradient(135deg, rgba(67, 97, 238, 0.15) 0%, rgba(76, 201, 240, 0.05) 100%);
+    }
+    .experience-scroll-box {
+        max-height: 150px;
+        overflow-y: auto;
+        padding-right: 8px;
+        scrollbar-width: thin;
+        scrollbar-color: #4361ee #f8f9fa;
+    }
+
+    .experience-scroll-box::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .experience-scroll-box::-webkit-scrollbar-track {
+        background: #f8f9fa;
+    }
+
+    .experience-scroll-box::-webkit-scrollbar-thumb {
+        background-color: #4361ee;
+        border-radius: 10px;
+    }
+
+    .experience-content {
+        font-size: 0.85rem;
+        line-height: 1.5;
+        color: #4b5563;
+    }
+
+    .experience-content br {
+        display: block;
+        content: "";
+        margin-top: 5px;
+    }
+
+    .preview-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: white;
+        color: #4361ee;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        margin-bottom: 10px;
+    }
+
+    .experience-text-mask {
+        mask-image: none !important;
+        -webkit-mask-image: none !important;
+    }
+</style>

@@ -404,8 +404,6 @@ namespace Recruit_Finder_AI.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "ADMIN")]
