@@ -74,7 +74,7 @@
                             <td>
                                 @if (isLocked)
                                 {
-                                    <span class="badge bg-danger text-white rounded-pill px-3" data-bs-toggle="tooltip" title="Reason: @(user.BanReason ?? "Unspecified")">
+                                    <span class="badge bg-danger text-white rounded-pill px-3" data-bs-toggle="tooltip" title="Powód: @(user.BanReason ?? "Nieokreślony")">
                                         <i class="bi bi-shield-lock-fill me-1"></i> Locked
                                     </span>
                                 }
@@ -86,33 +86,32 @@
                                 }
                             </td>
                             <td class="text-end pe-4">
-                                <div class="btn-group shadow-sm rounded-pill overflow-hidden bg-white border">
-                                    <a asp-action="EditUser" asp-route-id="@user.Id" class="btn btn-white border-0 btn-sm px-3" title="Edit User">
-                                        <i class="bi bi-pencil text-primary"></i>
+                                <div class="d-flex justify-content-end gap-2">
+                                    <a asp-action="EditUser" asp-route-id="@user.Id" 
+                                       class="btn btn-action btn-soft-primary" title="Edit User">
+                                        <i class="bi bi-pencil-fill"></i>
                                     </a>
 
                                     @if (isLocked)
                                     {
-                                        <form asp-action="UnlockUser" asp-route-id="@user.Id" method="post" class="d-inline">
-                                            @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-white border-0 btn-sm px-3" title="Unlock" onclick="return confirm('Unlock account?')">
-                                                <i class="bi bi-unlock text-info"></i>
-                                            </button>
-                                        </form>
+                                        <button type="button" class="btn btn-action btn-soft-info" 
+                                                onclick="openUnlockModal('@user.Id', '@user.UserName', '@(user.BanReason ?? "Brak powodu")', '@(user.LockoutEnd.HasValue ? user.LockoutEnd.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm") : "")', @(user.IsPermanentBan.ToString().ToLower()))"
+                                                title="Odblokuj użytkownika">
+                                            <i class="bi bi-unlock-fill"></i>
+                                        </button>
                                     }
                                     else
                                     {
-                                        <button type="button" class="btn btn-white border-0 btn-sm px-3" onclick="openBanModal('@user.Id', '@user.UserName')" title="Block">
-                                            <i class="bi bi-slash-circle text-danger"></i>
+                                        <button type="button" class="btn btn-action btn-soft-danger" 
+                                                onclick="openBanModal('@user.Id', '@user.UserName')" title="Zablokuj użytkownika">
+                                            <i class="bi bi-slash-circle-fill"></i>
                                         </button>
                                     }
 
-                                    <form asp-action="ForcePasswordReset" asp-route-id="@user.Id" method="post" class="d-inline">
-                                        @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn btn-white border-0 btn-sm px-3" title="Force Password Reset" onclick="return confirm('Force user to reset password?')">
-                                            <i class="bi bi-key text-warning"></i>
-                                        </button>
-                                    </form>
+                                    <button type="button" class="btn btn-action btn-soft-warning" 
+                                            onclick="openResetModal('@user.Id', '@user.UserName')" title="Force Password Reset">
+                                        <i class="bi bi-key-fill"></i>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -147,7 +146,7 @@
                     <div id="monthsContainer" class="mb-3">
                         <label class="form-label small fw-bold text-uppercase text-muted">Ban Duration</label>
                         <select class="form-select border-2 shadow-sm rounded-3" name="months">
-                            <option value="1">1 month</option>
+                            <option value="1">1 months</option>
                             <option value="3">3 months</option>
                             <option value="6">6 months</option>
                             <option value="12">1 year</option>
@@ -176,6 +175,63 @@
                     <button type="submit" id="submitBanBtn" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm">Apply Ban</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="unlockModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4 text-center">
+                <div class="icon-shape bg-soft-info text-info rounded-circle mb-3 mx-auto" style="width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; font-size: 2rem;">
+                    <i class="bi bi-unlock-fill"></i>
+                </div>
+                <h4 class="fw-bold">Unlock Account?</h4>
+                <p class="text-muted">You are about to restore access for <strong id="unlockUserName" class="text-dark"></strong>.</p>
+                
+                <div class="bg-light p-3 rounded-4 mb-4 text-start small">
+                    <div class="mb-1 text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Ban Type:</div>
+                    <div id="unlockType" class="mb-2"></div>
+    
+                    <div class="mb-1 text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Ban Reason:</div>
+                    <div id="unlockReason" class="fw-bold mb-2"></div>
+    
+                    <div class="mb-1 text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Expires:</div>
+                    <div id="unlockExpiry" class="fw-bold text-danger"></div>
+                </div>
+
+                <form asp-action="UnlockUser" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="unlockUserId" />
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-info text-white btn-lg rounded-pill fw-bold shadow-sm">Confirm Unlock</button>
+                        <button type="button" class="btn btn-light btn-lg rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4 text-center">
+                <div class="icon-shape bg-soft-warning text-warning rounded-circle mb-3 mx-auto" style="width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; font-size: 2rem;">
+                    <i class="bi bi-key-fill"></i>
+                </div>
+                <h4 class="fw-bold">Force Password Reset?</h4>
+                <p class="text-muted mb-4">User <strong id="resetUserName" class="text-dark"></strong> will be required to create a new password upon their next login attempt.</p>
+                
+                <form asp-action="ForcePasswordReset" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="resetUserId" />
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-warning text-dark btn-lg rounded-pill fw-bold shadow-sm">Confirm Reset</button>
+                        <button type="button" class="btn btn-light btn-lg rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
@@ -227,7 +283,7 @@
                 monthsContainer.style.display = 'none';
                 form.action = '@Url.Action("PermaBan", "Admin")';
                 btn.className = 'btn btn-dark rounded-pill px-4 fw-bold shadow-sm';
-                btn.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Apply Permanent Ban';
+                btn.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Nałóż PermaBan';
             } else {
                 monthsContainer.style.display = 'block';
                 form.action = '@Url.Action("TemporaryBan", "Admin")';
@@ -244,6 +300,30 @@
             } else {
                 container.classList.add('d-none');
             }
+        }
+
+        function openUnlockModal(userId, userName, reason, expiry, isPerma) {
+            document.getElementById('unlockUserId').value = userId;
+            document.getElementById('unlockUserName').innerText = userName;
+            document.getElementById('unlockReason').innerText = reason;
+    
+            const typeElement = document.getElementById('unlockType');
+    
+            if (isPerma) {
+                typeElement.innerHTML = '<span class="badge bg-danger">Permanent Ban</span>';
+                document.getElementById('unlockExpiry').innerText = "Never (Permanent)";
+            } else {
+                typeElement.innerHTML = '<span class="badge bg-warning text-dark">Temporary Ban</span>';
+                document.getElementById('unlockExpiry').innerText = expiry; 
+            }
+    
+            new bootstrap.Modal(document.getElementById('unlockModal')).show();
+        }
+
+        function openResetModal(userId, userName) {
+            document.getElementById('resetUserId').value = userId;
+            document.getElementById('resetUserName').innerText = userName;
+            new bootstrap.Modal(document.getElementById('resetPasswordModal')).show();
         }
 
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
@@ -293,5 +373,63 @@
     .form-select:focus, .form-control:focus {
         border-color: #4361ee;
         box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.1);
+    }
+    .bg-soft-info { background-color: rgba(13, 202, 240, 0.1); }
+    .bg-soft-warning { background-color: rgba(255, 193, 7, 0.1); }
+    .btn-action {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        border: none;
+        transition: all 0.2s ease-in-out;
+        font-size: 1rem;
+    }
+
+    .btn-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .btn-soft-primary {
+        background-color: rgba(67, 97, 238, 0.15);
+        color: #4361ee;
+    }
+    .btn-soft-primary:hover {
+        background-color: #4361ee;
+        color: white;
+    }
+
+    .btn-soft-danger {
+        background-color: rgba(239, 35, 60, 0.15);
+        color: #ef233c;
+    }
+    .btn-soft-danger:hover {
+        background-color: #ef233c;
+        color: white;
+    }
+
+    .btn-soft-info {
+        background-color: rgba(13, 202, 240, 0.15);
+        color: #0dcaf0;
+    }
+    .btn-soft-info:hover {
+        background-color: #0dcaf0;
+        color: white;
+    }
+
+    .btn-soft-warning {
+        background-color: rgba(255, 193, 7, 0.15);
+        color: #ffc107;
+    }
+    .btn-soft-warning:hover {
+        background-color: #ffc107;
+        color: #000;
+    }
+
+    .table td {
+        vertical-align: middle;
     }
 </style>

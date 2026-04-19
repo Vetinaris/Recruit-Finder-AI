@@ -13,8 +13,8 @@ namespace Recruit_Finder_AI.ViewModels
         public DateTimeOffset? LockoutEnd { get; set; }
         public DateTime? PasswordExpiration { get; set; }
         public string PrimaryRole { get; set; }
-
         public string? BanReason { get; set; }
+        public bool IsPermanentBan { get; set; }
     }
 
     public class AdminIndexViewModel

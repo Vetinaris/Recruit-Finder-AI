@@ -15,10 +15,16 @@ namespace Recruit_Finder_AI.Controllers
                 {
                     return RedirectToAction("Index", "Admin");
                 }
-              
+
             }
 
-            var categories = new List<string> { "IT", "Marketing", "Finance", "Healthcare", "Education", "Engineering", "Sales", "Customer Service", "Human Resources" };
+            var categories = new List<string>
+            {
+                "IT", "Data Science", "Marketing", "Finance",
+                "Healthcare", "Engineering", "Sales", "Customer Service",
+                "Human Resources", "Design & Creative", "Logistics",
+                "Legal", "Education", "Construction", "Hospitality"
+            };
             return View(categories);
         }
         public IActionResult Privacy()

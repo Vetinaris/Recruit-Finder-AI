@@ -39,5 +39,6 @@ namespace Recruit_Finder_AI.Models
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? ExpirationDate { get; set; }
     }
 }

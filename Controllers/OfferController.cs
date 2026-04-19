@@ -4,8 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Recruit_Finder_AI.Data;
 using Recruit_Finder_AI.Models;
-using System.Security.Claims;
 using Recruit_Finder_AI.Services;
+using System.Security.AccessControl;
+using System.Security.Claims;
 
 namespace Recruit_Finder_AI.Controllers
 {
@@ -25,25 +26,59 @@ namespace Recruit_Finder_AI.Controllers
             _notificationService = notificationService;
         }
 
-        public async Task<IActionResult> List(string category)
+        public async Task<IActionResult> List(
+           string category,
+           string? jobType,
+           string? salaryType,
+           int? minSalary,
+           string sortOrder = "newest",
+           bool showInactive = false)
         {
             ViewBag.CategoryName = category;
+            ViewBag.CurrentJobType = jobType;
+            ViewBag.CurrentSalaryType = salaryType;
+            ViewBag.CurrentMinSalary = minSalary;
+            ViewBag.CurrentSort = sortOrder;
+            ViewBag.ShowInactive = showInactive;
 
-            var query = _context.JobOffers
-                .Include(o => o.User)
-                .Where(o => o.Category == category)
-                .OrderByDescending(o => o.CreatedAt);
-            bool isStaff = User.IsInRole("MODERATOR") || User.IsInRole("ADMIN");
+            var query = _context.JobOffers.Include(o => o.User).Where(o => o.Category == category);
 
-            IQueryable<JobOffer> finalQuery = query;
-            if (!isStaff)
+            if (!string.IsNullOrEmpty(jobType))
+                query = query.Where(o => o.JobType == jobType);
+
+            if (!string.IsNullOrEmpty(salaryType))
+                query = query.Where(o => o.SalaryType == salaryType);
+
+            if (minSalary.HasValue)
             {
-                finalQuery = query.Where(o => o.IsVisible &&
-                    (o.User.LockoutEnd == null || o.User.LockoutEnd <= DateTimeOffset.UtcNow));
+                query = query.Where(o =>
+                    (o.MinimumSalary >= minSalary.Value) ||
+                    (o.SalaryType == "negotiable") ||
+                    (o.SalaryType == "none")
+                );
             }
 
-            var offers = await finalQuery.ToListAsync();
-            return View(offers);
+            query = sortOrder switch
+            {
+                "salary_desc" => query.OrderByDescending(o => o.MinimumSalary),
+                "salary_asc" => query.OrderBy(o => o.MinimumSalary),
+                "title" => query.OrderBy(o => o.Title),
+                _ => query.OrderByDescending(o => o.CreatedAt)
+            };
+
+            bool isStaff = User.IsInRole("MODERATOR") || User.IsInRole("ADMIN");
+
+            if (!isStaff || !showInactive)
+            {
+                var now = DateTime.UtcNow;
+                query = query.Where(o =>
+                    o.IsVisible &&
+                    (o.User.LockoutEnd == null || o.User.LockoutEnd <= DateTimeOffset.UtcNow) &&
+                    (o.ExpirationDate == null || o.ExpirationDate > now)
+                );
+            }
+
+            return View(await query.ToListAsync());
         }
 
         public async Task<IActionResult> Details(int? id)
@@ -165,7 +200,13 @@ namespace Recruit_Finder_AI.Controllers
                 return RedirectToAction(nameof(MyListings));
             }
 
-            ViewBag.Categories = new List<string> { "IT", "Marketing", "Finance", "Healthcare", "Education", "Engineering", "Sales", "Customer Service", "Human Resources" };
+            ViewBag.Categories = new List<string>
+            {
+                "IT", "Data Science", "Marketing", "Finance",
+                "Healthcare", "Engineering", "Sales", "Customer Service",
+                "Human Resources", "Design & Creative", "Logistics",
+                "Legal", "Education", "Construction", "Hospitality"
+            }; ;
             ViewBag.JobTypes = new List<string> { "Full-time", "Part-time", "Contract", "Freelance", "Internship" };
 
             var model = new JobOffer { Company = user.CompanyName };
@@ -175,10 +216,20 @@ namespace Recruit_Finder_AI.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
-        public async Task<IActionResult> Create(JobOffer offer)
+        public async Task<IActionResult> Create(JobOffer offer, string duration, DateTime? customDate)
         {
             offer.RecruiterId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             offer.CreatedAt = DateTime.UtcNow;
+            offer.ExpirationDate = duration switch
+            {
+                "1w" => DateTime.UtcNow.AddDays(7),
+                "1m" => DateTime.UtcNow.AddMonths(1),
+                "3m" => DateTime.UtcNow.AddMonths(3),
+                "1y" => DateTime.UtcNow.AddYears(1),
+                "custom" => customDate,
+                "manual" => null,
+                _ => null
+            };
 
             ModelState.Remove("RecruiterId");
             ModelState.Remove("User");
@@ -235,7 +286,45 @@ namespace Recruit_Finder_AI.Controllers
             }
             return View(offer);
         }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize]
+        public async Task<IActionResult> CloseOffer(int id)
+        {
+            var offer = await _context.JobOffers.FindAsync(id);
+            if (offer == null) return NotFound();
 
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (offer.RecruiterId != userId) return Forbid();
+
+            offer.ExpirationDate = DateTime.UtcNow;
+
+            _context.Update(offer);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Recruitment has been closed.";
+            return RedirectToAction(nameof(MyListings));
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize]
+        public async Task<IActionResult> ReopenOffer(int id)
+        {
+            var offer = await _context.JobOffers.FindAsync(id);
+            if (offer == null) return NotFound();
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (offer.RecruiterId != userId) return Forbid();
+
+            offer.ExpirationDate = null;
+            offer.IsVisible = true;
+
+            _context.Update(offer);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Offer has been reopened and is now live.";
+            return RedirectToAction(nameof(MyListings));
+        }
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         [Authorize]
@@ -250,6 +339,7 @@ namespace Recruit_Finder_AI.Controllers
             _context.JobOffers.Remove(offer);
             await _context.SaveChangesAsync();
 
+            TempData["SuccessMessage"] = "Offer deleted successfully.";
             return RedirectToAction(nameof(MyListings));
         }
     }

@@ -1,63 +1,120 @@
 ﻿@model IEnumerable<Recruit_Finder_AI.Entities.Notification>
+@{
+    ViewData["Title"] = "Messages & Notifications";
+}
 
 <div class="container py-5">
-    <h2 class="mb-4"><i class="bi bi-envelope-paper me-2 text-primary"></i>Your Messages</h2>
+    <div class="row mb-5 align-items-center">
+        <div class="col">
+            <h2 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-envelope-paper-heart me-2 text-primary"></i>Your Inbox
+            </h2>
+            <p class="text-muted mb-0">Stay updated with your latest activities and system alerts.</p>
+        </div>
+        <div class="col-auto">
+            <span class="badge bg-soft-primary text-primary rounded-pill px-3 py-2">
+                <i class="bi bi-bell me-1"></i> @Model.Count(n => !n.IsCompleted) New
+            </span>
+        </div>
+    </div>
 
     @if (!Model.Any())
     {
-        <div class="alert alert-info rounded-4 shadow-sm border-0">
-            <i class="bi bi-info-circle me-2"></i> You have no notifications at the moment.
+        <div class="text-center py-5 bg-white rounded-5 shadow-sm border border-dashed">
+            <div class="icon-shape bg-soft-light text-muted rounded-circle mb-3 mx-auto" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; font-size: 2rem;">
+                <i class="bi bi-mailbox"></i>
+            </div>
+            <h4 class="fw-bold text-dark">No messages yet</h4>
+            <p class="text-muted">When you get a notification, it will appear here.</p>
+            <a asp-controller="Home" asp-action="Index" class="btn btn-primary rounded-pill px-4 mt-2">Go to Homepage</a>
         </div>
     }
     else
     {
-        <div class="list-group shadow-sm rounded-4 overflow-hidden border-0">
+        <div class="row g-3">
             @foreach (var item in Model)
             {
-                <div class="list-group-item list-group-item-action p-4 @(item.IsCompleted ? "bg-light opacity-75" : "bg-white border-primary border-start border-4")">
-                    <div class="d-flex w-100 justify-content-between align-items-center">
-                        <h5 class="mb-1 fw-bold @(item.IsCompleted ? "text-secondary" : "text-dark")">@item.Title</h5>
-                        <small class="text-muted">@item.CreatedAt.ToString("g")</small>
-                    </div>
-                    <p class="mb-2 text-secondary">@item.Content</p>
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm rounded-4 notification-card @(item.IsCompleted ? "bg-light opacity-75" : "border-start border-primary border-4 bg-white")">
+                        <div class="card-body p-4">
+                            <div class="row align-items-center">
+                                <div class="col-auto d-none d-md-block">
+                                    <div class="icon-shape rounded-circle @(item.IsCompleted ? "bg-secondary text-white" : "bg-soft-primary text-primary")" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                                        <i class="bi @(item.IsCompleted ? "bi-check-all" : "bi-envelope-fill")"></i>
+                                    </div>
+                                </div>
 
-                    <div class="d-flex justify-content-between align-items-center mt-3">
-                        <div>
-                            @if (!string.IsNullOrEmpty(item.ActionUrl))
-                            {
-                                <a href="@item.ActionUrl" class="btn btn-sm btn-outline-primary rounded-pill px-3 me-2">
-                                    View Details
-                                </a>
-                            }
-                        </div>
+                                <div class="col">
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <h5 class="mb-0 fw-bold @(item.IsCompleted ? "text-secondary" : "text-dark")">
+                                            @item.Title
+                                        </h5>
+                                        <small class="text-muted fw-medium small">
+                                            <i class="bi bi-clock me-1"></i>@item.CreatedAt.ToString("g")
+                                        </small>
+                                    </div>
+                                    <p class="mb-0 text-secondary pe-md-5">@item.Content</p>
+                                </div>
 
-                        @if (!item.IsCompleted)
-                        {
-                            <form asp-action="MarkAsCompleted" method="post" class="d-inline">
-                                <input type="hidden" name="id" value="@item.Id" />
-                                <button type="submit" class="btn btn-sm @(User.IsInRole("ADMIN") || User.IsInRole("MODERATOR") ? "btn-success" : "btn-outline-secondary") rounded-pill px-3">
-                                    <i class="bi bi-check2-circle me-1"></i>
-                                    @if (User.IsInRole("ADMIN") || User.IsInRole("MODERATOR"))
+                                <div class="col-md-auto mt-3 mt-md-0 d-flex gap-2 justify-content-end align-items-center">
+                                    @if (!string.IsNullOrEmpty(item.ActionUrl))
                                     {
-                                        <span>Mark as Done</span>
+                                        <a href="@item.ActionUrl" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold">
+                                            View Details
+                                        </a>
+                                    }
+
+                                    @if (!item.IsCompleted)
+                                    {
+                                        <form asp-action="MarkAsCompleted" method="post" class="m-0">
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button type="submit" class="btn btn-sm @(User.IsInRole("ADMIN") || User.IsInRole("MODERATOR") ? "btn-success shadow-sm" : "btn-light border") rounded-pill px-3 fw-bold">
+                                                <i class="bi bi-check2-circle me-1"></i>
+                                                @(User.IsInRole("ADMIN") || User.IsInRole("MODERATOR") ? "Mark Done" : "Mark as read")
+                                            </button>
+                                        </form>
                                     }
                                     else
                                     {
-                                        <span>Mark as read</span>
+                                        <span class="badge @(User.IsInRole("ADMIN") || User.IsInRole("MODERATOR") ? "bg-soft-success text-success" : "bg-soft-secondary text-secondary") rounded-pill px-3 py-2">
+                                            <i class="bi bi-check-lg me-1"></i>
+                                            @(User.IsInRole("ADMIN") || User.IsInRole("MODERATOR") ? "Completed" : "Read")
+                                        </span>
                                     }
-                                </button>
-                            </form>
-                        }
-                        else
-                        {
-                            <span class="badge @(User.IsInRole("ADMIN") || User.IsInRole("MODERATOR") ? "bg-success" : "bg-secondary") rounded-pill px-3 shadow-sm">
-                                <i class="bi bi-check-lg me-1"></i>
-                                @(User.IsInRole("ADMIN") || User.IsInRole("MODERATOR") ? "Completed" : "Read")
-                            </span>
-                        }
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             }
         </div>
     }
 </div>
+
+<style>
+    body { background-color: #f8f9fa; }
+
+    .notification-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .notification-card:not(.bg-light):hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(67, 97, 238, 0.1) !important;
+    }
+
+    .bg-soft-primary { background-color: rgba(67, 97, 238, 0.1) !important; }
+    .bg-soft-success { background-color: rgba(45, 206, 137, 0.15) !important; }
+    .bg-soft-secondary { background-color: rgba(108, 117, 125, 0.1) !important; }
+    .bg-soft-light { background-color: #f1f3f5 !important; }
+
+    .border-dashed { border-style: dashed !important; border-width: 2px !important; }
+
+    .icon-shape {
+        flex-shrink: 0;
+    }
+
+    .card {
+        border: 1px solid rgba(0,0,0,0.03);
+    }
+</style>

@@ -5,14 +5,14 @@
 namespace Recruit_Finder_AI.Migrations
 {
     /// <inheritdoc />
-    public partial class AddIsVisibleToOffers : Migration
+    public partial class CvImplementationVerification : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<bool>(
-                name: "IsVisible",
-                table: "JobOffers",
+                name: "IsVerified",
+                table: "Cvs",
                 type: "bit",
                 nullable: false,
                 defaultValue: false);
@@ -22,8 +22,8 @@ namespace Recruit_Finder_AI.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "IsVisible",
-                table: "JobOffers");
+                name: "IsVerified",
+                table: "Cvs");
         }
     }
 }

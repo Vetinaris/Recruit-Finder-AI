@@ -81,7 +81,7 @@
 
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
-                        @if (!User.IsInRole("ADMIN"))
+                        @if (!(User.IsInRole("ADMIN") || User.IsInRole("MODERATOR")))
                         {
                             <li class="nav-item">
                                 <a class="nav-link px-3" asp-area="" asp-controller="Home" asp-action="Index">
@@ -99,8 +99,9 @@
                                 <ul class="dropdown-menu border-0 shadow" aria-labelledby="adminDropdown">
                                     <li><a class="dropdown-item" asp-controller="Admin" asp-action="Index"><i class="bi bi-people me-2"></i>Manage Users</a></li>
                                     <li><a class="dropdown-item" asp-controller="Admin" asp-action="AuditLogs"><i class="bi bi-journal-text me-2"></i>Audit Logs</a></li>
-                                    <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" asp-controller="Admin" asp-action="Settings"><i class="bi bi-gear me-2"></i>System Settings</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item small text-muted" asp-controller="Admin" asp-action="Guidelines"><i class="bi bi-info-circle me-2"></i>Admin Guidelines</a></li>
                                 </ul>
                             </li>
                         }
@@ -115,7 +116,7 @@
                                     <li><a class="dropdown-item" asp-controller="Moderator" asp-action="Index"><i class="bi bi-building-check me-2"></i>Verify Companies</a></li>
                                     <li><a class="dropdown-item" asp-controller="Home" asp-action="Index"><i class="bi bi-search me-2"></i>Review Job Offers</a></li>
                                     <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item small text-muted" href="#"><i class="bi bi-info-circle me-2"></i>Mod Guidelines</a></li>
+                                    <li><a class="dropdown-item small text-muted" asp-controller="Moderator" asp-action="Guidelines"><i class="bi bi-info-circle me-2"></i>Mod Guidelines</a></li>
                                 </ul>
                             </li>
                         }
@@ -128,7 +129,11 @@
                                 </a>
                             </li>
                         }
-
+                        <li class="nav-item">
+                            <a class="nav-link px-3" asp-area="" asp-controller="Cv" asp-action="Index">
+                                <i class="bi bi-file-earmark-person me-1"></i> My CV
+                            </a>
+                        </li>
                         <li class="nav-item">
                             <a class="nav-link px-3" asp-area="" asp-controller="Home" asp-action="About">
                                 <i class="bi bi-info-circle me-1"></i> How it works

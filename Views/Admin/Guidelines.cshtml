@@ -1,0 +1,126 @@
+﻿@{
+    ViewData["Title"] = "Admin Guidelines";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-xl-10">
+            <div class="d-flex align-items-center mb-5">
+                <div class="icon-shape bg-soft-primary text-primary rounded-4 me-3" style="width: 60px; height: 60px; font-size: 1.5rem;">
+                    <i class="bi bi-journal-check"></i>
+                </div>
+                <div>
+                    <h2 class="fw-bold mb-0">Administrative Guidelines</h2>
+                    <p class="text-muted mb-0">Standard operating procedures and system manual for Recruit Finder AI.</p>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-3 d-flex align-items-center">
+                                <i class="bi bi-people-fill text-primary me-2"></i> User Management
+                            </h5>
+                            <ul class="list-group list-group-flush small">
+                                <li class="list-group-item border-0 px-0 py-2">
+                                    <strong>Role Assignment:</strong> Always ensure a user has at least one role. Employers require "Employer" status to post jobs.
+                                </li>
+                                <li class="list-group-item border-0 px-0 py-2">
+                                    <strong>Verification:</strong> Manual verification of NIP and Company Address is recommended before granting permanent Employer status.
+                                </li>
+                                <li class="list-group-item border-0 px-0 py-2">
+                                    <strong>Account Edits:</strong> Use the "Edit" function to modify metadata; username and email changes trigger security stamp updates.
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100 border-start border-danger border-4">
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-3 d-flex align-items-center text-danger">
+                                <i class="bi bi-shield-slash-fill me-2"></i> Security Enforcement
+                            </h5>
+                            <div class="accordion accordion-flush" id="securityAccordion">
+                                <div class="accordion-item border-0">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed px-0 py-2 fw-semibold shadow-none bg-white" type="button" data-bs-toggle="collapse" data-bs-target="#banInfo">
+                                            Banning Policy
+                                        </button>
+                                    </h2>
+                                    <div id="banInfo" class="accordion-collapse collapse" data-bs-parent="#securityAccordion">
+                                        <div class="accordion-body px-0 py-2 small text-muted">
+                                            <strong>Temporary Ban:</strong> Use for minor violations (e.g., 3 months). User is automatically unlocked after the date expires.<br>
+                                            <strong>Permanent Ban:</strong> Use for severe fraud or phishing. Only another super-admin can reverse this.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-item border-0">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed px-0 py-2 fw-semibold shadow-none bg-white" type="button" data-bs-toggle="collapse" data-bs-target="#resetInfo">
+                                            Password Resets
+                                        </button>
+                                    </h2>
+                                    <div id="resetInfo" class="accordion-collapse collapse" data-bs-parent="#securityAccordion">
+                                        <div class="accordion-body px-0 py-2 small text-muted">
+                                            Force Password Reset invalidates the current password and redirects the user to the reset page on their next attempt.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm rounded-4 bg-light">
+                        <div class="card-body p-4 p-md-5">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h5 class="fw-bold mb-3"><i class="bi bi-database-lock me-2"></i> Data & Audit Logs</h5>
+                                    <p class="text-muted small">
+                                        Every administrative action is logged (IP, Timestamp, User). 
+                                        <strong>Export Logs</strong> functionality generates a CSV file compatible with Excel. 
+                                        Do not delete audit logs unless instructed by the CTO.
+                                    </p>
+                                    <div class="d-flex gap-2 mt-4">
+                                        <a asp-action="AuditLogs" class="btn btn-outline-primary rounded-pill px-4">View Logs</a>
+                                        <a asp-action="Settings" class="btn btn-primary rounded-pill px-4">System Settings</a>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 d-none d-md-block text-center">
+                                    <i class="bi bi-file-earmark-spreadsheet text-muted" style="font-size: 5rem; opacity: 0.3;"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-5 p-4 rounded-4 border border-warning bg-soft-warning d-flex align-items-start">
+                <i class="bi bi-exclamation-triangle-fill text-warning fs-4 me-3"></i>
+                <div>
+                    <h6 class="fw-bold text-dark">Confidentiality Reminder</h6>
+                    <p class="mb-0 small text-muted">Accessing user data is subject to GDPR regulations. All sessions are monitored. Unauthorised disclosure of user information is strictly prohibited.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    body { background-color: #f4f7f9; }
+    .bg-soft-primary { background-color: rgba(67, 97, 238, 0.1) !important; }
+    .bg-soft-warning { background-color: rgba(255, 173, 13, 0.1) !important; }
+    .icon-shape {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .accordion-button:not(.collapsed) {
+        color: #4361ee;
+        background-color: transparent;
+    }
+</style>

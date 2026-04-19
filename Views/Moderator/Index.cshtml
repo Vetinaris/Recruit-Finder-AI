@@ -3,87 +3,182 @@
     ViewData["Title"] = "Moderator Panel";
 }
 
-<div class="container mt-4">
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-white py-3">
-            <h5 class="mb-0 text-primary"><i class="bi bi-shield-check me-2"></i>Pending Business Verifications</h5>
+<div class="container py-5">
+    <div class="row mb-4 align-items-center">
+        <div class="col">
+            <h2 class="fw-bold mb-0 text-dark">Verification Queue</h2>
+            <p class="text-muted mb-0">Review and manage employer business applications.</p>
         </div>
-        <div class="card-body">
-            @if (TempData["SuccessMessage"] != null)
-            {
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    @TempData["SuccessMessage"]
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            }
+        <div class="col-auto">
+            <span class="badge bg-soft-primary text-primary rounded-pill px-3 py-2">
+                <i class="bi bi-clock-history me-1"></i> @Model.Count() Pending Requests
+            </span>
+        </div>
+    </div>
 
-            @if (!Model.Any())
-            {
-                <p class="text-muted text-center my-4">No companies are currently waiting for approval.</p>
-            }
-            else
-            {
-                <div class="table-responsive">
-                    <table class="table align-middle">
-                        <thead class="table-light">
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success border-0 shadow-sm rounded-4 alert-dismissible fade show mb-4" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light border-bottom">
+                        <tr>
+                            <th class="ps-4 py-3 text-uppercase small fw-bold text-muted">User Email</th>
+                            <th class="py-3 text-uppercase small fw-bold text-muted">Company Details</th>
+                            <th class="py-3 text-uppercase small fw-bold text-muted text-center">NIP / Tax ID</th>
+                            <th class="pe-4 py-3 text-uppercase small fw-bold text-muted text-end">Management</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.Any())
+                        {
                             <tr>
-                                <th>User</th>
-                                <th>Company Details</th>
-                                <th>NIP</th>
-                                <th class="text-end">Action</th>
+                                <td colspan="4" class="text-center py-5">
+                                    <i class="bi bi-inbox text-muted d-block mb-2" style="font-size: 2.5rem;"></i>
+                                    <p class="text-muted mb-0">Great job! All applications have been processed.</p>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var user in Model)
-                            {
-                                <tr>
-                                    <td>@user.Email</td>
-                                    <td>
-                                        <strong>@user.CompanyName</strong><br />
-                                        <small class="text-muted">@user.CompanyAddress</small>
-                                    </td>
-                                    <td><code class="fw-bold">@user.NIP</code></td>
-                                    <td class="text-end">
-                                        <form asp-action="Approve" method="post">
-                                            <input type="hidden" name="userId" value="@user.Id" />
-                                            <button type="submit" class="btn btn-outline-success btn-sm px-4">
-                                                Approve
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            }
-                            @foreach (var user in Model)
-                            {
-                                <tr>
-                                    <td>@user.Email</td>
-                                    <td>@user.CompanyName (NIP: @user.NIP)</td>
-                                    <td>
-                                        <div class="btn-group">
-                                            <form asp-action="Approve" method="post" class="d-inline">
-                                                <input type="hidden" name="userId" value="@user.Id" />
-                                                <button class="btn btn-sm btn-success">Approve</button>
-                                            </form>
+                        }
+                        @foreach (var user in Model)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-bold text-dark">@user.Email</div>
+                                    <small class="text-muted">Registered: @user.EmailConfirmed</small>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold">@user.CompanyName</div>
+                                    <div class="small text-muted text-truncate" style="max-width: 250px;">
+                                        <i class="bi bi-geo-alt me-1"></i>@user.CompanyAddress
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-light text-dark border fw-mono px-3 py-2">@user.NIP</span>
+                                </td>
+                                <td class="pe-4 text-end">
+                                    <div class="btn-group shadow-sm rounded-pill overflow-hidden">
+                                        <button type="button" class="btn btn-white btn-sm px-3 border-end text-success fw-bold" 
+                                                data-bs-toggle="modal" data-bs-target="#approveModal-@user.Id">
+                                            <i class="bi bi-check2 me-1"></i> Approve
+                                        </button>
+                                        
+                                        <button type="button" class="btn btn-white btn-sm px-3 border-end text-warning fw-bold" 
+                                                data-bs-toggle="modal" data-bs-target="#declineModal-@user.Id">
+                                            <i class="bi bi-x-lg me-1"></i> Decline
+                                        </button>
+                                        
+                                        <button type="button" class="btn btn-white btn-sm px-3 text-danger fw-bold" 
+                                                data-bs-toggle="modal" data-bs-target="#fraudModal-@user.Id">
+                                            <i class="bi bi-shield-exclamation me-1"></i> Fraud
+                                        </button>
+                                    </div>
 
-                                            <form asp-action="Decline" method="post" class="d-inline ms-1">
-                                                <input type="hidden" name="userId" value="@user.Id" />
-                                                <button class="btn btn-sm btn-warning">Decline</button>
-                                            </form>
-
-                                            <form asp-action="ReportFakeCompany" method="post" class="d-inline ms-1">
-                                                <input type="hidden" name="userId" value="@user.Id" />
-                                                <button class="btn btn-sm btn-danger" onclick="return confirm('Report this user to Admin as fraud?')">
-                                                    Report Fraud
-                                                </button>
-                                            </form>
+                                    <div class="modal fade" id="approveModal-@user.Id" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <div class="modal-content border-0 shadow rounded-4 text-start">
+                                                <div class="modal-header border-0 pb-0">
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body text-center p-4">
+                                                    <div class="icon-shape bg-soft-success text-success rounded-circle mb-3 mx-auto" style="width: 70px; height: 70px; font-size: 2rem; display: flex; align-items: center; justify-content: center;">
+                                                        <i class="bi bi-patch-check"></i>
+                                                    </div>
+                                                    <h4 class="fw-bold">Approve Company?</h4>
+                                                    <p class="text-muted">This will grant <strong>@user.CompanyName</strong> the Employer role and allow them to post jobs.</p>
+                                                    <form asp-action="Approve" method="post" class="mt-4">
+                                                        <input type="hidden" name="userId" value="@user.Id" />
+                                                        <div class="d-grid gap-2">
+                                                            <button type="submit" class="btn btn-success btn-lg rounded-pill">Confirm Approval</button>
+                                                            <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Cancel</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
+                                    </div>
+
+                                    <div class="modal fade" id="declineModal-@user.Id" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered text-start">
+                                            <div class="modal-content border-0 shadow rounded-4">
+                                                <div class="modal-body p-5 text-center">
+                                                    <div class="text-warning mb-3" style="font-size: 3rem;"><i class="bi bi-exclamation-circle"></i></div>
+                                                    <h4 class="fw-bold">Decline Application?</h4>
+                                                    <p class="text-muted">The user will be notified that their data (NIP: @user.NIP) was insufficient. They can try again later.</p>
+                                                    <form asp-action="Decline" method="post" class="mt-4">
+                                                        <input type="hidden" name="userId" value="@user.Id" />
+                                                        <div class="d-grid gap-2">
+                                                            <button type="submit" class="btn btn-warning btn-lg rounded-pill">Decline Request</button>
+                                                            <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Go Back</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="modal fade" id="fraudModal-@user.Id" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered text-start">
+                                            <div class="modal-content border-0 shadow rounded-4 bg-danger text-white">
+                                                <div class="modal-body p-5 text-center">
+                                                    <div class="mb-3" style="font-size: 3.5rem;"><i class="bi bi-shield-fire"></i></div>
+                                                    <h3 class="fw-bold text-white">Report Security Fraud?</h3>
+                                                    <p class="text-white-50">This is a serious action. All administrators will be alerted to ban <strong>@user.Email</strong> for impersonation.</p>
+                                                    <form asp-action="ReportFakeCompany" method="post" class="mt-4">
+                                                        <input type="hidden" name="userId" value="@user.Id" />
+                                                        <div class="d-grid gap-2">
+                                                            <button type="submit" class="btn btn-light btn-lg rounded-pill fw-bold text-danger">REPORT FRAUD</button>
+                                                            <button type="button" class="btn btn-link text-white text-decoration-none" data-bs-dismiss="modal">Cancel</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
+
+<style>
+    body { background-color: #f4f7f9; }
+    .bg-soft-primary { background-color: rgba(67, 97, 238, 0.1) !important; }
+    .bg-soft-success { background-color: rgba(45, 206, 137, 0.1) !important; }
+    
+    .btn-white {
+        background-color: #fff;
+        border-color: #f0f2f5;
+    }
+    .btn-white:hover {
+        background-color: #f8f9fa;
+        z-index: 1;
+    }
+
+    .fw-mono { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; }
+
+    .table-hover tbody tr:hover {
+        background-color: rgba(67, 97, 238, 0.02);
+    }
+
+    .modal-content {
+        border: none;
+    }
+    
+    .icon-shape {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>

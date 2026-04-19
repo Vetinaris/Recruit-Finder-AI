@@ -12,8 +12,8 @@ using Recruit_Finder_AI.Data;
 namespace Recruit_Finder_AI.Migrations
 {
     [DbContext(typeof(Recruit_Finder_AIContext))]
-    [Migration("20260326094253_AddCreatedAtToJobOffers")]
-    partial class AddCreatedAtToJobOffers
+    [Migration("20260414181159_CvImplementationVerification")]
+    partial class CvImplementationVerification
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -348,6 +348,40 @@ namespace Recruit_Finder_AI.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("Recruit_Finder_AI.Models.Cv", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsVerified")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Cvs");
+                });
+
             modelBuilder.Entity("Recruit_Finder_AI.Models.JobOffer", b =>
                 {
                     b.Property<int>("Id")
@@ -370,6 +404,9 @@ namespace Recruit_Finder_AI.Migrations
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ExpirationDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("IsVisible")
                         .HasColumnType("bit");
@@ -494,6 +531,17 @@ namespace Recruit_Finder_AI.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Recruit_Finder_AI.Models.Cv", b =>
+                {
+                    b.HasOne("Recruit_Finder_AI.Models.ApplicationUser", "User")
+                        .WithMany("Cvs")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Recruit_Finder_AI.Models.JobOffer", b =>
                 {
                     b.HasOne("Recruit_Finder_AI.Models.ApplicationUser", "User")
@@ -516,6 +564,8 @@ namespace Recruit_Finder_AI.Migrations
 
             modelBuilder.Entity("Recruit_Finder_AI.Models.ApplicationUser", b =>
                 {
+                    b.Navigation("Cvs");
+
                     b.Navigation("PasswordHistories");
                 });
 #pragma warning restore 612, 618

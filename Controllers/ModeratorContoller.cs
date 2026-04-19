@@ -101,5 +101,11 @@ namespace Recruit_Finder_AI.Controllers
             TempData["ErrorMessage"] = "Fraudulent user reported to Admin.";
             return RedirectToAction(nameof(Index));
         }
+
+        [HttpGet]
+        public IActionResult Guidelines()
+        {
+            return View();
+        }
     }
 }

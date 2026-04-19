@@ -82,7 +82,9 @@ namespace Recruit_Finder_AI.Controllers
                     Email = user.Email,
                     LockoutEnd = user.LockoutEnd,
                     PasswordExpiration = user.PasswordExpiration,
-                    PrimaryRole = primaryRole
+                    PrimaryRole = primaryRole,
+                    BanReason = user.BanReason,
+                    IsPermanentBan = user.IsPermanentBan
                 });
             }
 
@@ -257,7 +259,7 @@ namespace Recruit_Finder_AI.Controllers
 
             TempData[result.Succeeded ? "SuccessMessage" : "ErrorMessage"] =
                 result.Succeeded
-                    ? $"User {user.UserName} will be required to change password. Reset link: {Url.Page("/Account/ResetPassword", null, new { code, email = user.Email }, Request.Scheme)}"
+                    ? $"User {user.UserName} will be required to change password."
                     : $"Error setting password reset for {user.UserName}.";
 
             return RedirectToAction("Index");
@@ -402,8 +404,6 @@ namespace Recruit_Finder_AI.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "ADMIN")]
@@ -436,6 +436,49 @@ namespace Recruit_Finder_AI.Controllers
                 ModelState.AddModelError(string.Empty, "An error occurred while saving settings to the database.");
                 return View(model);
             }
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "ADMIN")]
+        public async Task<IActionResult> ExportAuditLogs()
+        {
+            var logs = await _context.AuditLogs
+                                     .OrderByDescending(l => l.Timestamp)
+                                     .ToListAsync();
+
+            var builder = new StringBuilder();
+
+            builder.AppendLine("sep=;");
+
+            builder.AppendLine("Timestamp;User;Action;Status;IP Address;Details");
+
+            foreach (var log in logs)
+            {
+                string safeDetails = log.Details?.Replace(";", "-").Replace("\r", "").Replace("\n", " ") ?? "";
+                string status = log.IsSuccess ? "Success" : "Failed";
+
+                builder.AppendLine($"{log.Timestamp:yyyy-MM-dd HH:mm:ss};{log.UserName};{log.Action};{status};{log.IpAddress};{safeDetails}");
+            }
+
+            var csvData = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(builder.ToString())).ToArray();
+            string fileName = $"AuditLogs_{DateTime.Now:yyyyMMdd_HHmm}.csv";
+
+            await _auditService.LogActionAsync(
+                User.Identity.Name,
+                "ADMIN_EXPORT_LOGS",
+                $"Admin exported {logs.Count} logs to CSV file.",
+                true,
+                _userManager.GetUserId(User)
+            );
+
+            return File(csvData, "text/csv", fileName);
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "ADMIN")]
+        public IActionResult Guidelines()
+        {
+            return View();
         }
     }
 }

@@ -38,6 +38,8 @@ builder.Services.AddScoped<SettingsService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
+builder.Services.AddHttpClient();
+
 
 var app = builder.Build();
 

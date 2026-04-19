@@ -1,0 +1,139 @@
+﻿@model Recruit_Finder_AI.Models.Cv
+@{
+    ViewData["Title"] = "Create Resume";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="bg-primary p-4 text-white text-center">
+                    <i class="bi bi-file-earmark-person display-4 mb-2 d-block"></i>
+                    <h2 class="fw-bold mb-0">Create New Resume</h2>
+                    <p class="opacity-75 mb-0">Complete the details below for AI analysis</p>
+                </div>
+                <div class="card-body p-5">
+                    <form asp-action="Create" method="post">
+                        @Html.AntiForgeryToken()
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                        <h4 class="mb-4 text-primary fw-bold border-bottom pb-2">
+                            <i class="bi bi-person-circle me-2"></i>Personal Information
+                        </h4>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label asp-for="Name" class="form-label fw-bold small text-muted">FIRST NAME</label>
+                                <input asp-for="Name" class="form-control rounded-3" placeholder="John" />
+                                <span asp-validation-for="Name" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Surname" class="form-label fw-bold small text-muted">LAST NAME</label>
+                                <input asp-for="Surname" class="form-control rounded-3" placeholder="Doe" />
+                                <span asp-validation-for="Surname" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Email" class="form-label fw-bold small text-muted">EMAIL ADDRESS</label>
+                                <input asp-for="Email" type="email" class="form-control rounded-3" placeholder="john.doe@example.com" />
+                                <span asp-validation-for="Email" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="PhoneNumber" class="form-label fw-bold small text-muted">PHONE NUMBER</label>
+                                <input asp-for="PhoneNumber" class="form-control rounded-3" placeholder="+48 123 456 789" />
+                                <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-8">
+                                <label asp-for="Address" class="form-label fw-bold small text-muted">ADDRESS</label>
+                                <input asp-for="Address" class="form-control rounded-3" placeholder="Warsaw, Poland" />
+                                <span asp-validation-for="Address" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="DateOfBirth" class="form-label fw-bold small text-muted">DATE OF BIRTH</label>
+                                <input asp-for="DateOfBirth" class="form-control rounded-3" placeholder="DD.MM.YYYY" />
+                                <span asp-validation-for="DateOfBirth" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <h4 class="mb-4 text-primary fw-bold border-bottom pb-2 mt-5">
+                            <i class="bi bi-briefcase me-2"></i>Professional Background
+                        </h4>
+                        <div class="mb-4">
+                            <label asp-for="ProfessionalExperience" class="form-label fw-bold small text-muted">PROFESSIONAL EXPERIENCE</label>
+                            <textarea asp-for="ProfessionalExperience" class="form-control rounded-3" rows="6"
+                                      placeholder="List your previous roles, responsibilities, and achievements..."></textarea>
+                            <span asp-validation-for="ProfessionalExperience" class="text-danger small"></span>
+                        </div>
+                        <div class="mb-4">
+                            <label asp-for="Education" class="form-label fw-bold small text-muted">EDUCATION</label>
+                            <textarea asp-for="Education" class="form-control rounded-3" rows="4"
+                                      placeholder="Schools, universities, and certificates..."></textarea>
+                            <span asp-validation-for="Education" class="text-danger small"></span>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label asp-for="Skills" class="form-label fw-bold small text-muted">SKILLS</label>
+                                <textarea asp-for="Skills" class="form-control rounded-3" rows="3" placeholder="e.g. Java, SQL, Project Management"></textarea>
+                                <span asp-validation-for="Skills" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Languages" class="form-label fw-bold small text-muted">LANGUAGES</label>
+                                <textarea asp-for="Languages" class="form-control rounded-3" rows="3" placeholder="e.g. English C1, German B2"></textarea>
+                                <span asp-validation-for="Languages" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <h4 class="mb-4 text-primary fw-bold border-bottom pb-2 mt-5">
+                            <i class="bi bi-plus-circle me-2"></i>Additional Information
+                        </h4>
+                        <div class="mb-4">
+                            <label asp-for="Portfolio" class="form-label fw-bold small text-muted">PORTFOLIO / LINKS</label>
+                            <input asp-for="Portfolio" class="form-control rounded-3" placeholder="https://github.com/yourprofile" />
+                            <span asp-validation-for="Portfolio" class="text-danger small"></span>
+                        </div>
+                        <div class="mb-4">
+                            <label asp-for="Interests" class="form-label fw-bold small text-muted">INTERESTS</label>
+                            <input asp-for="Interests" class="form-control rounded-3" placeholder="Travel, AI, Photography" />
+                            <span asp-validation-for="Interests" class="text-danger small"></span>
+                        </div>
+
+                        <div class="d-flex gap-3 pt-4 border-top">
+                            <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5 shadow-sm">
+                                <i class="bi bi-cloud-arrow-up-fill me-2"></i>Save & Verify
+                            </button>
+                            <a asp-action="Index" class="btn btn-light btn-lg rounded-pill px-4 border">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="mt-4 p-3 bg-soft-info text-info rounded-4 border border-info d-flex align-items-center">
+                <i class="bi bi-robot fs-2 me-3"></i>
+                <small>
+                    <strong>AI Analysis:</strong> Once you click "Save", our system will analyze each section of your CV to provide professional feedback.
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-soft-info {
+        background-color: rgba(13, 202, 240, 0.1);
+    }
+
+    .form-control:focus {
+        border-color: #4361ee;
+        box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.15);
+    }
+
+    textarea {
+        resize: none;
+    }
+</style>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
