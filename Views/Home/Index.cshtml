@@ -1,8 +1,80 @@
-﻿@{
+﻿@model List<string>
+@{
     ViewData["Title"] = "Home Page";
+
+    var categoryIcons = new Dictionary<string, string>
+    {
+        { "IT", "bi-cpu" },
+        { "Data Science", "bi-graph-up-arrow" },
+        { "Marketing", "bi-megaphone" },
+        { "Finance", "bi-cash-coin" },
+        { "Healthcare", "bi-hospital" },
+        { "Engineering", "bi-tools" },
+        { "Sales", "bi-currency-exchange" },
+        { "Customer Service", "bi-headset" },
+        { "Human Resources", "bi-people" },
+        { "Design & Creative", "bi-palette" },
+        { "Logistics", "bi-truck" },
+        { "Legal", "bi-shield-check" },
+        { "Education", "bi-mortarboard" },
+        { "Construction", "bi-building-gear" },
+        { "Hospitality", "bi-cup-hot" },
+        { "Default", "bi-briefcase" }
+    };
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="display-3 fw-bold text-primary">Find Your <span class="text-dark">Next Career</span></h1>
+        <p class="lead text-muted fs-4">Powered by AI to match you with the best opportunities.</p>
+    </div>
+
+    <div class="row g-4">
+        @foreach (var category in Model)
+        {
+            var iconClass = categoryIcons.ContainsKey(category) ? categoryIcons[category] : categoryIcons["Default"];
+            <div class="col-lg-4 col-md-6">
+                <div class="card h-100 border-0 shadow-sm transition-hover text-center p-4">
+                    <div class="card-body">
+                        <div class="icon-shape bg-light-primary text-primary rounded-circle mb-4 mx-auto">
+                            <i class="bi @iconClass fs-1"></i>
+                        </div>
+                        <h3 class="card-title fw-bold">@category</h3>
+                        <p class="text-muted">Explore high-paying roles in the @category sector.</p>
+                        <a asp-controller="Offer" asp-action="List" asp-route-category="@category" 
+                           class="btn btn-primary btn-lg rounded-pill px-4 mt-2">View Offers</a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
 </div>
+
+<style>
+    .transition-hover { 
+        transition: all 0.3s cubic-bezier(.25,.8,.25,1); 
+        border-radius: 24px; 
+    }
+    .transition-hover:hover { 
+        transform: translateY(-10px); 
+        box-shadow: 0 1rem 3rem rgba(67, 97, 238, 0.15) !important; 
+    }
+
+    .icon-shape { 
+        width: 90px; 
+        height: 90px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        transition: 0.3s;
+    }
+
+    .transition-hover:hover .icon-shape {
+        background-color: #4361ee !important;
+        color: white !important;
+    }
+
+    .bg-light-primary { 
+        background-color: #eef2ff; 
+    }
+</style>

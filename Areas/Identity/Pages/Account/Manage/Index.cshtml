@@ -1,0 +1,96 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Profile Settings";
+    ViewData["ActivePage"] = ManageNavPages.Index;
+}
+
+<partial name="_StatusMessage" for="StatusMessage" />
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+        <form id="profile-form" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+
+            <h5 class="mb-3 text-primary"><i class="bi bi-person-circle me-2"></i>Personal Information</h5>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Username" class="form-label">Username</label>
+                    <input asp-for="Username" class="form-control" disabled />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Input.PhoneNumber" class="form-label">Phone Number</label>
+                    <input asp-for="Input.PhoneNumber" class="form-control" />
+                    <span asp-validation-for="Input.PhoneNumber" class="text-danger"></span>
+                </div>
+            </div>
+
+            @if (User.IsInRole("USER") || Model.Input.IsEmployer)
+            {
+                <hr class="my-4" />
+                <h5 class="mb-3 text-primary"><i class="bi bi-building me-2"></i>Company Verification</h5>
+
+                @if (!Model.Input.IsEmployer)
+                {
+                    <div class="alert alert-info small shadow-sm border-0">
+                        <div class="d-flex align-items-center mb-1">
+                            <i class="bi bi-info-circle-fill me-2 fs-6"></i>
+                            <span class="fw-bold">Employer Account Application</span>
+                        </div>
+                        <div>
+                            Fill in the details below to apply for an Employer account.
+                            A Moderator will review your request.
+                            <span class="d-block mt-1">
+                                <i class="bi bi-clock me-1"></i>
+                                <strong>Note:</strong> Verification may take up to <strong>14 business days</strong>.
+                            </span>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-success d-flex align-items-center shadow-sm border-0">
+                        <i class="bi bi-patch-check-fill fs-4 me-3"></i>
+                        <div>
+                            <div class="fw-bold">Verified Employer Profile</div>
+                            <div class="small">To change company legal data, please contact our support: <strong>+48 123 456 789</strong></div>
+                        </div>
+                    </div>
+                }
+
+                <div class="row">
+                    <input type="hidden" asp-for="Input.IsEmployer" />
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Input.CompanyName" class="form-label">Company Name</label>
+                        <input asp-for="Input.CompanyName" class="form-control bg-light"
+                               placeholder="Legal business name"
+                               readonly="@(Model.Input.IsEmployer ? "readonly" : null)" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Input.NIP" class="form-label">NIP (Tax ID)</label>
+                        <input asp-for="Input.NIP" class="form-control bg-light"
+                               placeholder="e.g., 1234567890"
+                               readonly="@(Model.Input.IsEmployer ? "readonly" : null)" />
+                    </div>
+
+                    <div class="col-md-12 mb-3">
+                        <label asp-for="Input.CompanyAddress" class="form-label">Headquarters Address</label>
+                        <textarea asp-for="Input.CompanyAddress" class="form-control bg-light" rows="2"
+                                  readonly="@(Model.Input.IsEmployer ? "readonly" : null)"></textarea>
+                    </div>
+                </div>
+            }
+
+            <button id="update-profile-button" type="submit" class="w-100 btn btn-lg btn-primary shadow-sm mt-3">
+                <i class="bi bi-save me-2"></i>
+                @(Model.Input.IsEmployer ? "Update Phone Number" : "Save and Submit for Verification")
+            </button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,310 @@
+﻿@using System.Text.Encodings.Web
+@model IEnumerable<Recruit_Finder_AI.Models.JobOffer>
+@{
+    ViewData["Title"] = "My Job Listings";
+    bool isVerified = ViewBag.IsVerifiedEmployer ?? false;
+    var totalOffers = Model.Count();
+}
+
+<div class="container py-5">
+    <div class="row align-items-center mb-5">
+        <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
+            <h1 class="fw-bold display-6 mb-1">My Job Listings</h1>
+            <p class="text-muted mb-0">
+                You have <span class="fw-bold text-primary">@totalOffers</span> listings in total.
+            </p>
+        </div>
+        <div class="col-md-6 text-md-end">
+            @if (isVerified)
+            {
+                <a asp-action="Create" class="btn btn-primary btn-lg rounded-pill shadow-sm hover-lift px-4">
+                    <i class="bi bi-plus-circle-fill me-2"></i>Post New Offer
+                </a>
+            }
+            else
+            {
+                <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" title="Verify your profile to unlock">
+                    <button class="btn btn-secondary btn-lg rounded-pill shadow-sm px-4" disabled style="opacity: 0.6;">
+                        <i class="bi bi-lock-fill me-2"></i>Post New Offer
+                    </button>
+                </span>
+            }
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead class="bg-light border-bottom">
+                    <tr>
+                        <th class="ps-4 py-3 text-uppercase small fw-bold text-muted">Offer Details</th>
+                        <th class="py-3 text-uppercase small fw-bold text-muted">Category</th>
+                        <th class="py-3 text-uppercase small fw-bold text-muted">Timeline</th>
+                        <th class="py-3 text-uppercase small fw-bold text-muted">Status</th>
+                        <th class="py-3 text-center text-uppercase small fw-bold text-muted">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center py-5">
+                                <div class="py-4">
+                                    <i class="bi bi-clipboard2-plus text-muted display-1 mb-3 d-block"></i>
+                                    <h4 class="fw-bold text-muted">No offers yet</h4>
+                                    <p class="text-muted mb-0">Start recruiting today by adding your first position.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var item in Model)
+                    {
+                        bool isExpired = item.ExpirationDate.HasValue && item.ExpirationDate < DateTime.Now;
+                        bool canBeClosed = item.IsVisible && !isExpired;
+
+                        <tr class="@(item.IsVisible && !isExpired ? "" : "bg-light-subtle opacity-75")">
+                            <td class="ps-4 py-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon-shape bg-soft-primary text-primary rounded-3 me-3" style="width: 45px; height: 45px;">
+                                        <i class="bi bi-briefcase-fill"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark fs-6">@item.Title</div>
+                                        <div class="small text-muted"><i class="bi bi-geo-alt me-1"></i>@item.Location</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-soft-primary text-primary rounded-pill px-3 py-2 fw-semibold">
+                                    @item.Category
+                                </span>
+                            </td>
+                            <td>
+                                <div class="small">
+                                    <div class="text-muted mb-1">
+                                        <i class="bi bi-plus-circle me-1 text-primary"></i>@item.CreatedAt.ToString("dd MMM yyyy")
+                                    </div>
+                                    @if (item.ExpirationDate.HasValue)
+                                    {
+                                        <div class="@(isExpired ? "text-danger fw-bold" : "text-muted")">
+                                            <i class="bi bi-clock-history me-1"></i>@item.ExpirationDate.Value.ToString("dd MMM yyyy")
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="text-muted opacity-50 small font-italic">No expiry date</div>
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                @if (isExpired)
+                                {
+                                    <span class="badge bg-soft-warning text-warning rounded-pill px-3 py-2">
+                                        <i class="bi bi-exclamation-triangle-fill me-1"></i> Expired
+                                    </span>
+                                }
+                                else if (item.IsVisible)
+                                {
+                                    <span class="badge bg-soft-success text-success rounded-pill px-3 py-2">
+                                        <i class="bi bi-check-circle-fill me-1"></i> Active
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-soft-danger text-danger rounded-pill px-3 py-2">
+                                        <i class="bi bi-eye-slash-fill me-1"></i> Hidden
+                                    </span>
+                                }
+                            </td>
+                            <td class="text-center pe-4">
+                                <div class="btn-group shadow-sm rounded-pill bg-white border p-1">
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-link btn-sm text-primary p-2" title="Edit">
+                                        <i class="bi bi-pencil-square fs-5"></i>
+                                    </a>
+                                    <div class="vr my-2 text-muted opacity-25"></div>
+
+                                    @if (canBeClosed)
+                                    {
+                                        <button type="button" class="btn btn-link btn-sm text-warning p-2"
+                                                onclick="openCloseModal('@item.Id', '@(JavaScriptEncoder.Default.Encode(item.Title))')" title="Close Recruitment">
+                                            <i class="bi bi-x-circle-fill fs-5"></i>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-link btn-sm text-success p-2"
+                                                onclick="openReopenModal('@item.Id', '@(JavaScriptEncoder.Default.Encode(item.Title))')" title="Reopen Offer">
+                                            <i class="bi bi-arrow-clockwise fs-5"></i>
+                                        </button>
+                                    }
+
+                                    <div class="vr my-2 text-muted opacity-25"></div>
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-link btn-sm text-info p-2" title="View Details">
+                                        <i class="bi bi-person-lines-fill fs-5"></i>
+                                    </a>
+                                    <div class="vr my-2 text-muted opacity-25"></div>
+                                    <button type="button" class="btn btn-link btn-sm text-danger p-2"
+                                            onclick="openDeleteModal('@item.Id', '@(JavaScriptEncoder.Default.Encode(item.Title))')" title="Delete">
+                                        <i class="bi bi-trash3-fill fs-5"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="reopenOfferModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-5 text-center">
+                <div class="icon-shape bg-soft-success text-success rounded-circle mb-4 mx-auto" style="width: 80px; height: 80px; font-size: 2.5rem;">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </div>
+                <h3 class="fw-bold mb-2">Reopen Offer?</h3>
+                <p class="text-muted mb-4">You are about to reactivate <strong id="reopenOfferTitle" class="text-dark"></strong>. This will clear the expiration date and make the offer live again.</p>
+
+                <form id="reopenOfferForm" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success btn-lg rounded-pill fw-bold">Reopen Now</button>
+                        <button type="button" class="btn btn-light btn-lg rounded-pill fw-bold" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="closeOfferModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-5 text-center">
+                <div class="icon-shape bg-soft-warning text-warning rounded-circle mb-4 mx-auto" style="width: 80px; height: 80px; font-size: 2.5rem;">
+                    <i class="bi bi-x-circle"></i>
+                </div>
+                <h3 class="fw-bold mb-2">Close Recruitment?</h3>
+                <p class="text-muted mb-4">This will mark <strong id="closeOfferTitle" class="text-dark"></strong> as expired.</p>
+                <form id="closeOfferForm" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-warning btn-lg rounded-pill fw-bold text-white">Close Now</button>
+                        <button type="button" class="btn btn-light btn-lg rounded-pill fw-bold" data-bs-dismiss="modal">Keep Active</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteOfferModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-5 text-center">
+                <div class="icon-shape bg-soft-danger text-danger rounded-circle mb-4 mx-auto" style="width: 80px; height: 80px; font-size: 2.5rem;">
+                    <i class="bi bi-trash3"></i>
+                </div>
+                <h3 class="fw-bold mb-2">Delete Offer?</h3>
+                <p class="text-muted mb-4">Remove <strong id="deleteOfferTitle" class="text-dark"></strong>?</p>
+                <form id="deleteOfferForm" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-danger btn-lg rounded-pill fw-bold">Delete Permanently</button>
+                        <button type="button" class="btn btn-light btn-lg rounded-pill fw-bold" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openReopenModal(offerId, offerTitle) {
+            document.getElementById('reopenOfferTitle').innerText = offerTitle;
+            const form = document.getElementById('reopenOfferForm');
+            form.action = '@Url.Action("ReopenOffer", "Offer")/' + offerId;
+            new bootstrap.Modal(document.getElementById('reopenOfferModal')).show();
+        }
+
+        function openCloseModal(offerId, offerTitle) {
+            document.getElementById('closeOfferTitle').innerText = offerTitle;
+            const form = document.getElementById('closeOfferForm');
+            form.action = '@Url.Action("CloseOffer", "Offer")/' + offerId;
+            new bootstrap.Modal(document.getElementById('closeOfferModal')).show();
+        }
+
+        function openDeleteModal(offerId, offerTitle) {
+            document.getElementById('deleteOfferTitle').innerText = offerTitle;
+            const form = document.getElementById('deleteOfferForm');
+            form.action = '@Url.Action("Delete", "Offer")/' + offerId;
+            new bootstrap.Modal(document.getElementById('deleteOfferModal')).show();
+        }
+
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+    </script>
+}
+
+
+<style>
+    :root {
+        --soft-primary: rgba(67, 97, 238, 0.1);
+        --soft-success: rgba(25, 135, 84, 0.1);
+        --soft-warning: rgba(255, 193, 7, 0.1);
+        --soft-danger: rgba(220, 53, 69, 0.1);
+    }
+
+    .hover-lift {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+        .hover-lift:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
+        }
+
+    .icon-shape {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .bg-soft-primary {
+        background-color: var(--soft-primary);
+    }
+
+    .bg-soft-success {
+        background-color: var(--soft-success);
+    }
+
+    .bg-soft-warning {
+        background-color: var(--soft-warning);
+    }
+
+    .bg-soft-danger {
+        background-color: var(--soft-danger);
+    }
+
+    .custom-table tbody tr {
+        transition: background-color 0.2s ease;
+    }
+
+        .custom-table tbody tr:hover {
+            background-color: #fcfdff;
+        }
+
+    .btn-link {
+        text-decoration: none;
+        transition: transform 0.2s ease;
+    }
+
+        .btn-link:hover {
+            transform: scale(1.1);
+        }
+</style>

@@ -6,11 +6,27 @@ namespace Recruit_Finder_AI.Controllers
 {
     public class HomeController : Controller
     {
+
         public IActionResult Index()
         {
-            return View();
-        }
+            if (User.Identity.IsAuthenticated)
+            {
+                if (User.IsInRole("ADMIN"))
+                {
+                    return RedirectToAction("Index", "Admin");
+                }
 
+            }
+
+            var categories = new List<string>
+            {
+                "IT", "Data Science", "Marketing", "Finance",
+                "Healthcare", "Engineering", "Sales", "Customer Service",
+                "Human Resources", "Design & Creative", "Logistics",
+                "Legal", "Education", "Construction", "Hospitality"
+            };
+            return View(categories);
+        }
         public IActionResult Privacy()
         {
             return View();
@@ -20,6 +36,14 @@ namespace Recruit_Finder_AI.Controllers
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        }
+        public IActionResult About()
+        {
+            return View();
+        }
+        public IActionResult MyJobOffers()
+        {
+            return View();
         }
     }
 }

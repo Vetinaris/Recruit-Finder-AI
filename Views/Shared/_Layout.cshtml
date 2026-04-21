@@ -3,45 +3,183 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Recruit_Finder_AI</title>
-    <script type="importmap"></script>
+    <title>@ViewData["Title"] - RecruitFinder AI</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/Recruit_Finder_AI.styles.css" asp-append-version="true" />
+
+    <style>
+            :root {
+                --primary-ai: #4361ee;
+                --secondary-ai: #3f37c9;
+                --bg-light: #f8f9fa;
+                --admin-accent: #dc3545;
+            }
+
+            body {
+                font-family: 'Inter', sans-serif;
+                background-color: var(--bg-light);
+                color: #2b2d42;
+            }
+
+            .navbar {
+                background-color: rgba(255, 255, 255, 0.95) !important;
+                backdrop-filter: blur(10px);
+                border-bottom: 1px solid #e9ecef;
+            }
+
+            .navbar-brand {
+                font-weight: 700;
+                letter-spacing: -0.5px;
+            }
+
+            .nav-link {
+                font-weight: 500;
+                color: #4a4e69 !important;
+                transition: color 0.2s;
+            }
+
+                .nav-link:hover {
+                    color: var(--primary-ai) !important;
+                }
+
+            .admin-link {
+                color: var(--admin-accent) !important;
+                font-weight: 600;
+            }
+
+            footer {
+                background-color: #ffffff;
+                border-top: 1px solid #e9ecef;
+                padding: 1rem 0;
+            }
+
+            .main-container {
+                min-height: calc(100vh - 160px);
+            }
+    </style>
 </head>
+
 <body>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">Recruit_Finder_AI</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+        <nav class="navbar navbar-expand-lg navbar-light sticky-top shadow-sm mb-4">
+            <div class="container">
+                <a class="navbar-brand text-primary d-flex align-items-center" asp-area="" asp-controller="Home" asp-action="Index">
+                    <i class="bi bi-cpu-fill me-2 fs-3"></i>
+                    <span>RecruitFinder <span class="text-dark">AI</span></span>
+                </a>
+
+                <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
+
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
+                        @if (!(User.IsInRole("ADMIN") || User.IsInRole("MODERATOR")))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link px-3" asp-area="" asp-controller="Home" asp-action="Index">
+                                    <i class="bi bi-house-door me-1"></i> Home
+                                </a>
+                            </li>
+                        }
+
+                        @if (User.Identity.IsAuthenticated && User.IsInRole("ADMIN"))
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle admin-link px-3" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-shield-lock me-1"></i> Administration
+                                </a>
+                                <ul class="dropdown-menu border-0 shadow" aria-labelledby="adminDropdown">
+                                    <li><a class="dropdown-item" asp-controller="Admin" asp-action="Index"><i class="bi bi-people me-2"></i>Manage Users</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Admin" asp-action="AuditLogs"><i class="bi bi-journal-text me-2"></i>Audit Logs</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Admin" asp-action="Settings"><i class="bi bi-gear me-2"></i>System Settings</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item small text-muted" asp-controller="Admin" asp-action="Guidelines"><i class="bi bi-info-circle me-2"></i>Admin Guidelines</a></li>
+                                </ul>
+                            </li>
+                        }
+
+                        @if (User.Identity.IsAuthenticated && User.IsInRole("MODERATOR"))
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle px-3" href="#" id="modDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="color: #6f42c1 !important; font-weight: 600;">
+                                    <i class="bi bi-clipboard-check me-1"></i> Moderator Panel
+                                </a>
+                                <ul class="dropdown-menu border-0 shadow" aria-labelledby="modDropdown">
+                                    <li><a class="dropdown-item" asp-controller="Moderator" asp-action="Index"><i class="bi bi-building-check me-2"></i>Verify Companies</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Home" asp-action="Index"><i class="bi bi-search me-2"></i>Review Job Offers</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item small text-muted" asp-controller="Moderator" asp-action="Guidelines"><i class="bi bi-info-circle me-2"></i>Mod Guidelines</a></li>
+                                </ul>
+                            </li>
+                        }
+
+                        @if (User.Identity.IsAuthenticated && !User.IsInRole("ADMIN") && !User.IsInRole("MODERATOR"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link px-3" asp-area="" asp-controller="Cv" asp-action="Index">
+                                    <i class="bi bi-file-earmark-person me-1"></i> My CV
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link px-3" asp-area="" asp-controller="Offer" asp-action="MyListings">
+                                    <i class="bi bi-briefcase me-1"></i> Dashboard
+                                </a>
+                            </li>
+                        }
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                            <a class="nav-link px-3" asp-area="" asp-controller="Home" asp-action="About">
+                                <i class="bi bi-info-circle me-1"></i> How it works
+                            </a>
                         </li>
                     </ul>
+
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        <ul class="navbar-nav">
+                            <li class="nav-item me-3 d-flex align-items-center">
+                                <a class="nav-link position-relative py-1" asp-controller="Notifications" asp-action="Index">
+                                    <i class="bi bi-envelope fs-5"></i>
+
+                                    @await Component.InvokeAsync("NotificationBadge")
+                                </a>
+                            </li>
+                        </ul>
+                    }
+
+                    <partial name="_LoginPartial" />
                 </div>
             </div>
         </nav>
     </header>
-    <div class="container">
+
+    <div class="container main-container">
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
     </div>
 
-    <footer class="border-top footer text-muted">
+    <footer class="text-muted mt-5">
         <div class="container">
-            &copy; 2026 - Recruit_Finder_AI - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            <div class="row align-items-center">
+                <div class="col-md-6 text-center text-md-start">
+                    <span class="fw-bold text-primary">RecruitFinder AI</span> &copy; 2026 - All Rights Reserved
+                </div>
+                <div class="col-md-6 text-center text-md-end mt-3 mt-md-0">
+                    <a class="text-decoration-none text-muted me-3" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy Policy</a>
+                    <a href="#" class="text-muted fs-5"><i class="bi bi-linkedin"></i></a>
+                </div>
+            </div>
         </div>
     </footer>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>

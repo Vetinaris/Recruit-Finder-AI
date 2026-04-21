@@ -1,0 +1,222 @@
+﻿@model Recruit_Finder_AI.ViewModels.EditUserViewModel
+
+@{
+    ViewData["Title"] = "Edit User | " + Model.UserName;
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-xl-11">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <div class="d-flex align-items-center">
+                    <a asp-action="Index" class="btn btn-outline-primary rounded-circle me-3 shadow-sm d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;" title="Back to User List">
+                        <i class="bi bi-arrow-left fs-5"></i>
+                    </a>
+                    <div>
+                        <h2 class="fw-bold mb-0 text-dark">User Management</h2>
+                        <p class="text-muted mb-0 small text-uppercase fw-bold">Modifying: <span class="text-primary">@Model.UserName</span></p>
+                    </div>
+                </div>
+                <span class="badge bg-soft-primary text-primary rounded-pill px-3 py-2">
+                    <i class="bi bi-shield-check me-1"></i> Admin Console
+                </span>
+            </div>
+
+            <form asp-action="EditUser" method="post">
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger rounded-4 border-0 shadow-sm mb-4"></div>
+                
+                <input type="hidden" asp-for="Id" />
+                <input type="hidden" asp-for="UserName" />
+                <input type="hidden" asp-for="Email" />
+
+                <div class="row g-4">
+                    <div class="col-lg-7">
+                        <div class="card border-0 shadow-sm rounded-4 mb-4">
+                            <div class="card-body p-4 p-md-5">
+                                <h5 class="fw-bold mb-4 d-flex align-items-center">
+                                    <span class="icon-shape bg-soft-primary text-primary rounded-3 me-3">
+                                        <i class="bi bi-person-vcard"></i>
+                                    </span>
+                                    Profile Information
+                                </h5>
+                                
+                                <div class="row mb-4 g-3">
+                                    <div class="col-sm-6">
+                                        <label class="small text-muted text-uppercase fw-bold d-block mb-1">Username</label>
+                                        <div class="p-3 bg-light rounded-3 fw-semibold border-start border-primary border-4">@Model.UserName</div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label class="small text-muted text-uppercase fw-bold d-block mb-1">Email Address</label>
+                                        <div class="p-3 bg-light rounded-3 fw-semibold border-start border-primary border-4">@Model.Email</div>
+                                    </div>
+                                </div>
+
+                                <hr class="my-5 opacity-25">
+
+                                <h5 class="fw-bold mb-4 d-flex align-items-center">
+                                    <span class="icon-shape bg-soft-success text-success rounded-3 me-3">
+                                        <i class="bi bi-building"></i>
+                                    </span>
+                                    Employer Settings
+                                </h5>
+
+                                <div class="form-check form-switch p-3 border rounded-4 mb-4 bg-light-subtle d-flex align-items-center justify-content-between px-4 shadow-sm border-dashed">
+                                    <div>
+                                        <label asp-for="IsEmployer" class="form-check-label fw-bold h6 mb-0">Verified Employer Status</label>
+                                        <div class="form-text small">Grants permission to post job offers.</div>
+                                    </div>
+                                    <input asp-for="IsEmployer" class="form-check-input ms-0" type="checkbox" role="switch" style="width: 3.5rem; height: 1.75rem;">
+                                </div>
+
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label asp-for="CompanyName" class="small text-muted text-uppercase fw-bold mb-1">Company Name</label>
+                                        <input asp-for="CompanyName" class="form-control rounded-3 border-light shadow-none bg-light" placeholder="e.g. Google Inc." />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label asp-for="NIP" class="small text-muted text-uppercase fw-bold mb-1">NIP / Tax ID</label>
+                                        <input asp-for="NIP" class="form-control rounded-3 border-light shadow-none bg-light" placeholder="10-digit number" />
+                                    </div>
+                                    <div class="col-12">
+                                        <label asp-for="CompanyAddress" class="small text-muted text-uppercase fw-bold mb-1">Registered Address</label>
+                                        <textarea asp-for="CompanyAddress" class="form-control rounded-3 border-light shadow-none bg-light" rows="2" placeholder="Street, City, Country"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card border-0 shadow-sm rounded-4">
+                            <div class="card-body p-4">
+                                <h5 class="fw-bold mb-4 d-flex align-items-center">
+                                    <span class="icon-shape bg-soft-warning text-warning rounded-3 me-3">
+                                        <i class="bi bi-people"></i>
+                                    </span>
+                                    System Permissions
+                                </h5>
+                                <div class="row g-2">
+                                    @for (int i = 0; i < Model.AvailableRoles.Count; i++)
+                                    {
+                                        <div class="col-md-6">
+                                            <div class="p-2 border rounded-3 transition-hover d-flex align-items-center bg-white">
+                                                <input type="hidden" asp-for="@Model.AvailableRoles[i].RoleName" />
+                                                <div class="form-check mb-0">
+                                                    <input asp-for="@Model.AvailableRoles[i].IsSelected" class="form-check-input cursor-pointer" id="role_@i" />
+                                                    <label class="form-check-label fw-semibold cursor-pointer ms-2" for="role_@i">
+                                                        @Model.AvailableRoles[i].RoleName
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-5">
+                        <div class="card border-0 shadow-sm rounded-4 h-100">
+                            <div class="card-body p-4 p-md-5">
+                                <h5 class="fw-bold mb-4 d-flex align-items-center text-dark">
+                                    <span class="icon-shape bg-soft-danger text-danger rounded-3 me-3">
+                                        <i class="bi bi-shield-lock-fill"></i>
+                                    </span>
+                                    Security Enforcement
+                                </h5>
+
+                                <div class="security-item p-4 rounded-4 mb-3 border bg-white shadow-sm transition-hover">
+                                    <div class="form-check form-switch d-flex align-items-center justify-content-between p-0">
+                                        <div>
+                                            <label asp-for="IsLocked" class="form-check-label fw-bold mb-1 text-dark">Lock User Account</label>
+                                            <p class="text-muted small mb-0">Instant access revocation for this user.</p>
+                                        </div>
+                                        <input asp-for="IsLocked" class="form-check-input ms-0" type="checkbox" role="switch" style="width: 3.2rem; height: 1.6rem;">
+                                    </div>
+                                </div>
+
+                                <div class="security-item p-4 rounded-4 mb-4 border bg-white shadow-sm transition-hover">
+                                    <div class="form-check form-switch d-flex align-items-center justify-content-between p-0">
+                                        <div>
+                                            <label asp-for="ForcePasswordReset" class="form-check-label fw-bold mb-1 text-dark">Require Password Reset</label>
+                                            <p class="text-muted small mb-0">Forces a change on the next login attempt.</p>
+                                        </div>
+                                        <input asp-for="ForcePasswordReset" class="form-check-input ms-0" type="checkbox" role="switch" style="width: 3.2rem; height: 1.6rem;">
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 pt-2">
+                                    <label asp-for="PasswordExpiration" class="form-label fw-bold text-muted small text-uppercase">Manual Expiration Limit</label>
+                                    <div class="input-group shadow-sm rounded-3 overflow-hidden border">
+                                        <span class="input-group-text bg-light border-0 text-primary">
+                                            <i class="bi bi-calendar-x"></i>
+                                        </span>
+                                        <input asp-for="PasswordExpiration" type="datetime-local" class="form-control border-0 bg-white fw-semibold shadow-none py-2" />
+                                    </div>
+                                    <div class="form-text text-muted small mt-2">
+                                        <i class="bi bi-info-circle me-1"></i> Leave blank for permanent validity.
+                                    </div>
+                                </div>
+
+                                <div class="mt-5 pt-3 d-grid">
+                                    <button type="submit" class="btn btn-primary btn-lg rounded-pill py-3 fw-bold shadow-sm transition-btn">
+                                        <i class="bi"></i>Apply Changes
+                                    </button>
+                                    <p class="text-center mt-3 text-muted small">
+                                        Changes are tracked in <a asp-action="AuditLogs" class="text-primary text-decoration-none fw-bold">System Audit</a>.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    body { background-color: #f4f7f9; }
+
+    .bg-soft-primary { background-color: rgba(67, 97, 238, 0.1) !important; }
+    .bg-soft-success { background-color: rgba(45, 206, 137, 0.1) !important; }
+    .bg-soft-warning { background-color: rgba(255, 173, 13, 0.1) !important; }
+
+    .icon-shape {
+        width: 42px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+
+    .transition-hover {
+        transition: all 0.2s ease-in-out;
+        cursor: pointer;
+    }
+
+    .transition-hover:hover {
+        background-color: #f8f9fa !important;
+        border-color: #4361ee !important;
+        transform: translateX(5px);
+    }
+
+    .cursor-pointer { cursor: pointer; }
+
+    .border-dashed { border-style: dashed !important; border-width: 2px !important; }
+
+    .form-control:focus {
+        background-color: #fff !important;
+        border-color: #4361ee !important;
+    }
+
+    .bg-secondary { background-color: rgba(255,255,255,0.1) !important; }
+    
+    .form-check-input:checked {
+        background-color: #4361ee;
+        border-color: #4361ee;
+    }
+</style>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
