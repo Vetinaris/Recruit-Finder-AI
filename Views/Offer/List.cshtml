@@ -25,12 +25,37 @@
         </a>
     </div>
 
-    <div class="card border-0 shadow-sm rounded-4 mb-5 bg-white">
+    <div class="card border-0 shadow-sm rounded-4 mb-5 bg-white" style="border: 1px solid #f8f9fa !important;">
         <div class="card-body p-4">
-            <form method="get" asp-action="List" class="row g-3 align-items-end">
+            <form method="get" asp-action="List" class="row g-3">
                 <input type="hidden" name="category" value="@ViewBag.CategoryName" />
 
+                <div class="col-lg-5 col-md-12">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Keyword Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-light-subtle rounded-start-pill">
+                            <i class="bi bi-search text-primary"></i>
+                        </span>
+                        <input type="text" name="searchString" class="form-control border-light-subtle shadow-sm rounded-end-pill"
+                               placeholder="Job title, company..." value="@ViewBag.CurrentSearch" />
+                    </div>
+                </div>
+
                 <div class="col-lg-3 col-md-6">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Subcategory</label>
+                    <select name="subcategory" class="form-select border-light-subtle shadow-sm rounded-pill">
+                        <option value="">All Specializations</option>
+                        @if (ViewBag.Subcategories != null)
+                        {
+                            foreach (var sub in (List<string>)ViewBag.Subcategories)
+                            {
+                                <option value="@sub" selected="@(ViewBag.CurrentSubcategory == sub)">@sub</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <div class="col-lg-4 col-md-6">
                     <label class="form-label small fw-bold text-muted text-uppercase">Job Type</label>
                     <select name="jobType" class="form-select border-light-subtle shadow-sm rounded-pill">
                         <option value="">All Types</option>
@@ -41,50 +66,55 @@
                     </select>
                 </div>
 
-                <div class="col-lg-3 col-md-6">
-                    <label class="form-label small fw-bold text-muted text-uppercase">Salary Type</label>
-                    <select name="salaryType" class="form-select border-light-subtle shadow-sm rounded-pill">
-                        <option value="">Any Salary Type</option>
-                        <option value="none" selected="@(ViewBag.CurrentSalaryType == "none")">Undisclosed</option>
-                        <option value="negotiable" selected="@(ViewBag.CurrentSalaryType == "negotiable")">Negotiable</option>
-                        <option value="fixed" selected="@(ViewBag.CurrentSalaryType == "fixed")">Fixed Price</option>
-                        <option value="range" selected="@(ViewBag.CurrentSalaryType == "range")">Salary Range</option>
+                <div class="col-lg-3 col-md-4">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Language</label>
+                    <select name="language" class="form-select border-light-subtle shadow-sm rounded-pill">
+                        <option value="">Any Language</option>
+                        @if (ViewBag.Languages != null)
+                        {
+                            foreach (var lang in (List<string>)ViewBag.Languages)
+                            {
+                                <option value="@lang" selected="@(ViewBag.CurrentLanguage == lang)">@lang</option>
+                            }
+                        }
                     </select>
                 </div>
 
-                <div class="col-lg-2 col-md-4">
-                    <label class="form-label small fw-bold text-muted text-uppercase">Min. PLN</label>
-                    <input type="number" name="minSalary" class="form-control border-light-subtle shadow-sm rounded-pill"
-                           placeholder="e.g. 5000" value="@ViewBag.CurrentMinSalary" />
-                </div>
-
-                <div class="col-lg-2 col-md-4">
+                <div class="col-lg-3 col-md-4">
                     <label class="form-label small fw-bold text-muted text-uppercase">Sort By</label>
                     <select name="sortOrder" class="form-select border-light-subtle shadow-sm rounded-pill">
-                        <option value="newest" selected="@(ViewBag.CurrentSort == "newest")">Newest</option>
+                        <option value="newest" selected="@(ViewBag.CurrentSort == "newest")">Newest Postings</option>
                         <option value="salary_desc" selected="@(ViewBag.CurrentSort == "salary_desc")">Highest Salary</option>
                         <option value="salary_asc" selected="@(ViewBag.CurrentSort == "salary_asc")">Lowest Salary</option>
+                        <option value="title" selected="@(ViewBag.CurrentSort == "title")">A-Z Title</option>
                     </select>
                 </div>
 
-                <div class="col-lg-2 col-md-4 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary rounded-pill flex-grow-1 shadow-sm">
-                        <i class="bi bi-filter"></i> Apply
+                <div class="col-lg-3 col-md-4">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Min Salary (EUR)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-light-subtle rounded-start-pill px-3">€</span>
+                        <input type="number" name="minSalary" class="form-control border-light-subtle shadow-sm rounded-end-pill"
+                               placeholder="e.g. 5000" value="@ViewBag.CurrentMinSalary" />
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-md-12 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-primary rounded-pill flex-grow-1 shadow-sm fw-bold">
+                        <i class="bi bi-filter me-1"></i> Apply
                     </button>
-                    <a asp-action="List" asp-route-category="@ViewBag.CategoryName" class="btn btn-light border rounded-pill shadow-sm">
+                    <a asp-action="List" asp-route-category="@ViewBag.CategoryName" class="btn btn-light border rounded-pill shadow-sm" title="Reset">
                         <i class="bi bi-arrow-counterclockwise"></i>
                     </a>
                 </div>
 
                 @if (isStaff)
                 {
-                    <div class="col-12 mt-3">
-                        <div class="form-check form-switch p-3 border rounded-pill bg-light d-inline-flex align-items-center" style="padding-left: 3.5em !important;">
-                            <input class="form-check-input me-2" type="checkbox" name="showInactive" value="true" id="showInactive"
-                                   @(showInactive ? "checked" : "") onchange="this.form.submit()" style="cursor: pointer; transform: scale(1.2);">
-                            <label class="form-check-label fw-bold text-dark mb-0" for="showInactive" style="cursor: pointer;">
-                                <i class="bi bi-eye-fill text-primary me-1"></i> Show Hidden & Expired (Staff Mode)
-                            </label>
+                    <div class="col-12 mt-2">
+                        <div class="form-check form-switch p-2 border rounded-pill bg-light d-inline-flex align-items-center" style="padding-left: 3.5em !important;">
+                            <input class="form-check-input" type="checkbox" name="showInactive" value="true" id="showInactive"
+                                   @(showInactive ? "checked" : "") onchange="this.form.submit()">
+                            <label class="form-check-label ms-2 fw-semibold" for="showInactive">Show hidden & expired offers</label>
                             <input type="hidden" name="showInactive" value="false" />
                         </div>
                     </div>
@@ -100,7 +130,7 @@
                 <div class="bg-light rounded-4 p-5 border border-dashed">
                     <i class="bi bi-search text-muted display-1 mb-4 d-block"></i>
                     <h3 class="fw-bold">No offers found</h3>
-                    <p class="text-muted">Try adjusting your filters.</p>
+                    <p class="text-muted">Try adjusting your filters or keyword.</p>
                 </div>
             </div>
         }
@@ -115,30 +145,29 @@
                 <div class="col-lg-4 col-md-6">
                     <div class="card h-100 border-0 shadow-sm job-card rounded-4 @(isInactive ? "opacity-75 border-dashed-danger" : "")">
                         <div class="card-body p-4 d-flex flex-column">
+                            
                             <div class="d-flex justify-content-between align-items-start mb-3">
-                                <div class="d-flex flex-column gap-1">
+                                <div class="d-flex flex-wrap gap-1">
                                     <span class="badge bg-soft-primary text-primary rounded-pill px-3 py-2">
                                         <i class="bi bi-geo-alt me-1"></i>@(string.IsNullOrEmpty(item.Location) ? "Remote" : item.Location)
                                     </span>
+                                    
+                                    @if (!string.IsNullOrEmpty(item.Subcategory))
+                                    {
+                                        <span class="badge bg-light text-dark border rounded-pill px-3 py-2">
+                                            <i class="bi bi-tag me-1"></i>@item.Subcategory
+                                        </span>
+                                    }
+
                                     @if (isStaff && isInactive)
                                     {
-                                        <div class="d-flex gap-1 flex-wrap mt-1">
-                                            @if (!item.IsVisible)
-                                            {
-                                                <span class="badge bg-danger">HIDDEN</span>
-                                            }
-                                            @if (isExpired)
-                                            {
-                                                <span class="badge bg-warning text-dark">EXPIRED</span>
-                                            }
-                                            @if (isAuthorBanned)
-                                            {
-                                                <span class="badge bg-dark text-white">USER BANNED</span>
-                                            }
-                                        </div>
+                                        <div class="w-100 mt-1"></div>
+                                        @if (!item.IsVisible) { <span class="badge bg-danger">HIDDEN</span> }
+                                        @if (isExpired) { <span class="badge bg-warning text-dark">EXPIRED</span> }
+                                        @if (isAuthorBanned) { <span class="badge bg-dark text-white">USER BANNED</span> }
                                     }
                                 </div>
-                                <small class="text-muted fw-bold">
+                                <small class="text-muted fw-bold text-nowrap">
                                     <i class="bi bi-clock me-1"></i>@(item.JobType ?? "Full-time")
                                 </small>
                             </div>
@@ -150,27 +179,31 @@
 
                             <div class="d-flex flex-wrap gap-2 mb-3">
                                 <small class="text-muted border rounded-pill px-2 py-1 bg-light" style="font-size: 0.75rem;">
-                                    <i class="bi bi-calendar-plus me-1"></i>Added: @item.CreatedAt.ToString("dd.MM.yyyy")
+                                    <i class="bi bi-calendar-plus me-1"></i>@item.CreatedAt.ToString("dd.MM.yyyy")
                                 </small>
 
                                 @if (item.ExpirationDate.HasValue)
                                 {
                                     <small class="border rounded-pill px-2 py-1 @(isExpired ? "bg-soft-danger text-danger border-danger" : "bg-light text-muted")" style="font-size: 0.75rem;">
                                         <i class="bi bi-calendar-x me-1"></i>
-                                        @(isExpired ? "Ended: " : "Ends: ") @item.ExpirationDate.Value.ToString("dd.MM.yyyy")
+                                        @item.ExpirationDate.Value.ToString("dd.MM.yyyy")
                                     </small>
                                 }
                             </div>
 
                             <div class="mb-4">
-                                <p class="text-muted small line-clamp-3">@Html.Raw(item.Description)</p>
+                                <div class="text-muted small line-clamp-3">@Html.Raw(item.Description)</div>
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center mt-auto pt-3 border-top">
                                 <div class="salary-box">
-                                    <span class="text-success fw-bold">@item.MinimumSalary PLN</span>
+                                    <span class="text-success fw-bold fs-5">
+                                        @if (item.SalaryType == "negotiable") { <span>Negotiable</span> }
+                                        else if (item.MinimumSalary.HasValue) { <span>€@item.MinimumSalary?.ToString("N0")</span> }
+                                        else { <span>Not specified</span> }
+                                    </span>
                                 </div>
-                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-primary rounded-pill px-4">Details</a>
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-primary rounded-pill px-4 hover-lift">Details</a>
                             </div>
 
                             @if (isStaff)
@@ -179,18 +212,18 @@
                                     <div class="d-flex gap-2">
                                         @if (item.IsVisible)
                                         {
-                                            <button onclick="openVisibilityModal('@item.Id', 'hide', '@item.Title')" class="btn btn-sm btn-outline-warning flex-grow-1 rounded-pill">
-                                                <i class="bi bi-eye-slash"></i>
+                                            <button onclick="openVisibilityModal('@item.Id', 'hide', '@item.Title')" class="btn btn-sm btn-outline-warning flex-grow-1 rounded-pill shadow-sm">
+                                                <i class="bi bi-eye-slash"></i> Hide
                                             </button>
                                         }
                                         else
                                         {
-                                            <button onclick="openVisibilityModal('@item.Id', 'show', '@item.Title')" class="btn btn-sm btn-success text-white flex-grow-1 rounded-pill">
-                                                <i class="bi bi-eye"></i>
+                                            <button onclick="openVisibilityModal('@item.Id', 'show', '@item.Title')" class="btn btn-sm btn-success text-white flex-grow-1 rounded-pill shadow-sm">
+                                                <i class="bi bi-eye"></i> Show
                                             </button>
                                         }
-                                        <button onclick="openFlagModal('@item.Id', '@item.Title')" class="btn btn-sm btn-outline-danger flex-grow-1 rounded-pill">
-                                            <i class="bi bi-flag"></i>
+                                        <button onclick="openFlagModal('@item.Id', '@item.Title')" class="btn btn-sm btn-outline-danger flex-grow-1 rounded-pill shadow-sm">
+                                            <i class="bi bi-flag"></i> Report
                                         </button>
                                     </div>
                                 </div>
@@ -204,71 +237,123 @@
 </div>
 
 <div class="modal fade" id="visibilityModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form id="visibilityForm" method="post">
-                @Html.AntiForgeryToken()
-                <div class="modal-header">
-                    <h5 class="modal-title">Change Visibility</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4 text-center">
+                <div id="visibilityIcon" class="icon-shape rounded-circle mb-3 mx-auto" style="width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; font-size: 2.2rem;">
                 </div>
-                <div class="modal-body">
-                    <p id="visibilityModalText"></p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn" id="visibilityConfirmBtn">Confirm</button>
-                </div>
-            </form>
+                <h4 class="fw-bold" id="visibilityModalTitle">Change Visibility</h4>
+                <p class="text-muted mb-4">Are you sure you want to <span id="visibilityActionText" class="fw-bold"></span> the offer: <strong id="visibilityOfferName" class="text-dark"></strong>?</p>
+                
+                <form id="visibilityForm" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="d-grid gap-2">
+                        <button type="submit" id="visibilityConfirmBtn" class="btn btn-lg rounded-pill fw-bold shadow-sm">Confirm Change</button>
+                        <button type="button" class="btn btn-light btn-lg rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
 
 <div class="modal fade" id="flagModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form id="flagForm" method="post" asp-action="ReportUser" asp-controller="Offer">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="id" id="flagOfferId" />
-                <div class="modal-header text-danger">
-                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill"></i> Report Offer</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4 text-center">
+                <div class="icon-shape bg-soft-danger text-danger rounded-circle mb-3 mx-auto" style="width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; font-size: 2.2rem;">
+                    <i class="bi bi-flag-fill"></i>
                 </div>
-                <div class="modal-body">
-                    <p>Report offer: <strong id="flagOfferTitle"></strong>?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger">Report & Hide</button>
-                </div>
-            </form>
+                <h4 class="fw-bold">Flag Offer & Author?</h4>
+                <p class="text-muted mb-4">This will hide the offer "<strong id="flagOfferName"></strong>" and notify Administrators for serious rule violations.</p>
+                
+                <form id="flagForm" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-danger btn-lg rounded-pill fw-bold shadow-sm">Confirm Flag</button>
+                        <button type="button" class="btn btn-light btn-lg rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
 
-<script>
-    function openVisibilityModal(id, action, title) {
-        const modal = new bootstrap.Modal(document.getElementById('visibilityModal'));
-        const form = document.getElementById('visibilityForm');
-        const text = document.getElementById('visibilityModalText');
-        const btn = document.getElementById('visibilityConfirmBtn');
+@section Scripts {
+    <script>
+        function openVisibilityModal(id, action, title) {
+            const form = document.getElementById('visibilityForm');
+            const titleElem = document.getElementById('visibilityModalTitle');
+            const actionText = document.getElementById('visibilityActionText');
+            const offerName = document.getElementById('visibilityOfferName');
+            const confirmBtn = document.getElementById('visibilityConfirmBtn');
+            const iconContainer = document.getElementById('visibilityIcon');
 
-        if (action === 'hide') {
-            text.innerHTML = `Are you sure you want to <strong>HIDE</strong>: <strong>${title}</strong>?`;
-            form.action = `/Offer/HideOffer/${id}`;
-            btn.className = 'btn btn-warning';
-        } else {
-            text.innerHTML = `Are you sure you want to <strong>SHOW</strong>: <strong>${title}</strong>?`;
-            form.action = `/Offer/ShowOffer/${id}`;
-            btn.className = 'btn btn-success';
+            offerName.innerText = title;
+            
+            if (action === 'hide') {
+                form.action = '/Offer/HideOffer/' + id;
+                titleElem.innerText = 'Hide Offer?';
+                actionText.innerText = 'HIDE';
+                confirmBtn.className = 'btn btn-warning btn-lg rounded-pill fw-bold shadow-sm';
+                iconContainer.className = 'icon-shape bg-soft-warning text-warning rounded-circle mb-3 mx-auto';
+                iconContainer.innerHTML = '<i class="bi bi-eye-slash-fill"></i>';
+            } else {
+                form.action = '/Offer/ShowOffer/' + id;
+                titleElem.innerText = 'Show Offer?';
+                actionText.innerText = 'SHOW';
+                confirmBtn.className = 'btn btn-success btn-lg rounded-pill fw-bold shadow-sm';
+                iconContainer.className = 'icon-shape bg-soft-success text-success rounded-circle mb-3 mx-auto';
+                iconContainer.innerHTML = '<i class="bi bi-eye-fill"></i>';
+            }
+
+            new bootstrap.Modal(document.getElementById('visibilityModal')).show();
         }
-        modal.show();
+
+        function openFlagModal(id, title) {
+            document.getElementById('flagOfferName').innerText = title;
+            document.getElementById('flagForm').action = '/Offer/ReportUser/' + id;
+            new bootstrap.Modal(document.getElementById('flagModal')).show();
+        }
+    </script>
+}
+
+<style>
+    .job-card {
+        transition: all 0.3s cubic-bezier(.25,.8,.25,1);
+        border: 1px solid #f0f0f0 !important;
     }
 
-    function openFlagModal(id, title) {
-        const modal = new bootstrap.Modal(document.getElementById('flagModal'));
-        document.getElementById('flagOfferId').value = id;
-        document.getElementById('flagOfferTitle').innerText = title;
-        modal.show();
+        .job-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 1rem 3rem rgba(67, 97, 238, 0.12) !important;
+            border-color: #4361ee !important;
+        }
+
+    .border-dashed {
+        border-style: dashed !important;
+        border-width: 2px !important;
     }
-</script>
+
+    .bg-soft-danger {
+        background-color: rgba(220, 53, 69, 0.05);
+    }
+
+    .bg-soft-primary {
+        background-color: rgba(67, 97, 238, 0.1);
+    }
+
+    .btn-white {
+        background: white;
+    }
+
+    .line-clamp-3 {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .bg-soft-warning { background-color: rgba(255, 193, 7, 0.1); }
+    .bg-soft-success { background-color: rgba(25, 135, 84, 0.1); }
+    .icon-shape { display: flex; align-items: center; justify-content: center; }
+</style>

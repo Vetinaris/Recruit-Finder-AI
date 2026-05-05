@@ -24,16 +24,17 @@ namespace Recruit_Finder_AI.Areas.Identity.Pages.Account.Manage
 
 
         public ChangePasswordModel(
-            UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager,
-            ILogger<ChangePasswordModel> logger,
-            Recruit_Finder_AIContext context,
-            SettingsService settingsService)
+     UserManager<ApplicationUser> userManager,
+     SignInManager<ApplicationUser> signInManager,
+     ILogger<ChangePasswordModel> logger,
+     Recruit_Finder_AIContext context,
+     SettingsService settingsService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _context = context;
+            _settingsService = settingsService;
         }
 
         [BindProperty]

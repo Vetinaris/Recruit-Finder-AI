@@ -56,80 +56,90 @@ namespace Recruit_Finder_AI.Areas.Identity.Pages.Account
             public string Code { get; set; }
         }
 
-        public IActionResult OnGet(string code = null)
+        public IActionResult OnGet(string code = null, string email = null)
         {
-            if (code == null)
+            if (code == null || email == null)
             {
-                return BadRequest("A code must be supplied for password reset.");
+                return RedirectToPage("./ForgotPassword");
             }
-            else
+
+            Input = new InputModel
             {
-                Input = new InputModel
-                {
-                    Code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code))
-                };
-                return Page();
-            }
+                Code = code,
+                Email = email
+            };
+            return Page();
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            if (!ModelState.IsValid)
-            {
-                return Page();
-            }
+            if (!ModelState.IsValid) return Page();
 
-            var settings = await _settingsService.GetAdminSettingsAsync();
+            var user = await _context.Users
+                .Include(u => u.PasswordHistories)
+                .FirstOrDefaultAsync(u => u.Email == Input.Email);
 
-            var user = await _userManager.FindByEmailAsync(Input.Email);
             if (user == null)
             {
                 return RedirectToPage("./ResetPasswordConfirmation");
             }
 
-            if (Input.Password.Length < settings.MinPasswordLength)
+            var savedCode = await _userManager.GetAuthenticationTokenAsync(user, "ManualReset", "ResetCode");
+            if (savedCode == null || savedCode != Input.Code.Trim())
             {
-                ModelState.AddModelError(string.Empty, $"Password must be at least {settings.MinPasswordLength} characters long.");
+                ModelState.AddModelError(string.Empty, "Invalid code. Please try again.");
                 return Page();
             }
 
-            var passwordHistory = await _context.PasswordHistories
-                .Where(ph => ph.ApplicationUserId == user.Id)
-                .OrderByDescending(ph => ph.CreatedAt)
-                .Take(settings.PasswordHistoryDepth)
-                .ToListAsync();
+            var settings = await _settingsService.GetAdminSettingsAsync();
+            var passwordHasher = new PasswordHasher<ApplicationUser>();
 
-            foreach (var entry in passwordHistory)
+            foreach (var history in user.PasswordHistories)
             {
-                var verificationResult = _userManager.PasswordHasher.VerifyHashedPassword(user, entry.PasswordHash, Input.Password);
-                if (verificationResult != PasswordVerificationResult.Failed)
+                var verificationResult = passwordHasher.VerifyHashedPassword(user, history.PasswordHash, Input.Password);
+                if (verificationResult == PasswordVerificationResult.Success)
                 {
-                    ModelState.AddModelError(string.Empty, $"You cannot use any of your last {settings.PasswordHistoryDepth} passwords.");
+                    ModelState.AddModelError(string.Empty, $"You cannot reuse any of your last {settings.PasswordHistoryDepth} passwords.");
                     return Page();
                 }
             }
 
-            var result = await _userManager.ResetPasswordAsync(user, Input.Code, Input.Password);
+            var internalToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, internalToken, Input.Password);
+
             if (result.Succeeded)
             {
-                user.PasswordExpiration = DateTime.UtcNow.AddDays(settings.PasswordExpirationDays);
-                user.ResetPasswordAttemptCount = 0;
-                user.LastResetAttempt = DateTime.UtcNow;
-
-                _context.PasswordHistories.Add(new PasswordHistory
+                user.PasswordHistories.Add(new PasswordHistory
                 {
-                    ApplicationUserId = user.Id,
                     PasswordHash = user.PasswordHash,
                     CreatedAt = DateTime.UtcNow
                 });
 
-                await _userManager.UpdateAsync(user);
+                var historyToKeep = settings.PasswordHistoryDepth;
+                var redundantHistory = user.PasswordHistories
+                    .OrderByDescending(h => h.CreatedAt)
+                    .Skip(historyToKeep)
+                    .ToList();
+
+                if (redundantHistory.Any())
+                {
+                    _context.PasswordHistories.RemoveRange(redundantHistory);
+                }
+
+                int expiryDays = settings?.PasswordExpirationDays ?? 90;
+                user.PasswordExpiration = DateTime.UtcNow.AddDays(expiryDays);
+
+                await _userManager.RemoveAuthenticationTokenAsync(user, "ManualReset", "ResetCode");
+
                 await _context.SaveChangesAsync();
 
                 return RedirectToPage("./ResetPasswordConfirmation");
             }
 
-            foreach (var error in result.Errors) ModelState.AddModelError(string.Empty, error.Description);
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
             return Page();
         }
     }

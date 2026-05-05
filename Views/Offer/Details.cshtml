@@ -5,6 +5,8 @@
     ViewData["Title"] = Model.Title + " | Recruit Finder AI";
     var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
     var isActualOwner = User.Identity.IsAuthenticated && Model.RecruiterId == userId;
+    var userApplication = ViewBag.UserApplication as Recruit_Finder_AI.Models.JobApplication;
+    bool isOfferExpired = Model.ExpirationDate.HasValue && Model.ExpirationDate < DateTime.Now;
 }
 
 <div class="container py-5">
@@ -48,7 +50,17 @@
 
                         <div class="col-lg-8 p-4 p-md-5 border-end bg-white">
                             <div class="mb-5">
-                                <span class="badge bg-soft-primary text-primary rounded-pill px-3 py-2 mb-3">@Model.Category</span>
+                                <div class="d-flex flex-wrap gap-2 mb-3">
+                                    <span class="badge bg-soft-primary text-primary rounded-pill px-3 py-2">@Model.Category</span>
+
+                                    @if (!string.IsNullOrEmpty(Model.Subcategory))
+                                    {
+                                        <span class="badge bg-light text-secondary border rounded-pill px-3 py-2">
+                                            <i class="bi bi-tag-fill me-1 small"></i>@Model.Subcategory
+                                        </span>
+                                    }
+                                </div>
+
                                 <h1 class="fw-bold text-dark display-5 mb-3">@Model.Title</h1>
 
                                 <div class="row g-3">
@@ -91,7 +103,7 @@
                                                 </div>
                                                 <div>
                                                     <small class="d-block text-uppercase text-danger" style="font-size: 0.65rem; letter-spacing: 0.5px;">Expires</small>
-                                                    <span class="@(Model.ExpirationDate < DateTime.Now ? "text-danger fw-bold" : "")">
+                                                    <span class="@(isOfferExpired ? "text-danger fw-bold" : "")">
                                                         @Model.ExpirationDate.Value.ToString("dd MMM yyyy")
                                                     </span>
                                                 </div>
@@ -116,11 +128,11 @@
                                     <span class="text-success fw-bold fs-4">
                                         @if (Model.SalaryType == "fixed")
                                         {
-                                            @:PLN @Model.MinimumSalary?.ToString("N0")
+                                            @:EUR @Model.MinimumSalary?.ToString("N0")
                                         }
                                         else if (Model.SalaryType == "range")
                                         {
-                                            @:PLN @Model.MinimumSalary?.ToString("N0") - @Model.MaximumSalary?.ToString("N0")
+                                            @:EUR @Model.MinimumSalary?.ToString("N0") - @Model.MaximumSalary?.ToString("N0")
                                         }
                                         else
                                         {
@@ -146,24 +158,94 @@
                                             <span class="fw-bold text-dark">AI-Matched Candidate Pool</span>
                                         </div>
                                     </div>
+
+                                    @if (!string.IsNullOrEmpty(Model.RequiredLanguages))
+                                    {
+                                        <div class="d-flex mb-3">
+                                            <i class="bi bi-translate text-primary me-3 fs-5"></i>
+                                            <div>
+                                                <small class="text-muted d-block">Languages</small>
+                                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                                    @foreach (var lang in Model.RequiredLanguages.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                                                    {
+                                                        <span class="badge border text-dark fw-medium" style="background-color: #f0f2f5;">@lang.Trim()</span>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
                                 </div>
 
                                 <hr class="my-4 opacity-50">
 
-                                @if (User.Identity.IsAuthenticated && !User.IsInRole("ADMIN") && !User.IsInRole("MODERATOR"))
-                                {
-                                    <a href="mailto:careers@@recruitfinder.ai?subject=Application: @Model.Title" class="btn btn-primary btn-lg w-100 rounded-pill shadow mb-3 py-3 fw-bold">
-                                        Apply Now <i class="bi bi-send-fill ms-2"></i>
-                                    </a>
-                                }
-                                else if (!User.Identity.IsAuthenticated)
-                                {
-                                    <a asp-area="Identity" asp-page="/Account/Login" class="btn btn-primary btn-lg w-100 rounded-pill shadow mb-3 py-3 fw-bold">
-                                        Login to Apply
-                                    </a>
-                                }
+                                <div class="d-grid gap-2">
+                                    @if (User.Identity.IsAuthenticated)
+                                    {
+                                        @if (isActualOwner)
+                                        {
+                                            <div class="alert alert-info rounded-4 mb-0 py-2 small border-0 shadow-sm text-center">
+                                                <i class="bi bi-person-badge me-2"></i>You are the recruiter.
+                                            </div>
+                                        }
+                                        else if (userApplication != null)
+                                        {
+                                            <div class="bg-white p-4 rounded-4 border shadow-sm text-center">
+                                                <div class="text-success fw-bold mb-2">
+                                                    <i class="bi bi-check-circle-fill me-2"></i>Application Sent
+                                                </div>
+                                                <div class="small text-muted mb-3">
+                                                    Status: <span class="badge bg-light text-dark border fw-medium">@userApplication.Status</span>
+                                                </div>
 
-                                <div class="text-center">
+                                                @if (!isOfferExpired && userApplication.Status == "Pending")
+                                                {
+                                                    <div class="border-top pt-3">
+                                                        <p class="x-small text-muted mb-3">Sent the wrong CV? You can withdraw your application and apply again.</p>
+
+                                                        <form asp-action="WithdrawApplication" asp-controller="Offer" method="post">
+                                                            @Html.AntiForgeryToken()
+                                                            <input type="hidden" name="jobId" value="@Model.Id" />
+                                                            <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-4 w-100 py-2 transition-all"
+                                                                    onclick="return confirm('Are you sure you want to withdraw your CV? You will be able to apply again with a different one.')">
+                                                                <i class="bi bi-arrow-counterclockwise me-1"></i> Withdraw & Change CV
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                }
+                                                else if (isOfferExpired)
+                                                {
+                                                    <div class="alert bg-light border-0 small text-muted mb-0 rounded-3">
+                                                        <i class="bi bi-lock-fill me-1"></i> Offer expired - changes locked
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                        else if (isOfferExpired)
+                                        {
+                                            <button class="btn btn-secondary btn-lg rounded-pill fw-bold py-3 opacity-75" disabled>
+                                                Offer Expired
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <a asp-controller="Offer"
+                                               asp-action="SelectForApplication"
+                                               asp-route-jobId="@Model.Id"
+                                               class="btn btn-primary btn-lg rounded-pill shadow py-3 fw-bold">
+                                                Apply Now
+                                            </a>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <a asp-area="Identity" asp-page="/Account/Login"
+                                           class="btn btn-primary btn-lg rounded-pill shadow py-3 fw-bold">
+                                            Login to Apply
+                                        </a>
+                                    }
+                                </div>
+
+                                <div class="text-center mt-3">
                                     <p class="small text-muted mb-0">Direct application via <span class="fw-bold">Recruit Finder AI</span></p>
                                 </div>
                             </div>

@@ -1,51 +1,48 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-#nullable disable
-
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI.Services;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.WebUtilities;
 using System.ComponentModel.DataAnnotations;
-using System.Text;
-using System.Text.Encodings.Web;
 using Recruit_Finder_AI.Models;
-
+using Recruit_Finder_AI.Services;
+using Microsoft.Extensions.Configuration;
 
 namespace Recruit_Finder_AI.Areas.Identity.Pages.Account
 {
     public class ForgotPasswordModel : PageModel
     {
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly IEmailSender _emailSender;
+        private readonly EmailService _emailService;
+        private readonly IConfiguration _configuration;
+        private readonly AuditService _auditService;
 
-        public ForgotPasswordModel(UserManager<ApplicationUser> userManager, IEmailSender emailSender)
+        public ForgotPasswordModel(
+            UserManager<ApplicationUser> userManager,
+            EmailService emailService,
+            IConfiguration configuration,
+            AuditService auditService)
         {
             _userManager = userManager;
-            _emailSender = emailSender;
+            _emailService = emailService;
+            _configuration = configuration;
+            _auditService = auditService;
         }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         [BindProperty]
         public InputModel Input { get; set; }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         public class InputModel
         {
-            /// <summary>
-            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-            ///     directly from your code. This API may change or be removed in future releases.
-            /// </summary>
             [Required]
             [EmailAddress]
             public string Email { get; set; }
+        }
+
+        public void OnGet(string email = null)
+        {
+            if (!string.IsNullOrEmpty(email))
+            {
+                Input = new InputModel { Email = email };
+            }
         }
 
         public async Task<IActionResult> OnPostAsync()
@@ -53,26 +50,22 @@ namespace Recruit_Finder_AI.Areas.Identity.Pages.Account
             if (ModelState.IsValid)
             {
                 var user = await _userManager.FindByEmailAsync(Input.Email);
-                if (user == null || !(await _userManager.IsEmailConfirmedAsync(user)))
+                if (user != null)
                 {
+                    var random = new Random();
+                    string shortCode = random.Next(100000, 999999).ToString();
 
-                    return RedirectToPage("./ForgotPasswordConfirmation");
+                    await _userManager.SetAuthenticationTokenAsync(user, "ManualReset", "ResetCode", shortCode);
+                    bool success = await _emailService.SendPasswordResetCodeAsync(Input.Email, shortCode);
+
+                    if (success)
+                    {
+                        await _auditService.LogAsync(user.UserName, "FORGOT_PASSWORD_PAGE", "Code sent", true, user.Id);
+                        TempData["StatusMessage"] = "A new code has been sent.";
+                    }
                 }
 
-                var code = await _userManager.GeneratePasswordResetTokenAsync(user);
-                code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-                var callbackUrl = Url.Page(
-                    "/Account/ResetPassword",
-                    pageHandler: null,
-                    values: new { area = "Identity", code },
-                    protocol: Request.Scheme);
-
-                await _emailSender.SendEmailAsync(
-                    Input.Email,
-                    "Reset Password",
-                    $"Please reset your password by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
-
-                return RedirectToPage("./ForgotPasswordConfirmation");
+                return RedirectToPage("./ForgotPasswordConfirmation", new { email = Input.Email });
             }
 
             return Page();

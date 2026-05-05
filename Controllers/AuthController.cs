@@ -17,6 +17,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace DM_AI.Controllers
 {
@@ -30,18 +31,25 @@ namespace DM_AI.Controllers
         private readonly IConfiguration _configuration;
         private readonly AuditService _auditService;
         private readonly Recruit_Finder_AIContext _context;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly EmailService _emailService;
 
         public AuthController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             IConfiguration configuration,
-            AuditService auditService)
+            AuditService auditService,
+            IHttpClientFactory httpClientFactory,
+            Recruit_Finder_AIContext context,
+            EmailService emailService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
-
+            _context = context;
             _auditService = auditService;
+            _httpClientFactory = httpClientFactory;
+            _emailService = emailService;
         }
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] ApiRegisterDto model)
@@ -52,7 +60,8 @@ namespace DM_AI.Controllers
             {
                 UserName = model.Input.Username,
                 Email = model.Input.Email,
-                PasswordExpiration = DateTime.UtcNow.AddDays(30)
+                PasswordExpiration = DateTime.UtcNow.AddDays(30),
+                EmailConfirmed = false
             };
 
             var result = await _userManager.CreateAsync(user, model.Input.Password);
@@ -67,10 +76,43 @@ namespace DM_AI.Controllers
                 });
                 await _context.SaveChangesAsync();
 
-                await _auditService.LogAsync(user.UserName, "REGISTER", "User registered via API", true, user.Id);
-                return Ok(new { token = GenerateJwtToken(user), redirectUrl = "/" });
+                await _auditService.LogActionAsync(user.UserName, "REGISTER", "User registered via API, awaiting confirmation", true, user.Id);
+
+                var random = new Random();
+                string confirmationCode = random.Next(100000, 999999).ToString();
+
+                await _userManager.SetAuthenticationTokenAsync(user, "ManualConfirm", "EmailCode", confirmationCode);
+                await _emailService.SendEmailConfirmationCodeAsync(user.Email, confirmationCode);
+
+                return Ok(new
+                {
+                    Message = "Registration successful. Check email.",
+                    RequiresConfirmation = true
+                });
             }
             return BadRequest(result.Errors);
+        }
+
+        [HttpPost("confirm-email")]
+        public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailDto model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null) return BadRequest("Invalid request.");
+
+            var savedCode = await _userManager.GetAuthenticationTokenAsync(user, "ManualConfirm", "EmailCode");
+
+            if (savedCode != null && savedCode == model.Code)
+            {
+                await _userManager.RemoveAuthenticationTokenAsync(user, "ManualConfirm", "EmailCode");
+
+                user.EmailConfirmed = true;
+                await _userManager.UpdateAsync(user);
+
+                await _auditService.LogActionAsync(user.UserName, "CONFIRM_EMAIL", "Email confirmed", true, user.Id);
+                return Ok(new { Message = "Email confirmed successfully." });
+            }
+
+            return BadRequest(new { Message = "Invalid or expired code." });
         }
 
         [HttpPost("login")]
@@ -119,6 +161,58 @@ namespace DM_AI.Controllers
             await _signInManager.SignInAsync(user, isPersistent: model.RememberMe);
 
             return Ok(new { Token = token, RedirectUrl = "/" });
+        }
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto model)
+        {
+            if (string.IsNullOrEmpty(model.Email)) return BadRequest("Email is required.");
+
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user != null)
+            {
+                var random = new Random();
+                string simpleCode = random.Next(100000, 999999).ToString();
+
+                await _userManager.SetAuthenticationTokenAsync(user, "ManualReset", "ResetCode", simpleCode);
+
+                Console.WriteLine($"[DEBUG] Wysyłam do Pythona kod: {simpleCode}");
+
+                bool success = await _emailService.SendPasswordResetCodeAsync(user.Email, simpleCode);
+
+                if (success)
+                {
+                    await _auditService.LogAsync(user.UserName, "ForgotPassword", "Reset code sent", true, user.Id);
+                }
+            }
+
+            return Ok(new { Message = "If your email is in our system, you will receive a reset code." });
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null) return BadRequest("Invalid request.");
+
+            var savedCode = await _userManager.GetAuthenticationTokenAsync(user, "ManualReset", "ResetCode");
+
+            if (savedCode != null && savedCode == model.Code)
+            {
+                await _userManager.RemoveAuthenticationTokenAsync(user, "ManualReset", "ResetCode");
+
+                var internalToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var result = await _userManager.ResetPasswordAsync(user, internalToken, model.NewPassword);
+
+                if (result.Succeeded)
+                {
+                    user.PasswordExpiration = DateTime.UtcNow.AddDays(30);
+                    await _userManager.UpdateAsync(user);
+                    return Ok(new { Message = "Password has been reset successfully." });
+                }
+                return BadRequest(result.Errors);
+            }
+
+            return BadRequest(new { Message = "Invalid or expired code." });
         }
         private string GenerateJwtToken(ApplicationUser user)
         {

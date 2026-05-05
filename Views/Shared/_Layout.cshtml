@@ -124,16 +124,16 @@
                         @if (User.Identity.IsAuthenticated && !User.IsInRole("ADMIN") && !User.IsInRole("MODERATOR"))
                         {
                             <li class="nav-item">
+                                <a class="nav-link px-3" asp-area="" asp-controller="Cv" asp-action="Index">
+                                    <i class="bi bi-file-earmark-person me-1"></i> My CV
+                                </a>
+                            </li>
+                            <li class="nav-item">
                                 <a class="nav-link px-3" asp-area="" asp-controller="Offer" asp-action="MyListings">
                                     <i class="bi bi-briefcase me-1"></i> Dashboard
                                 </a>
                             </li>
                         }
-                        <li class="nav-item">
-                            <a class="nav-link px-3" asp-area="" asp-controller="Cv" asp-action="Index">
-                                <i class="bi bi-file-earmark-person me-1"></i> My CV
-                            </a>
-                        </li>
                         <li class="nav-item">
                             <a class="nav-link px-3" asp-area="" asp-controller="Home" asp-action="About">
                                 <i class="bi bi-info-circle me-1"></i> How it works

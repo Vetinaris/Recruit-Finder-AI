@@ -3,182 +3,337 @@
 @{
     ViewData["Title"] = "CV Details";
     var displayTitle = $"{Model.Name} {Model.Surname}";
+
+    List<(string Dates, string Title, string Desc)> ParseSection(string input)
+    {
+        var result = new List<(string Dates, string Title, string Desc)>();
+        if (string.IsNullOrEmpty(input)) return result;
+
+        var entries = input.Split(';', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var entry in entries)
+        {
+            try
+            {
+                var trimEntry = entry.Trim();
+                var dateStart = trimEntry.IndexOf('[');
+                var dateEnd = trimEntry.IndexOf(']');
+                
+                if (dateStart != -1 && dateEnd != -1)
+                {
+                    var dates = trimEntry.Substring(dateStart + 1, dateEnd - dateStart - 1);
+                    var rest = trimEntry.Substring(dateEnd + 1).Trim();
+                    var colonIndex = rest.IndexOf(':');
+                    var title = colonIndex != -1 ? rest.Substring(0, colonIndex).Trim() : rest;
+                    var desc = colonIndex != -1 ? rest.Substring(colonIndex + 1).Trim() : "";
+                    
+                    result.Add((dates, title, desc));
+                }
+                else
+                {
+                    result.Add(("", "Detail", trimEntry));
+                }
+            }
+            catch { continue; }
+        }
+
+        return result.OrderByDescending(x => {
+            var match = System.Text.RegularExpressions.Regex.Match(x.Dates, @"\d{4}");
+            return match.Success ? int.Parse(match.Value) : 0;
+        }).ToList();
+    }
 }
 
 <div class="container py-5">
     <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a asp-action="Index" class="text-decoration-none">My Resumes</a></li>
-            <li class="breadcrumb-item active">@displayTitle</li>
+        <ol class="breadcrumb bg-transparent p-0">
+            <li class="breadcrumb-item"><a asp-action="Index" class="text-decoration-none text-primary fw-medium">My Resumes</a></li>
+            <li class="breadcrumb-item active fw-bold text-dark">@displayTitle</li>
         </ol>
     </nav>
 
     <div class="row g-4">
         <div class="col-lg-8">
-            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
                 <div class="card-header bg-white border-bottom-0 pt-4 px-4 d-flex justify-content-between align-items-center">
                     <h2 class="fw-bold mb-0 text-dark">@displayTitle</h2>
-                    @if (Model.IsVerified)
-                    {
-                        <span class="badge rounded-pill bg-success-soft text-success border border-success border-opacity-25 px-3 py-2">
-                            <i class="bi bi-patch-check-fill me-1"></i> AI Verified
-                        </span>
-                    }
-                    else
-                    {
-                        <span class="badge rounded-pill bg-warning-soft text-warning border border-warning border-opacity-25 px-3 py-2 animate-pulse">
-                            <i class="bi bi-cpu-fill me-1"></i> AI Processing
-                        </span>
-                    }
+                    <div id="status-badge-container">
+                        @if (Model.IsVerified)
+                        {
+                            <span class="badge rounded-pill bg-success-soft text-success border border-success border-opacity-25 px-3 py-2">
+                                <i class="bi bi-patch-check-fill me-1"></i> AI Verified
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge rounded-pill bg-warning-soft text-warning border border-warning border-opacity-25 px-3 py-2 animate-pulse">
+                                <i class="bi bi-cpu-fill me-1"></i> AI Processing
+                            </span>
+                        }
+                    </div>
                 </div>
 
                 <div class="card-body p-4">
                     <div class="mb-4 text-muted small">
                         <i class="bi bi-calendar3 me-2"></i>Last updated: @Model.CreatedAt.ToString("f")
                     </div>
-                    <div class="row g-3 mb-5">
-                        <div class="col-12">
-                            <h5 class="text-primary fw-bold mb-3 border-bottom pb-2">Personal Information</h5>
+
+                    <div class="row g-3 mb-5 p-3 rounded-4 bg-light border-start border-primary border-4">
+                        <div class="col-md-6">
+                            <label class="text-muted small text-uppercase fw-bold mb-1 d-block">Email Address</label>
+                            <p class="fw-medium mb-3">@Model.Email</p>
+
+                            <label class="text-muted small text-uppercase fw-bold mb-1 d-block">Phone Number</label>
+                            <p class="fw-medium mb-0">@Model.PhoneNumber</p>
                         </div>
                         <div class="col-md-6">
-                            <p class="mb-1 text-muted small uppercase fw-bold">Email Address</p>
-                            <p class="fw-medium">@Model.Email</p>
+                            <label class="text-muted small text-uppercase fw-bold mb-1 d-block">Location</label>
+                            <p class="fw-medium mb-3">@Model.Address</p>
 
-                            <p class="mb-1 text-muted small uppercase fw-bold">Phone Number</p>
-                            <p class="fw-medium">@Model.PhoneNumber</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p class="mb-1 text-muted small uppercase fw-bold">Location</p>
-                            <p class="fw-medium">@Model.Address</p>
-
-                            <p class="mb-1 text-muted small uppercase fw-bold">Date of Birth</p>
-                            <p class="fw-medium">@Model.DateOfBirth</p>
+                            <label class="text-muted small text-uppercase fw-bold mb-1 d-block">Date of Birth</label>
+                            <p class="fw-medium mb-0">@(!string.IsNullOrEmpty(Model.DateOfBirth) ? Model.DateOfBirth : "Not provided")</p>
                         </div>
                     </div>
 
                     <div class="mb-5">
-                        <h5 class="text-primary fw-bold mb-3 border-bottom pb-2">Professional Experience</h5>
-                        <div class="bg-light p-4 rounded-4" style="white-space: pre-wrap;">@Model.ProfessionalExperience</div>
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="icon-shape bg-soft-primary text-primary rounded-3 me-2" style="width: 35px; height: 35px;">
+                                <i class="bi bi-briefcase-fill"></i>
+                            </div>
+                            <h5 class="fw-bold mb-0">Professional Experience</h5>
+                        </div>
+                        
+                        <div class="timeline">
+                            @foreach (var exp in ParseSection(Model.ProfessionalExperience))
+                            {
+                                <div class="timeline-item pb-4 ps-4 border-start position-relative">
+                                    <div class="timeline-dot bg-primary"></div>
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <h6 class="fw-bold text-dark mb-0">@exp.Title</h6>
+                                        <span class="badge bg-light text-primary border rounded-pill">@exp.Dates</span>
+                                    </div>
+                                    <p class="text-muted small mb-0" style="white-space: pre-wrap;">@exp.Desc</p>
+                                </div>
+                            }
+                        </div>
                     </div>
 
                     <div class="mb-5">
-                        <h5 class="text-primary fw-bold mb-3 border-bottom pb-2">Education</h5>
-                        <div class="bg-light p-4 rounded-4" style="white-space: pre-wrap;">@Model.Education</div>
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="icon-shape bg-soft-primary text-primary rounded-3 me-2" style="width: 35px; height: 35px;">
+                                <i class="bi bi-mortarboard-fill"></i>
+                            </div>
+                            <h5 class="fw-bold mb-0">Education</h5>
+                        </div>
+                        
+                        <div class="timeline">
+                            @foreach (var edu in ParseSection(Model.Education))
+                            {
+                                <div class="timeline-item pb-4 ps-4 border-start position-relative">
+                                    <div class="timeline-dot bg-primary"></div>
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <h6 class="fw-bold text-dark mb-0">@edu.Title</h6>
+                                        <span class="badge bg-light text-primary border rounded-pill">@edu.Dates</span>
+                                    </div>
+                                    <p class="text-muted small mb-0" style="white-space: pre-wrap;">@edu.Desc</p>
+                                </div>
+                            }
+                        </div>
                     </div>
 
                     <div class="row g-4 mb-5">
                         <div class="col-md-6">
-                            <h5 class="text-primary fw-bold mb-3 border-bottom pb-2">Skills</h5>
-                            <div class="bg-light p-3 rounded-4 h-100">@Model.Skills</div>
+                            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">Skills</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                @if (!string.IsNullOrEmpty(Model.Skills))
+                                {
+                                    @foreach (var skill in Model.Skills.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries))
+                                    {
+                                        <span class="badge bg-white border text-dark fw-bold rounded-pill px-3 py-2 shadow-xs">@skill.Trim()</span>
+                                    }
+                                }
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <h5 class="text-primary fw-bold mb-3 border-bottom pb-2">Languages</h5>
-                            <div class="bg-light p-3 rounded-4 h-100">@Model.Languages</div>
+                            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">Languages</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                @if (!string.IsNullOrEmpty(Model.Languages))
+                                {
+                                    @foreach (var lang in Model.Languages.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries))
+                                    {
+                                        <span class="badge bg-white border text-dark fw-bold rounded-pill px-3 py-2 shadow-xs">@lang.Trim()</span>
+                                    }
+                                }
+                            </div>
                         </div>
                     </div>
 
                     <div class="row g-4">
                         <div class="col-md-6">
-                            <h6 class="fw-bold text-dark">Portfolio / Links</h6>
-                            <p class="text-muted">
-                                @if (!string.IsNullOrEmpty(Model.Portfolio))
+                            <h6 class="fw-bold text-dark mb-2">Portfolio / Links</h6>
+                            @if (!string.IsNullOrEmpty(Model.Portfolio))
+                            {
+                                <div class="d-flex flex-wrap gap-2">
+                                    @foreach (var link in Model.Portfolio.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries))
+                                    {
+                                        var cleanLink = link.Trim();
+                                        var url = cleanLink.StartsWith("http") ? cleanLink : "https://" + cleanLink;
+                                        <a href="@url" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-xs">
+                                            <i class="bi bi-link-45deg me-1"></i>
+                                            @(cleanLink.Length > 25 ? cleanLink.Substring(0, 22) + "..." : cleanLink)
+                                        </a>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="text-muted small italic">No links provided</span>
+                            }
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-dark mb-2">Interests</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                @if (!string.IsNullOrEmpty(Model.Interests))
                                 {
-                                    <a href="@Model.Portfolio" target="_blank" class="text-decoration-none"><i class="bi bi-link-45deg"></i> @Model.Portfolio</a>
+                                    @foreach (var interest in Model.Interests.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries))
+                                    {
+                                        <span class="badge bg-white border text-dark fw-bold rounded-pill px-3 py-2 shadow-xs">
+                                            <i style="font-size: 0.75rem;"></i> @interest.Trim()
+                                        </span>
+                                    }
                                 }
                                 else
                                 {
-                                    <span>No portfolio provided</span>
+                                    <span class="text-muted small italic">No interests provided</span>
                                 }
-                            </p>
-                        </div>
-                        <div class="col-md-6">
-                            <h6 class="fw-bold text-dark">Interests</h6>
-                            <p class="text-muted">@Model.Interests</p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="card-footer bg-white border-top-0 p-4">
-                    <div class="d-flex gap-2">
-                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary rounded-pill px-4">
-                            <i class="bi bi-pencil me-2"></i>Edit Resume
+                <div class="card-footer bg-light border-top-0 p-4">
+                    <div class="d-flex flex-column flex-md-row gap-3 pt-4 border-top">
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-lg rounded-pill px-5 shadow hover-lift fw-bold">
+                            Edit
                         </a>
-                        <a asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4">Back to List</a>
+                        <a asp-action="Index" class="btn btn-light btn-lg rounded-pill px-4 border shadow-sm">Back to List</a>
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="col-lg-4">
-            <div class="card border-0 shadow-sm rounded-4 bg-soft-primary mb-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-soft-primary mb-4 overflow-hidden position-relative">
                 <div class="card-body p-4">
                     <div class="d-flex align-items-center mb-3">
-                        <i class="bi bi-robot fs-2 text-primary me-2"></i>
-                        <h5 class="fw-bold mb-0">AI Feedback</h5>
+                        <div class="icon-circle bg-white text-primary me-2">
+                            <i class="bi bi-robot fs-5"></i>
+                        </div>
+                        <h5 class="fw-bold mb-0">AI Assistant</h5>
                     </div>
 
                     @if (Model.IsVerified && !string.IsNullOrEmpty(Model.AiFeedback))
                     {
-                        <div class="p-3 bg-white rounded-3 shadow-sm border-start border-primary border-4">
-                            <p class="small text-dark mb-0" style="line-height: 1.5;">@Model.AiFeedback</p>
-                        </div>
-                    }
-                    else if (!Model.IsVerified)
-                    {
-                        <div class="text-center py-3">
-                            <div class="spinner-border text-primary spinner-border-sm mb-2" role="status"></div>
-                            <p class="small text-muted mb-0">AI is currently analyzing your resume. Check back in a few seconds.</p>
+                        <div class="p-3 bg-white rounded-4 shadow-sm border-start border-primary border-4 animate-in">
+                            <p class="small text-dark mb-0 fw-medium" style="line-height: 1.6;">@Model.AiFeedback</p>
                         </div>
                     }
                     else
                     {
-                        <p class="small text-muted mb-0">No specific feedback available at this time.</p>
+                        <div class="text-center py-4 bg-white rounded-4 opacity-75">
+                            <div class="spinner-border text-primary spinner-border-sm mb-2" role="status"></div>
+                            <p class="small text-muted mb-0">Analyzing resume content...</p>
+                        </div>
                     }
                 </div>
             </div>
 
-            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" onsubmit="return confirm('Are you sure you want to delete this CV?')">
-                <button type="submit" class="btn btn-outline-danger w-100 rounded-pill">
-                    <i class="bi bi-trash me-2"></i>Delete CV
-                </button>
-            </form>
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-3">
+                    <button type="button" class="btn btn-danger w-100 rounded-pill mb-4 shadow-sm hover-lift py-2 fw-bold" 
+                            onclick="confirmDelete('@Model.Id', '@displayTitle')">
+                        <i class="bi bi-trash me-2"></i>Delete Resume
+                    </button>
+
+                    <div class="p-3 bg-light rounded-4 border">
+                        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-file-pdf-fill text-danger me-2"></i>Export Options</h6>
+                        <a href="@Url.Action("PreviewPdf", new { id = Model.Id })" target="_blank" 
+                           class="btn btn-outline-dark w-100 rounded-pill mb-2 btn-sm py-2 hover-lift">
+                            <i class="bi bi-eye me-2"></i>Preview PDF
+                        </a>
+                        <a href="@Url.Action("DownloadPdf", new { id = Model.Id })" 
+                           class="btn btn-dark w-100 rounded-pill btn-sm py-2 hover-lift">
+                            <i class="bi bi-download me-2"></i>Download PDF
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4 overflow-hidden">
+            <div class="bg-danger py-2 w-100"></div>
+            <div class="modal-body p-4 text-center">
+                <div class="icon-shape bg-soft-danger text-danger rounded-circle mb-3 mx-auto" style="width: 60px; height: 60px;">
+                    <i class="bi bi-exclamation-triangle fs-2"></i>
+                </div>
+                <h4 class="fw-bold mb-2">Delete this CV?</h4>
+                <p class="text-muted mb-4">You are about to delete <strong id="deleteCvName"></strong>. This action cannot be reversed.</p>
+                
+                <form id="deleteForm" asp-action="Delete" method="post">
+                    <input type="hidden" name="id" id="deleteCvId" />
+                    @Html.AntiForgeryToken()
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-light rounded-pill flex-grow-1 py-2 fw-bold" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger rounded-pill flex-grow-1 py-2 fw-bold">Delete Forever</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function confirmDelete(id, name) {
+            document.getElementById('deleteCvId').value = id;
+            document.getElementById('deleteCvName').innerText = name;
+            new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        }
+
+        function checkStatus() {
+            if ("@Model.IsVerified" === "True") return;
+
+            fetch(`/Cv/GetStatus/@Model.Id`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.isVerified) {
+                        location.reload();
+                    }
+                });
+        }
+        setInterval(checkStatus, 3000);
+    </script>
+}
+
 <style>
-    .bg-success-soft {
-        background-color: rgba(25, 135, 84, 0.1);
-    }
-
-    .bg-warning-soft {
-        background-color: rgba(255, 193, 7, 0.1);
-    }
-
-    .bg-soft-primary {
-        background-color: rgba(67, 97, 238, 0.1);
-    }
-
-    .uppercase {
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .animate-pulse {
-        animation: pulse-animation 2s infinite;
-    }
-
-    @@keyframes pulse-animation {
-        0% {
-            opacity: 1;
-        }
-
-        50% {
-            opacity: 0.6;
-        }
-
-        100% {
-            opacity: 1;
-        }
-    }
+    .bg-soft-primary { background-color: rgba(67, 97, 238, 0.08); }
+    .bg-soft-danger { background-color: rgba(220, 53, 69, 0.1); }
+    .bg-success-soft { background-color: rgba(25, 135, 84, 0.1); }
+    .bg-warning-soft { background-color: rgba(255, 193, 7, 0.1); }
+    .shadow-xs { box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .icon-shape { display: flex; align-items: center; justify-content: center; }
+    .icon-circle { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .hover-lift { transition: transform 0.2s ease; }
+    .hover-lift:hover { transform: translateY(-3px); }
+    .timeline { border-left: 2px solid #e9ecef; margin-left: 10px; }
+    .timeline-item { position: relative; }
+    .timeline-dot { position: absolute; left: -6px; top: 5px; width: 11px; height: 11px; border-radius: 50%; z-index: 1; }
+    .timeline-item:last-child { border-left: 2px solid transparent !important; }
+    .animate-pulse { animation: pulse 2s infinite; }
+    @@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    .animate-in { animation: fadeIn 0.5s ease-out; }
+    @@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 </style>

@@ -67,6 +67,7 @@ public class LoginModel : PageModel
         if (ModelState.IsValid)
         {
             var user = await _userManager.FindByEmailAsync(Input.Email);
+
             if (user == null)
             {
                 await _auditService.LogAsync(Input.Email, "LOGIN", "Login failed: User not found", false, null);
@@ -77,12 +78,17 @@ public class LoginModel : PageModel
             if (user.IsPermanentBan)
             {
                 await _auditService.LogAsync(user.UserName, "LOGIN", "Login blocked: PERMANENT BAN", false, user.Id);
+                ModelState.AddModelError(string.Empty, "Your account has been permanently banned.");
+                return Page();
+            }
 
-                string reasonText = !string.IsNullOrEmpty(user.BanReason)
-                    ? $"Reason: {user.BanReason}"
-                    : "Violation of service terms.";
+            if (!await _userManager.IsEmailConfirmedAsync(user))
+            {
+                await _auditService.LogAsync(user.UserName, "LOGIN", "Account deleted due to lack of confirmation during login attempt", false, user.Id);
 
-                ModelState.AddModelError(string.Empty, $"Your account has been permanently banned. {reasonText}");
+                await _userManager.DeleteAsync(user);
+
+                ModelState.AddModelError(string.Empty, "This account was not confirmed and has been removed. Please register again.");
                 return Page();
             }
 

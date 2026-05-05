@@ -7,12 +7,13 @@ using Recruit_Finder_AI.Data;
 using Recruit_Finder_AI.Entities;
 using Recruit_Finder_AI.Models;
 using Recruit_Finder_AI.Services;
+using Recruit_Finder_AI.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Recruit_Finder_AI.ViewModels;
 
 namespace Recruit_Finder_AI.Controllers
 {
@@ -25,13 +26,19 @@ namespace Recruit_Finder_AI.Controllers
         private readonly AuditService _auditService;
         private readonly SettingsService _settingsService;
         private readonly NotificationService _notificationService;
+        private readonly IConfiguration _configuration;
+        private readonly EmailService _emailService;
+
+
+
 
         public AdminController(UserManager<ApplicationUser> userManager,
                                RoleManager<IdentityRole> roleManager,
                                Recruit_Finder_AIContext context,
                                AuditService auditService,
                                SettingsService settingsService,
-                               NotificationService notificationService)
+                               NotificationService notificationService,
+            IConfiguration configuration, EmailService emailService)
         {
             _userManager = userManager;
             _roleManager = roleManager;
@@ -39,6 +46,8 @@ namespace Recruit_Finder_AI.Controllers
             _auditService = auditService;
             _settingsService = settingsService;
             _notificationService = notificationService;
+            _configuration = configuration;
+            _emailService = emailService;
         }
 
         private async Task<AdminIndexViewModel> LoadIndexModel(AdminIndexViewModel model)
@@ -131,7 +140,6 @@ namespace Recruit_Finder_AI.Controllers
 
             return View(model);
         }
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditUser(EditUserViewModel model)
@@ -160,6 +168,7 @@ namespace Recruit_Finder_AI.Controllers
             user.NIP = model.NIP;
             user.CompanyAddress = model.CompanyAddress;
             user.IsEmployer = model.IsEmployer;
+
             bool isCurrentlyLocked = await _userManager.IsLockedOutAsync(user);
             if (model.IsLocked && !isCurrentlyLocked)
             {
@@ -171,9 +180,17 @@ namespace Recruit_Finder_AI.Controllers
                 await _userManager.ResetAccessFailedCountAsync(user);
             }
 
+            bool resetEmailSent = false;
             if (model.ForcePasswordReset)
             {
                 user.PasswordExpiration = DateTime.UtcNow.AddDays(-1);
+
+                var code = new Random().Next(100000, 999999).ToString();
+
+                await _userManager.RemoveAuthenticationTokenAsync(user, "ManualReset", "ResetCode");
+                await _userManager.SetAuthenticationTokenAsync(user, "ManualReset", "ResetCode", code);
+
+                resetEmailSent = await _emailService.SendPasswordResetCodeAsync(user.Email, code);
             }
             else
             {
@@ -198,15 +215,21 @@ namespace Recruit_Finder_AI.Controllers
             {
                 await _userManager.UpdateSecurityStampAsync(user);
 
+                string message = $"User {user.UserName} updated successfully.";
+                if (model.ForcePasswordReset)
+                {
+                    message += resetEmailSent ? " 6-digit reset code has been sent." : " Warning: Failed to send reset email.";
+                }
+
                 await _auditService.LogActionAsync(
                     User.Identity.Name,
                     "ADMIN_EDIT_USER",
-                    $"Edited user {user.UserName}. Roles: {string.Join(", ", selectedRoleNames)}",
+                    $"Edited user {user.UserName}. ForceReset: {model.ForcePasswordReset}",
                     true,
                     user.Id
                 );
 
-                TempData["SuccessMessage"] = $"User {user.UserName} updated successfully.";
+                TempData["SuccessMessage"] = message;
                 return RedirectToAction("Index");
             }
 
@@ -229,38 +252,42 @@ namespace Recruit_Finder_AI.Controllers
                 return RedirectToAction("Index");
             }
 
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+            var code = new Random().Next(100000, 999999).ToString();
+
+            await _userManager.RemoveAuthenticationTokenAsync(user, "ManualReset", "ResetCode");
+            var tokenResult = await _userManager.SetAuthenticationTokenAsync(user, "ManualReset", "ResetCode", code);
+
             user.PasswordExpiration = DateTime.UtcNow.AddDays(-1);
+
+            await _userManager.UpdateSecurityStampAsync(user);
+
             var result = await _userManager.UpdateAsync(user);
 
+            bool emailSent = false;
             if (result.Succeeded)
             {
-
-                try
-                {
-                    await _context.SaveChangesAsync();
-                }
-                catch (Exception)
-                {
-
-                }
+                emailSent = await _emailService.SendPasswordResetCodeAsync(user.Email, code);
             }
 
             await _auditService.LogActionAsync(
                 User.Identity.Name,
                 "ADMIN_FORCE_PASSWORD_RESET",
-                result.Succeeded
-                    ? $"Admin forced password reset for user {user.UserName}."
-                    : $"Failed to force password reset for user {user.UserName}.",
+                result.Succeeded ? $"Admin forced reset for {user.UserName}. Email sent: {emailSent}" : "Failed to force reset.",
                 result.Succeeded,
                 user.Id
             );
 
-            TempData[result.Succeeded ? "SuccessMessage" : "ErrorMessage"] =
-                result.Succeeded
-                    ? $"User {user.UserName} will be required to change password."
-                    : $"Error setting password reset for {user.UserName}.";
+            if (result.Succeeded)
+            {
+                TempData["SuccessMessage"] = emailSent
+                    ? $"User {user.UserName} is now required to change password. 6-digit code sent."
+                    : $"User {user.UserName} required to change password, but email delivery failed.";
+            }
+            else
+            {
+                var errorMsg = string.Join(" ", result.Errors.Select(e => e.Description));
+                TempData["ErrorMessage"] = "Error occurred: " + errorMsg;
+            }
 
             return RedirectToAction("Index");
         }

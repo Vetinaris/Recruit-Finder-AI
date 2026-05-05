@@ -5,11 +5,8 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Recruit_Finder_AI.Models;
 using Recruit_Finder_AI.Services;
 using Recruit_Finder_AI.Data;
-using System;
 using System.ComponentModel.DataAnnotations;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Security.Cryptography;
 
 public class RegisterModel : PageModel
 {
@@ -19,13 +16,16 @@ public class RegisterModel : PageModel
     private readonly AuditService _auditService;
     private readonly Recruit_Finder_AIContext _context;
     private readonly SettingsService _settingsService;
+    private readonly EmailService _emailService;
 
     public RegisterModel(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
         ILogger<RegisterModel> logger,
         AuditService auditService,
-        Recruit_Finder_AIContext context, SettingsService settingsService)
+        Recruit_Finder_AIContext context,
+        SettingsService settingsService,
+        EmailService emailService)
     {
         _userManager = userManager;
         _signInManager = signInManager;
@@ -33,6 +33,7 @@ public class RegisterModel : PageModel
         _auditService = auditService;
         _context = context;
         _settingsService = settingsService;
+        _emailService = emailService;
     }
 
     [BindProperty]
@@ -61,16 +62,10 @@ public class RegisterModel : PageModel
         ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 
         var settings = await _settingsService.GetAdminSettingsAsync();
-
         if (!settings.EnableRegistration)
         {
-            ModelState.AddModelError(string.Empty, "Public registration is currently disabled by the system administrator.");
+            ModelState.AddModelError(string.Empty, "Registration is disabled.");
             return Page();
-        }
-
-        if (!string.IsNullOrEmpty(Input.Password) && Input.Password.Length < settings.MinPasswordLength)
-        {
-            ModelState.AddModelError("Input.Password", $"The password must be at least {settings.MinPasswordLength} characters long.");
         }
 
         if (ModelState.IsValid)
@@ -79,7 +74,8 @@ public class RegisterModel : PageModel
             {
                 UserName = Input.Email,
                 Email = Input.Email,
-                PasswordExpiration = DateTime.UtcNow.AddDays(settings.PasswordExpirationDays)
+                PasswordExpiration = DateTime.UtcNow.AddDays(settings.PasswordExpirationDays),
+                EmailConfirmed = false
             };
 
             var result = await _userManager.CreateAsync(user, Input.Password);
@@ -94,12 +90,12 @@ public class RegisterModel : PageModel
                     PasswordHash = user.PasswordHash,
                     CreatedAt = DateTime.UtcNow
                 });
+
                 await _context.SaveChangesAsync();
 
-                await _auditService.LogActionAsync(user.UserName, "REGISTER", "User registered via Web UI", true, user.Id);
+                _logger.LogInformation($">>> [REGISTER] Konto utworzone dla {user.Email}. Przekierowanie do wysyłki kodu.");
 
-                await _signInManager.SignInAsync(user, isPersistent: false);
-                return LocalRedirect(returnUrl);
+                return RedirectToPage("./SendCode", new { email = user.Email });
             }
 
             foreach (var error in result.Errors)
@@ -107,8 +103,6 @@ public class RegisterModel : PageModel
                 ModelState.AddModelError(string.Empty, error.Description);
             }
         }
-
         return Page();
     }
-
 }
