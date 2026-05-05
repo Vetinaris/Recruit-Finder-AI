@@ -1,0 +1,119 @@
+﻿@model Recruit_Finder_AI.Models.ApplyViewModel
+@section Styles {
+    <link rel="stylesheet" href="~/css/offer.css" />
+}
+@{
+    ViewData["Title"] = "Select your CV";
+}
+
+<div class="container py-5" lang="en-US">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="text-center mb-5">
+                <div class="icon-shape bg-soft-primary text-primary rounded-circle mb-3 mx-auto shadow-sm d-flex align-items-center justify-content-center"
+                     style="width: 80px; height: 80px; font-size: 2.5rem;">
+                    <i class="bi bi-send-check"></i>
+                </div>
+                <h1 class="fw-bold display-6 mb-1">Apply for <span class="text-primary">Position</span></h1>
+                <p class="text-muted fs-5">You are applying for: <strong>@Model.JobOffer.Title</strong> at @Model.JobOffer.Company</p>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden" style="border: 1px solid #f8f9fa !important;">
+                <div class="card-body p-4 p-md-5">
+                    <form asp-action="SubmitApplication" method="post" id="applyForm" novalidate>
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="JobOfferId" />
+
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="bg-primary rounded-pill me-3" style="width: 4px; height: 24px;"></div>
+                            <h4 class="fw-bold mb-0 h5 text-dark">Select Your CV</h4>
+                        </div>
+
+                        <div class="list-group mb-5 gap-2">
+                            @foreach (var cv in Model.UserResumes)
+                            {
+                                bool isVerified = cv.IsVerified;
+
+                                <label class="list-group-item list-group-item-action d-flex align-items-center gap-3 p-3 border rounded-4 shadow-sm clickable-item @(!isVerified ? "opacity-75 bg-light" : "")">
+                                    <input class="form-check-input flex-shrink-0 custom-radio" type="radio"
+                                           name="SelectedCvId" value="@cv.Id" required
+                                    @(!isVerified ? "disabled" : "")
+                                    @(isVerified && cv == Model.UserResumes.FirstOrDefault(c => c.IsVerified) ? "checked" : "")>
+                                    
+                                    <div class="d-flex flex-column flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="fw-bold text-dark">@cv.Name @cv.Surname</span>
+                                            @if (isVerified)
+                                            {
+                                                <span class="badge bg-soft-success text-success rounded-pill px-3">Verified</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-soft-danger text-danger rounded-pill px-3">Not Verified</span>
+                                            }
+                                        </div>
+                                        <span class="small text-muted">
+                                            <i class="bi bi-calendar3 me-1"></i>Created: @cv.CreatedAt.ToString("dd.MM.yyyy")
+                                        </span>
+                                    </div>
+                                </label>
+                            }
+                        </div>
+
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="bg-primary rounded-pill me-3" style="width: 4px; height: 24px;"></div>
+                            <h4 class="fw-bold mb-0 h5 text-dark">Message to Recruiter</h4>
+                        </div>
+
+                        <div class="mb-5">
+                            <label asp-for="Message" class="text-muted small text-uppercase fw-bold mb-2 d-block">Why should we hire you? (Optional)</label>
+                            <textarea name="Message" id="messageTextArea"
+                                      class="form-control border-light-subtle shadow-sm rounded-4"
+                                      rows="5"
+                                      placeholder="Write a brief cover letter...">@Model.Message</textarea>
+                        </div>
+
+                        <div class="d-flex flex-column flex-md-row gap-3 pt-4 border-top">
+                            <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5 shadow hover-lift fw-bold">
+                                Send Application
+                            </button>
+                            <a asp-action="Details" asp-route-id="@Model.JobOfferId"
+                                   class="btn btn-light btn-lg rounded-pill px-4 border shadow-sm text-muted">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script type="text/javascript">
+        $(document).ready(function () {
+        function removeEmojis(text) {
+        var regex = /[^\w\s\d.,!@@#$%^&*()\-=_+\[\]{}|;:'"<>\/?\\ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/gu;
+        return text.replace(regex, '');
+        }
+
+        $('#messageTextArea').on('input', function() {
+        var val = $(this).val();
+        var cleaned = removeEmojis(val);
+        if (val !== cleaned) {
+        $(this).val(cleaned);
+        }
+        });
+
+        $('#applyForm').on('submit', function(e) {
+        var selected = $('input[name="SelectedCvId"]:checked');
+        if (selected.length === 0 || selected.is(':disabled')) {
+        alert("Please select a verified CV.");
+        e.preventDefault();
+        return false;
+        }
+        });
+        });
+    </script>
+}

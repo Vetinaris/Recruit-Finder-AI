@@ -1,4 +1,7 @@
 ﻿@model IEnumerable<Recruit_Finder_AI.Entities.Notification>
+@section Styles {
+    <link rel="stylesheet" href="~/css/notifications.css" asp-append-version="true" />
+}
 @{
     ViewData["Title"] = "Messages & Notifications";
 }
@@ -90,31 +93,3 @@
         </div>
     }
 </div>
-
-<style>
-    body { background-color: #f8f9fa; }
-
-    .notification-card {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .notification-card:not(.bg-light):hover {
-        transform: translateX(5px);
-        box-shadow: 0 5px 15px rgba(67, 97, 238, 0.1) !important;
-    }
-
-    .bg-soft-primary { background-color: rgba(67, 97, 238, 0.1) !important; }
-    .bg-soft-success { background-color: rgba(45, 206, 137, 0.15) !important; }
-    .bg-soft-secondary { background-color: rgba(108, 117, 125, 0.1) !important; }
-    .bg-soft-light { background-color: #f1f3f5 !important; }
-
-    .border-dashed { border-style: dashed !important; border-width: 2px !important; }
-
-    .icon-shape {
-        flex-shrink: 0;
-    }
-
-    .card {
-        border: 1px solid rgba(0,0,0,0.03);
-    }
-</style>

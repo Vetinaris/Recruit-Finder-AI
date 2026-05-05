@@ -7,70 +7,73 @@
 
 <h3 class="fw-bold text-danger mb-4">@ViewData["Title"]</h3>
 
-<div class="alert alert-danger rounded-4 p-4 border-0 mb-4 shadow-sm" role="alert">
-    <div class="d-flex">
-        <div class="flex-shrink-0">
-            <i class="bi bi-exclamation-triangle-fill fs-2 me-3"></i>
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden" style="border: 1px solid #f8f9fa !important;">
+    <div class="card-body p-4 p-md-5">
+        
+        <div class="d-flex align-items-center mb-4">
+            <div class="bg-danger text-white me-3 icon-circle">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+            </div>
+            <h4 class="mb-0 fw-bold text-dark">Permanent Action Warning</h4>
         </div>
-        <div>
-            <h5 class="fw-bold">Permanent Action Warning</h5>
-            <p class="mb-0 small opacity-75">
-                Deleting this data will permanently remove your account and all associated AI recruitment history, 
-                including your posted job offers, matched candidates, and CV analysis reports. 
-                <strong>This action cannot be undone.</strong>
+
+        <div class="alert alert-danger border-0 rounded-4 shadow-sm mb-5 p-4 bg-light border-start border-danger border-4">
+            <p class="text-dark mb-0 small">
+                Deleting this data will permanently remove your account and all associated AI recruitment history,
+                including your posted job offers, matched candidates, and CV analysis reports.
+                <strong class="text-danger">This action cannot be undone.</strong>
             </p>
         </div>
-    </div>
-</div>
 
-<div class="row">
-    <div class="col-md-8">
-        <form id="delete-user" method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger small mb-3" role="alert"></div>
-            
-            @if (Model.RequirePassword)
-            {
-                <div class="form-floating mb-4">
-                    <input asp-for="Input.Password" class="form-control rounded-3 border-danger-subtle" autocomplete="current-password" aria-required="true" placeholder="Enter your password to confirm" />
-                    <label asp-for="Input.Password" class="form-label text-muted">Confirm with Password</label>
-                    <span asp-validation-for="Input.Password" class="text-danger small"></span>
-                    <div class="form-text mt-2 small text-muted">
-                        For security reasons, please enter your password to authorize this permanent deletion.
+        <div class="row">
+            <div class="col-lg-10">
+                <form id="delete-user" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger small mb-3" role="alert"></div>
+                    
+                    @if (Model.RequirePassword)
+                    {
+                        <div class="mb-5">
+                            <label asp-for="Input.Password" class="form-label small fw-bold text-muted text-uppercase ms-2">Confirm with Password</label>
+                            <input asp-for="Input.Password" class="form-control rounded-pill border-light-subtle shadow-sm px-4 py-2 no-emoji" autocomplete="current-password" aria-required="true" placeholder="Enter your password to authorize deletion" />
+                            <span asp-validation-for="Input.Password" class="text-danger small ms-2"></span>
+                            <div class="form-text mt-3 ms-2 small text-muted">
+                                <i class="bi bi-shield-lock me-1"></i> For security reasons, please enter your password to authorize this permanent deletion.
+                            </div>
+                        </div>
+                    }
+                    
+                    <div class="d-flex flex-column flex-md-row gap-3 pt-2">
+                        <button class="btn btn-danger btn-lg rounded-pill px-5 shadow-sm hover-shake fw-bold" type="submit">
+                            Delete My Data & Account
+                        </button>
+                        <a asp-page="./Index" class="btn btn-light btn-lg rounded-pill px-4 border shadow-sm">
+                            Cancel
+                        </a>
                     </div>
-                </div>
-            }
-            
-            <div class="d-grid d-md-block">
-                <button class="btn btn-danger btn-lg rounded-pill px-5 shadow-sm hover-shake" type="submit">
-                    <i class="bi bi-trash3 me-2"></i>Delete My Data & Account
-                </button>
-                <a asp-page="./Index" class="btn btn-light btn-lg rounded-pill px-4 ms-md-2 mt-2 mt-md-0">Cancel</a>
+                </form>
             </div>
-        </form>
+        </div>
     </div>
 </div>
-
-<style>
-    .hover-shake:hover {
-        animation: shake 0.5s;
-        animation-iteration-count: infinite;
-    }
-
-    @@keyframes shake {
-        0% { transform: translate(1px, 1px) rotate(0deg); }
-        10% { transform: translate(-1px, -2px) rotate(-1deg); }
-        20% { transform: translate(-3px, 0px) rotate(1deg); }
-        30% { transform: translate(3px, 2px) rotate(0deg); }
-        40% { transform: translate(1px, -1px) rotate(1deg); }
-        50% { transform: translate(-1px, 2px) rotate(-1deg); }
-        60% { transform: translate(-3px, 1px) rotate(0deg); }
-        70% { transform: translate(3px, 1px) rotate(-1deg); }
-        80% { transform: translate(-1px, -1px) rotate(1deg); }
-        90% { transform: translate(1px, 2px) rotate(0deg); }
-        100% { transform: translate(1px, -2px) rotate(-1deg); }
-    }
-</style>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            function removeEmojis(text) {
+                const regex = /[^\w\s\d.,!@@#$%^&*()\-=_+\[\]{}|;:'"<>\/?\\ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/gu;
+                return text.replace(regex, '');
+            }
+
+            document.querySelectorAll('.no-emoji').forEach(el => {
+                el.addEventListener('input', e => {
+                    const original = e.target.value;
+                    const cleaned = removeEmojis(original);
+                    if (original !== cleaned) {
+                        e.target.value = cleaned;
+                    }
+                });
+            });
+        });
+    </script>
 }

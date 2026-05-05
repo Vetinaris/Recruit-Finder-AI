@@ -2,95 +2,213 @@
 @model IndexModel
 @{
     ViewData["Title"] = "Profile Settings";
-    ViewData["ActivePage"] = ManageNavPages.Index;
 }
 
+<h3 class="fw-bold mb-4 text-dark">@ViewData["Title"]</h3>
 <partial name="_StatusMessage" for="StatusMessage" />
 
-<div class="card shadow-sm border-0">
-    <div class="card-body p-4">
-        <form id="profile-form" method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+<div class="card shadow-sm border-0 rounded-4 overflow-hidden" style="border: 1px solid #f8f9fa !important;">
+    <div class="card-body p-4 p-md-5">
+        <form id="profile-form" method="post" enctype="multipart/form-data">
 
-            <h5 class="mb-3 text-primary"><i class="bi bi-person-circle me-2"></i>Personal Information</h5>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label asp-for="Username" class="form-label">Username</label>
-                    <input asp-for="Username" class="form-control" disabled />
+            <div class="d-flex align-items-center mb-4">
+                <div class="bg-primary rounded-circle text-white me-3 d-flex align-items-center justify-content-center"
+                     style="width: 40px; height: 40px; min-width: 40px;">
+                    <i class="bi bi-person-fill"></i>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label asp-for="Input.PhoneNumber" class="form-label">Phone Number</label>
-                    <input asp-for="Input.PhoneNumber" class="form-control" />
-                    <span asp-validation-for="Input.PhoneNumber" class="text-danger"></span>
+                <h4 class="mb-0 fw-bold text-dark">Personal Information</h4>
+            </div>
+
+            <div class="row align-items-center mb-5">
+                <div class="col-auto">
+                    <div class="position-relative shadow-sm rounded-circle p-1 bg-white" style="width: 120px; height: 120px;">
+                        @if (Model.Input.ProfilePicture != null)
+                        {
+                            <img id="profile-preview" src="data:@Model.Input.ContentType;base64,@Convert.ToBase64String(Model.Input.ProfilePicture)"
+                                 class="rounded-circle w-100 h-100" style="object-fit: cover;" />
+                        }
+                        else
+                        {
+                            <div id="profile-placeholder" class="bg-light rounded-circle w-100 h-100 d-flex align-items-center justify-content-center border border-2 border-dashed">
+                                <i class="bi bi-camera text-muted fs-1"></i>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="col">
+                    <label class="form-label fw-bold d-block">Profile Photo</label>
+                    <input type="file" asp-for="Input.ImageFile" id="imageInput" class="form-control form-control-sm rounded-pill mb-1" style="max-width: 300px;" accept="image/*" />
+                    <div class="form-text small">JPG, PNG or GIF. Max size 2MB.</div>
+                </div>
+            </div>
+            
+            <div class="row g-4 mb-2">
+                <div class="col-md-6">
+                    <label asp-for="Username" class="form-label small fw-bold text-muted text-uppercase ms-2">Account Username</label>
+                    <input asp-for="Username" class="form-control rounded-pill border-light-subtle shadow-sm px-4 bg-light" disabled />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Input.PhoneNumber" class="form-label small fw-bold text-muted text-uppercase ms-2">Contact Number</label>
+                    <input asp-for="Input.PhoneNumber" class="form-control rounded-pill border-light-subtle shadow-sm px-4 restrict-phone no-emoji" placeholder="+48 000 000 000" data-val="false" />
+                    <span asp-validation-for="Input.PhoneNumber" class="text-danger small ms-2"></span>
                 </div>
             </div>
 
-            @if (User.IsInRole("USER") || Model.Input.IsEmployer)
+            @if (User.Identity.IsAuthenticated && !User.IsInRole("ADMIN") && !User.IsInRole("MODERATOR"))
             {
-                <hr class="my-4" />
-                <h5 class="mb-3 text-primary"><i class="bi bi-building me-2"></i>Company Verification</h5>
+                <hr class="my-5 opacity-25" />
 
-                @if (!Model.Input.IsEmployer)
-                {
-                    <div class="alert alert-info small shadow-sm border-0">
-                        <div class="d-flex align-items-center mb-1">
-                            <i class="bi bi-info-circle-fill me-2 fs-6"></i>
-                            <span class="fw-bold">Employer Account Application</span>
+                <div class="form-check form-switch p-3 border rounded-4 mb-4 bg-light-subtle d-flex align-items-center justify-content-between px-4 shadow-sm border-dashed">
+                    <div>
+                        <label asp-for="Input.ShowCompanySection" class="form-check-label fw-bold h6 mb-0">Company Verification</label>
+                        <div class="form-text small">Enable this to provide details for employer status verification.</div>
+                    </div>
+                    <input asp-for="Input.ShowCompanySection"
+                           class="form-check-input ms-0"
+                           type="checkbox"
+                           role="switch"
+                           id="companySwitch"
+                           style="width: 3.5rem; height: 1.75rem;"
+                           disabled="@(Model.Input.HasSubmittedCompanyData || Model.Input.IsEmployer ? "disabled" : null)">
+                    @if (Model.Input.HasSubmittedCompanyData || Model.Input.IsEmployer)
+                    {
+                        <input type="hidden" asp-for="Input.ShowCompanySection" value="true" />
+                    }
+                </div>
+
+                <div id="companyFields" style="@(Model.Input.ShowCompanySection || Model.Input.IsEmployer ? "display:block;" : "display:none;")">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="bg-primary rounded-circle text-white me-3 d-flex align-items-center justify-content-center"
+                             style="width: 40px; height: 40px; min-width: 40px;">
+                            <i class="bi bi-building-fill"></i>
                         </div>
-                        <div>
-                            Fill in the details below to apply for an Employer account.
-                            A Moderator will review your request.
-                            <span class="d-block mt-1">
-                                <i class="bi bi-clock me-1"></i>
-                                <strong>Note:</strong> Verification may take up to <strong>14 business days</strong>.
-                            </span>
+                        <h4 class="mb-0 fw-bold text-dark">Company Details</h4>
+                    </div>
+
+                    @if (Model.Input.HasSubmittedCompanyData)
+                    {
+                        <div class="alert alert-warning border-0 rounded-4 shadow-sm mb-4 p-4 bg-warning-soft border-start border-warning border-4">
+                            <div class="d-flex align-items-center text-dark">
+                                <i class="bi bi-clock-history fs-3 text-warning me-3"></i>
+                                <div>
+                                    <p class="mb-0 fw-bold">Verification in progress</p>
+                                    <p class="mb-0 small">Your data is being reviewed. The process may take up to <b>14 days</b>. Changes are disabled during this time.</p>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                }
-                else
-                {
-                    <div class="alert alert-success d-flex align-items-center shadow-sm border-0">
-                        <i class="bi bi-patch-check-fill fs-4 me-3"></i>
-                        <div>
-                            <div class="fw-bold">Verified Employer Profile</div>
-                            <div class="small">To change company legal data, please contact our support: <strong>+48 123 456 789</strong></div>
+                    }
+                    else if (!Model.Input.IsEmployer)
+                    {
+                        <div class="alert alert-info border-0 rounded-4 shadow-sm mb-4 p-4 bg-light border-start border-primary border-4">
+                            <div class="d-flex align-items-center text-dark">
+                                <i class="bi bi-info-circle fs-3 text-primary me-3"></i>
+                                <div>
+                                    <p class="mb-0 fw-bold">Verification Process</p>
+                                    <p class="mb-0 small opacity-75">All fields below are required for our moderators to verify your business account.</p>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                }
+                    }
 
-                <div class="row">
-                    <input type="hidden" asp-for="Input.IsEmployer" />
+                    <div class="row g-4">
+                        <input type="hidden" asp-for="Input.IsEmployer" />
 
-                    <div class="col-md-6 mb-3">
-                        <label asp-for="Input.CompanyName" class="form-label">Company Name</label>
-                        <input asp-for="Input.CompanyName" class="form-control bg-light"
-                               placeholder="Legal business name"
-                               readonly="@(Model.Input.IsEmployer ? "readonly" : null)" />
-                    </div>
+                        <div class="col-md-6">
+                            <label asp-for="Input.CompanyName" class="form-label small fw-bold text-muted text-uppercase ms-2">Company Name</label>
+                            <input asp-for="Input.CompanyName"
+                                   data-val="false"
+                                   class="form-control rounded-pill border-light-subtle shadow-sm px-4 no-emoji company-input @(Model.Input.IsEmployer ? "bg-light" : "")"
+                                   readonly="@(Model.Input.IsEmployer ? "readonly" : null)" />
+                            <span asp-validation-for="Input.CompanyName" class="text-danger small ms-2"></span>
+                        </div>
 
-                    <div class="col-md-6 mb-3">
-                        <label asp-for="Input.NIP" class="form-label">NIP (Tax ID)</label>
-                        <input asp-for="Input.NIP" class="form-control bg-light"
-                               placeholder="e.g., 1234567890"
-                               readonly="@(Model.Input.IsEmployer ? "readonly" : null)" />
-                    </div>
+                        <div class="col-md-6">
+                            <label asp-for="Input.NIP" class="form-label small fw-bold text-muted text-uppercase ms-2">NIP / Tax ID</label>
+                            <input asp-for="Input.NIP"
+                                   data-val="false"
+                                   class="form-control rounded-pill border-light-subtle shadow-sm px-4 restrict-nip company-input @(Model.Input.IsEmployer ? "bg-light" : "")"
+                                   readonly="@(Model.Input.IsEmployer ? "readonly" : null)" maxlength="10" />
+                            <span asp-validation-for="Input.NIP" class="text-danger small ms-2"></span>
+                        </div>
 
-                    <div class="col-md-12 mb-3">
-                        <label asp-for="Input.CompanyAddress" class="form-label">Headquarters Address</label>
-                        <textarea asp-for="Input.CompanyAddress" class="form-control bg-light" rows="2"
-                                  readonly="@(Model.Input.IsEmployer ? "readonly" : null)"></textarea>
+                        <div class="col-md-12">
+                            <label asp-for="Input.CompanyAddress" class="form-label small fw-bold text-muted text-uppercase ms-2">Headquarters Address</label>
+                            <textarea asp-for="Input.CompanyAddress"
+                                      data-val="false"
+                                      class="form-control rounded-4 border-light-subtle shadow-sm px-4 py-3 no-emoji company-input @(Model.Input.IsEmployer ? "bg-light" : "")"
+                                      rows="3"
+                                      readonly="@(Model.Input.IsEmployer ? "readonly" : null)"></textarea>
+                            <span asp-validation-for="Input.CompanyAddress" class="text-danger small ms-2"></span>
+                        </div>
                     </div>
                 </div>
             }
 
-            <button id="update-profile-button" type="submit" class="w-100 btn btn-lg btn-primary shadow-sm mt-3">
-                <i class="bi bi-save me-2"></i>
-                @(Model.Input.IsEmployer ? "Update Phone Number" : "Save and Submit for Verification")
-            </button>
+            <div class="pt-4 mt-2">
+                <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5 shadow hover-lift fw-bold">
+                    Save Changes
+                </button>
+            </div>
         </form>
     </div>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const companySwitch = document.getElementById('companySwitch');
+            const companyFields = document.getElementById('companyFields');
+            const companyInputs = document.querySelectorAll('.company-input');
+
+            if (companySwitch) {
+                companySwitch.addEventListener('change', function () {
+                    if (this.checked) {
+                        companyFields.style.display = 'block';
+                        companyInputs.forEach(input => input.setAttribute('required', 'required'));
+                    } else {
+                        companyFields.style.display = 'none';
+                        companyInputs.forEach(input => input.removeAttribute('required'));
+                    }
+                });
+            }
+
+            const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu;
+            
+            document.querySelectorAll('.no-emoji').forEach(el => {
+                el.addEventListener('input', e => {
+                    e.target.value = e.target.value.replace(emojiRegex, '');
+                });
+            });
+
+            document.querySelectorAll('.restrict-phone').forEach(el => {
+                el.addEventListener('input', e => {
+                    e.target.value = e.target.value.replace(/[^\d+ \-]/g, '');
+                });
+            });
+
+            document.querySelectorAll('.restrict-nip').forEach(el => {
+                el.addEventListener('input', e => {
+                    e.target.value = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
+                    if (e.target.value.trim()) e.target.classList.remove('company-field-error');
+                });
+            });
+
+            const form = document.getElementById('profile-form');
+            form.addEventListener('submit', function(e) {
+                if (companySwitch && companySwitch.checked) {
+                    let isValid = true;
+                    companyInputs.forEach(field => {
+                        if (!field.value.trim()) {
+                            field.classList.add('company-field-error');
+                            isValid = false;
+                        }
+                    });
+                    if (!isValid) {
+                        e.preventDefault();
+                    }
+                }
+            });
+        });
+    </script>
 }

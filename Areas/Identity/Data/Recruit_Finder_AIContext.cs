@@ -18,6 +18,7 @@ public class Recruit_Finder_AIContext : IdentityDbContext<ApplicationUser>
     public DbSet<SystemSetting> SystemSettings { get; set; }
     public DbSet<Notification> Notifications { get; set; }
     public DbSet<Cv> Cvs { get; set; }
+    public DbSet<JobApplication> Applications { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -41,6 +42,28 @@ public class Recruit_Finder_AIContext : IdentityDbContext<ApplicationUser>
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
+        builder.Entity<JobApplication>(entity =>
+        {
+            entity.HasKey(a => a.Id);
+
+            entity.HasOne(a => a.JobOffer)
+                  .WithMany(o => o.Applications)
+                  .HasForeignKey(a => a.JobOfferId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(a => a.Cv)
+                  .WithMany()
+                  .HasForeignKey(a => a.CvId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(a => a.Candidate)
+                  .WithMany()
+                  .HasForeignKey(a => a.CandidateId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Property(a => a.Status).HasMaxLength(50).HasDefaultValue("Pending");
+            entity.Property(a => a.AppliedAt).IsRequired();
+        });
         builder.Entity<Cv>(entity =>
         {
             entity.Property(c => c.Name).IsRequired().HasMaxLength(100);

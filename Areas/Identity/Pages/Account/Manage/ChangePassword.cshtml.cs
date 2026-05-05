@@ -21,19 +21,22 @@ namespace Recruit_Finder_AI.Areas.Identity.Pages.Account.Manage
         private readonly ILogger<ChangePasswordModel> _logger;
         private readonly Recruit_Finder_AIContext _context;
         private readonly SettingsService _settingsService;
-
+        private readonly NotificationService _notificationService;
 
         public ChangePasswordModel(
-            UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager,
-            ILogger<ChangePasswordModel> logger,
-            Recruit_Finder_AIContext context,
-            SettingsService settingsService)
+        UserManager<ApplicationUser> userManager,
+        SignInManager<ApplicationUser> signInManager,
+        ILogger<ChangePasswordModel> logger,
+        Recruit_Finder_AIContext context,
+        SettingsService settingsService,
+        NotificationService notificationService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _context = context;
+            _settingsService = settingsService;
+            _notificationService = notificationService;
         }
 
         [BindProperty]
@@ -111,6 +114,12 @@ namespace Recruit_Finder_AI.Areas.Identity.Pages.Account.Manage
             var changePasswordResult = await _userManager.ChangePasswordAsync(user, Input.OldPassword, Input.NewPassword);
             if (!changePasswordResult.Succeeded)
             {
+                await _notificationService.SendAsync(
+                    user.Id,
+                    "Security Alert",
+                    "Your password has been changed successfully. If this wasn't you, contact support immediately.",
+                    null
+                );
                 foreach (var error in changePasswordResult.Errors) ModelState.AddModelError(string.Empty, error.Description);
                 return Page();
             }

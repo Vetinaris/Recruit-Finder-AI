@@ -1,0 +1,85 @@
+﻿@page
+@model RegisterConfirmationModel
+@{
+    ViewData["Title"] = "Confirm Your Account";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden" style="border: 1px solid #f8f9fa !important;">
+                <div class="card-body p-4 p-md-5">
+                    
+                    <div class="text-center mb-4">
+                        <div class="bg-primary text-white mb-3 mx-auto icon-circle shadow-sm">
+                            <i class="bi bi-patch-check-fill"></i>
+                        </div>
+                        <h2 class="fw-bold text-dark">Email Verification</h2>
+                        <p class="text-muted small">
+                            Please enter the 6-digit code sent to:<br />
+                            <strong class="text-primary">@Model.Input.Email</strong>
+                        </p>
+                    </div>
+
+                    <form method="post">
+                        <input type="hidden" asp-for="Input.Email" />
+                        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3 text-center" role="alert"></div>
+
+                        <div class="form-group mb-4">
+                            <label asp-for="Input.Code" class="form-label small fw-bold text-muted text-uppercase d-block text-center ms-2">Verification Code</label>
+                            <input asp-for="Input.Code"
+                                   class="form-control form-control-lg text-center fw-bold rounded-4 shadow-sm no-emoji"
+                                   style="font-size: 2rem; letter-spacing: 8px; height: 70px;"
+                                   maxlength="6"
+                                   placeholder="000000"
+                                   autocomplete="off" />
+                            <span asp-validation-for="Input.Code" class="text-danger small d-block text-center mt-2"></span>
+                        </div>
+
+                        <button type="submit" class="w-100 btn btn-primary btn-lg rounded-pill shadow hover-lift fw-bold mb-3">
+                            Confirm & Activate Account
+                        </button>
+                    </form>
+
+                    <div class="mt-4 pt-3 border-top text-center">
+                        <p class="small text-muted mb-1">Didn't receive the code?</p>
+                        <a asp-page="./SendCode" asp-route-email="@Model.Input.Email" class="text-primary fw-bold text-decoration-none small hover-link">
+                            <i class="bi bi-arrow-clockwise"></i> Resend code
+                        </a>
+                    </div>
+
+                    <div class="text-center mt-3">
+                        <p class="small text-muted mb-0">
+                            Wrong email address?
+                            <a asp-page="./Register" class="text-primary text-decoration-none fw-bold hover-link">
+                                Register again
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            function removeEmojis(text) {
+                const regex = /[^\w\s\d.,!@@#$%^&*()\-=_+\[\]{}|;:'"<>\/?\\gu]/gu;
+                return text.replace(regex, '');
+            }
+
+            document.querySelectorAll('.no-emoji').forEach(el => {
+                el.addEventListener('input', e => {
+                    const original = e.target.value;
+                    const cleaned = removeEmojis(original);
+                    if (original !== cleaned) {
+                        e.target.value = cleaned;
+                    }
+                });
+            });
+        });
+    </script>
+}

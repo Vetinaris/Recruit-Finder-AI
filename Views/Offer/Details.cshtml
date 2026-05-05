@@ -1,10 +1,15 @@
 ﻿@model Recruit_Finder_AI.Models.JobOffer
 @using System.Security.Claims
-
+@section Styles {
+    <link rel="stylesheet" href="~/css/offer.css" />
+}
 @{
     ViewData["Title"] = Model.Title + " | Recruit Finder AI";
     var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
     var isActualOwner = User.Identity.IsAuthenticated && Model.RecruiterId == userId;
+
+    var userApplication = ViewBag.UserApplication as Recruit_Finder_AI.Models.JobApplication;
+    bool isOfferExpired = Model.ExpirationDate.HasValue && Model.ExpirationDate < DateTime.Now;
 }
 
 <div class="container py-5">
@@ -13,36 +18,23 @@
 
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <a asp-action="List" asp-route-category="@Model.Category" class="btn btn-link text-decoration-none p-0 text-secondary hover-shift-left">
-                    <i class="bi bi-arrow-left me-2"></i>Back to @Model.Category Offers
+                    <i class="bi bi-arrow-left me-2"></i>Back to @Model.Category
                 </a>
 
                 @if (isActualOwner)
                 {
                     <div class="btn-group shadow-sm rounded-pill overflow-hidden border">
-                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-white btn-sm px-4 fw-bold">
-                            <i class="bi bi-pencil-square me-2 text-primary"></i>Edit Offer
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-white px-4 py-2 fw-bold">
+                            <i class="bi bi-pencil-square me-2 text-primary"></i>Edit
                         </a>
-                        <a asp-action="MyListings" class="btn btn-white btn-sm px-4 fw-bold border-start">
+                        <a asp-action="MyListings" class="btn btn-white px-4 py-2 fw-bold border-start">
                             <i class="bi bi-gear-fill me-2 text-secondary"></i>Manage
                         </a>
                     </div>
                 }
             </div>
 
-            @if ((User.IsInRole("ADMIN") || User.IsInRole("MODERATOR")) && (!Model.IsVisible || (Model.User?.LockoutEnd > DateTimeOffset.UtcNow)))
-            {
-                <div class="alert bg-soft-warning border-warning rounded-4 mb-4 shadow-sm">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-shield-exclamation fs-3 me-3 text-warning"></i>
-                        <div>
-                            <strong class="text-dark">Staff Mode:</strong> This offer is <strong>hidden</strong> or the author is <strong>banned</strong>.
-                            It is currently invisible to regular candidates.
-                        </div>
-                    </div>
-                </div>
-            }
-
-            <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+            <div class="card border-0 custom-main-shadow rounded-4 overflow-hidden mb-4">
                 <div class="card-body p-0">
                     <div class="row g-0">
 
@@ -50,7 +42,6 @@
                             <div class="mb-5">
                                 <div class="d-flex flex-wrap gap-2 mb-3">
                                     <span class="badge bg-soft-primary text-primary rounded-pill px-3 py-2">@Model.Category</span>
-        
                                     @if (!string.IsNullOrEmpty(Model.Subcategory))
                                     {
                                         <span class="badge bg-light text-secondary border rounded-pill px-3 py-2">
@@ -59,209 +50,222 @@
                                     }
                                 </div>
 
-                                <h1 class="fw-bold text-dark display-5 mb-3">@Model.Title</h1>
+                                <h1 class="fw-bold text-dark display-6 mb-3">@Model.Title</h1>
 
                                 <div class="row g-3">
-                                    <div class="col-sm-6 col-md-3">
+                                    <div class="col-sm-6 col-md-3 border-end-sm">
                                         <div class="d-flex align-items-center text-muted">
-                                            <div class="icon-box bg-light rounded-3 me-2">
-                                                <i class="bi bi-building"></i>
-                                            </div>
-                                            <span class="fw-semibold">@Model.Company</span>
+                                            <i class="bi bi-building me-2 text-primary"></i>
+                                            <span class="fw-semibold small">@Model.Company</span>
                                         </div>
                                     </div>
-
-                                    <div class="col-sm-6 col-md-3">
+                                    <div class="col-sm-6 col-md-3 border-end-sm">
                                         <div class="d-flex align-items-center text-muted">
-                                            <div class="icon-box bg-light rounded-3 me-2">
-                                                <i class="bi bi-geo-alt"></i>
-                                            </div>
-                                            <span>@(string.IsNullOrEmpty(Model.Location) ? "Remote" : Model.Location)</span>
+                                            <i class="bi bi-geo-alt me-2 text-primary"></i>
+                                            <span class="small">@(string.IsNullOrEmpty(Model.Location) ? "Remote" : Model.Location)</span>
                                         </div>
                                     </div>
-
                                     <div class="col-sm-6 col-md-3">
-                                        <div class="d-flex align-items-center text-muted">
-                                            <div class="icon-box bg-light rounded-3 me-2">
-                                                <i class="bi bi-calendar-check"></i>
-                                            </div>
-                                            <div>
-                                                <small class="d-block text-uppercase" style="font-size: 0.65rem; letter-spacing: 0.5px;">Posted</small>
-                                                <span>@Model.CreatedAt.ToString("dd MMM yyyy")</span>
-                                            </div>
+                                        <div class="d-flex align-items-center text-muted small">
+                                            <i class="bi bi-calendar-check me-2 text-primary"></i>
+                                            <span>@Model.CreatedAt.ToString("dd.MM.yyyy")</span>
                                         </div>
                                     </div>
-
-                                    @if (Model.ExpirationDate.HasValue)
-                                    {
-                                        <div class="col-sm-6 col-md-3">
-                                            <div class="d-flex align-items-center text-muted">
-                                                <div class="icon-box bg-light rounded-3 me-2">
-                                                    <i class="bi bi-calendar-x"></i>
-                                                </div>
-                                                <div>
-                                                    <small class="d-block text-uppercase text-danger" style="font-size: 0.65rem; letter-spacing: 0.5px;">Expires</small>
-                                                    <span class="@(Model.ExpirationDate < DateTime.Now ? "text-danger fw-bold" : "")">
-                                                        @Model.ExpirationDate.Value.ToString("dd MMM yyyy")
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    }
                                 </div>
                             </div>
 
-                            <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">Job Description</h5>
-                            <div class="job-content">
+                            <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                                <i class="bi bi-card-text me-2 text-primary"></i>Job Description
+                            </h5>
+                            <div class="job-content text-justify mb-4">
                                 @Model.Description
+                            </div>
+
+                            <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                                <i class="bi bi-list-check me-2 text-primary"></i>Key Requirements
+                            </h5>
+
+                            <div class="requirements-section">
+                                @if (!string.IsNullOrEmpty(Model.Requirements))
+                                {
+                                    <div class="job-content small" style="white-space: normal !important;">
+                                        @foreach (var req in Model.Requirements.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries))
+                                        {
+                                            if (!string.IsNullOrWhiteSpace(req))
+                                            {
+                                                <div class="d-flex align-items-center mb-4">
+                                                    <i class="bi bi-check2-circle text-primary me-2" style="font-size: 0.9rem; line-height: 1; flex-shrink: 0;"></i>
+                                                    <span style="line-height: 1.2;">@req.Trim()</span>
+                                                </div>
+                                            }
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="text-muted fst-italic">No specific requirements listed.</p>
+                                }
                             </div>
                         </div>
 
-                        <div class="col-lg-4 bg-light p-4 p-md-5">
+                        <div class="col-lg-4 bg-light p-3 p-md-4">
                             <div class="sticky-top" style="top: 2rem; z-index: 1;">
                                 <h5 class="fw-bold mb-4">Summary</h5>
 
-                                <div class="bg-white rounded-4 p-4 shadow-sm mb-4 border-start border-success border-4">
-                                    <label class="text-muted small text-uppercase fw-bold d-block mb-1">Salary Range</label>
-                                    <span class="text-success fw-bold fs-4">
-                                        @if (Model.SalaryType == "fixed")
-                                        {
-                                            @:EUR @Model.MinimumSalary?.ToString("N0")
-                                        }
-                                        else if (Model.SalaryType == "range")
-                                        {
-                                            @:EUR @Model.MinimumSalary?.ToString("N0") - @Model.MaximumSalary?.ToString("N0")
-                                        }
-                                        else
-                                        {
-                                            <span class="text-secondary text-capitalize">@Model.SalaryType</span>
-                                        }
-                                    </span>
-                                    <small class="text-muted d-block mt-1">Gross / Month</small>
+                                <div class="bg-white rounded-4 p-3 shadow-sm mb-4 border-start border-success border-4">
+                                    <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-size: 0.8rem;">Salary Range</label>
+                                    <div class="salary-container">
+                                        <span class="text-success fw-bold fs-6 text-nowrap d-inline-block" style="letter-spacing: -0.4px;">
+                                            @if (Model.SalaryType == "fixed")
+                                            {
+                                                @:EUR @Model.MinimumSalary?.ToString("N0")
+                                            }
+                                            else if (Model.SalaryType == "range")
+                                            {
+                                                @:EUR @Model.MinimumSalary?.ToString("N0") - @Model.MaximumSalary?.ToString("N0")
+                                            }
+                                            else if (Model.SalaryType?.ToLower() == "none")
+                                            {
+                                                @:Not disclosed
+                                            }
+                                            else
+                                            {
+                                                <span class="text-capitalize">@Model.SalaryType</span>
+                                            }
+                                        </span>
+                                    </div>
+                                    <small class="text-muted d-block mt-1" style="font-size: 0.8rem;">Gross / Month</small>
                                 </div>
 
-                                <div class="mb-4">
-                                    <div class="d-flex mb-3">
-                                        <i class="bi bi-briefcase text-primary me-3 fs-5"></i>
+                                <div class="mb-4 px-1">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <i class="bi bi-briefcase text-primary me-3"></i>
                                         <div>
-                                            <small class="text-muted d-block">Contract Type</small>
+                                            <small class="text-muted d-block" style="font-size: 0.8rem;">Contract</small>
                                             <span class="fw-bold text-dark">@(string.IsNullOrEmpty(Model.JobType) ? "Full-time" : Model.JobType)</span>
                                         </div>
                                     </div>
 
-                                    <div class="d-flex mb-3">
-                                        <i class="bi bi-robot text-primary me-3 fs-5"></i>
+                                    <div class="d-flex align-items-center mb-3">
+                                        <i class="bi bi-robot text-primary me-3"></i>
                                         <div>
-                                            <small class="text-muted d-block">AI Evaluation</small>
-                                            <span class="fw-bold text-dark">AI-Matched Candidate Pool</span>
+                                            <small class="text-muted d-block" style="font-size: 0.8rem;">Evaluation</small>
+                                            <span class="fw-bold text-dark">AI-Matched Pool</span>
                                         </div>
                                     </div>
 
                                     @if (!string.IsNullOrEmpty(Model.RequiredLanguages))
                                     {
                                         <div class="d-flex mb-3">
-                                            <i class="bi bi-translate text-primary me-3 fs-5"></i>
+                                            <i class="bi bi-translate text-primary me-3"></i>
                                             <div>
-                                                <small class="text-muted d-block">Languages</small>
+                                                <small class="text-muted d-block" style="font-size: 0.8rem;">Languages</small>
                                                 <div class="d-flex flex-wrap gap-1 mt-1">
                                                     @foreach (var lang in Model.RequiredLanguages.Split(',', StringSplitOptions.RemoveEmptyEntries))
                                                     {
-                                                        <span class="badge border text-dark fw-medium" style="background-color: #f0f2f5;">@lang.Trim()</span>
+                                                        <span class="badge border text-dark fw-normal bg-white" style="font-size: 0.8rem;">@lang.Trim()</span>
                                                     }
                                                 </div>
                                             </div>
                                         </div>
                                     }
                                 </div>
+                                <div class="d-grid gap-2">
+                                    @if (User.Identity.IsAuthenticated)
+                                    {
+                                        if (isActualOwner)
+                                        {
+                                            <div class="btn btn-outline-primary disabled rounded-pill fw-bold border-2" style="padding: 0.6rem 1.5rem; opacity: 0.9;">
+                                                Recruiter view
+                                            </div>
+                                        }
+                                        else if (userApplication != null)
+                                        {
+                                            <div class="bg-white p-4 rounded-4 border shadow-sm text-center">
+                                                <div class="text-success fw-bold mb-2">
+                                                    <i class="bi bi-check-circle-fill me-2"></i>Application Sent
+                                                </div>
+                                                <div class="small text-muted mb-3">
+                                                    Status: <span class="badge bg-light text-dark border fw-medium">@userApplication.Status</span>
+                                                </div>
 
-                                <hr class="my-4 opacity-50">
+                                                @if (!isOfferExpired && userApplication.Status == "Pending")
+                                                {
+                                                    <div class="border-top pt-3">
+                                                        <p class="x-small text-muted mb-3">Sent the wrong CV? You can withdraw your application and apply again.</p>
+                        
+                                                        <button type="button" class="btn btn-outline-danger rounded-pill px-4 w-100 py-2 transition-all"
+                                                                data-bs-toggle="modal" data-bs-target="#withdrawModal">
+                                                            <i class="bi bi-arrow-counterclockwise me-1"></i> Withdraw & Change CV
+                                                        </button>
 
-                                @if (User.Identity.IsAuthenticated && !User.IsInRole("ADMIN") && !User.IsInRole("MODERATOR"))
-                                {
-                                    <a href="mailto:careers@@recruitfinder.ai?subject=Application: @Model.Title" class="btn btn-primary btn-lg w-100 rounded-pill shadow mb-3 py-3 fw-bold">
-                                        Apply Now
-                                    </a>
-                                }
-                                else if (!User.Identity.IsAuthenticated)
-                                {
-                                    <a asp-area="Identity" asp-page="/Account/Login" class="btn btn-primary btn-lg w-100 rounded-pill shadow mb-3 py-3 fw-bold">
-                                        Login to Apply
-                                    </a>
-                                }
-
-                                <div class="text-center">
-                                    <p class="small text-muted mb-0">Direct application via <span class="fw-bold">Recruit Finder AI</span></p>
+                                                        <form id="realWithdrawForm" asp-action="WithdrawApplication" asp-controller="Offer" method="post" style="display:none;">
+                                                            @Html.AntiForgeryToken()
+                                                            <input type="hidden" name="jobId" value="@Model.Id" />
+                                                        </form>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                        else if (!isOfferExpired)
+                                        {
+                                            <a asp-controller="Offer" asp-action="SelectForApplication" asp-route-jobId="@Model.Id"
+                                                   class="btn btn-primary btn-lg rounded-pill shadow py-3 fw-bold">
+                                                Apply Now
+                                            </a>
+                                        }
+                                    }
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <div class="text-center px-4">
-                <p class="text-muted small">
-                    <i class="bi bi-info-circle me-1"></i> Security Note: Never send money or sensitive personal data like ID numbers directly to recruiters via email.
-                </p>
-            </div>
-
         </div>
     </div>
 </div>
 
-<style>
-    body {
-        background-color: #f8fafd;
-    }
+<div class="modal fade" id="withdrawModal" tabindex="-1" aria-labelledby="withdrawModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 custom-main-shadow rounded-4">
+            <div class="modal-header border-0 pb-0 d-flex justify-content-end">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center px-4 pb-4">
+                <div class="icon-box-circle bg-soft-danger text-danger mb-4">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                
+                <h3 class="fw-bold text-dark mb-2">Withdraw Application?</h3>
+                <p class="text-muted mb-0">
+                    Are you sure you want to withdraw your CV? <br>
+                    <span class="small">You will be able to apply again with an updated document.</span>
+                </p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center gap-2 pb-5">
+                <button type="button" class="btn btn-light rounded-pill px-4 fw-semibold border hover-shift" data-bs-dismiss="modal">
+                    Keep Application
+                </button>
+                <button type="button" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm hover-lift" id="confirmWithdrawBtn">
+                    Yes, Withdraw
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
-    .bg-soft-primary {
-        background-color: rgba(67, 97, 238, 0.1);
-    }
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const confirmBtn = document.getElementById('confirmWithdrawBtn');
+        const withdrawForm = document.getElementById('realWithdrawForm');
 
-    .bg-soft-warning {
-        background-color: rgba(255, 193, 7, 0.1);
-    }
-
-    .bg-white {
-        background-color: #ffffff;
-    }
-
-    .icon-box {
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #4361ee;
-    }
-
-    .job-content {
-        font-size: 1.1rem;
-        line-height: 1.8;
-        color: #3d4451;
-        white-space: pre-wrap;
-    }
-
-    .hover-shift-left {
-        transition: transform 0.2s ease;
-    }
-
-        .hover-shift-left:hover {
-            transform: translateX(-5px);
-            color: #4361ee !important;
+        if (confirmBtn && withdrawForm) {
+            confirmBtn.addEventListener('click', function () {
+                confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Withdrawing...';
+                confirmBtn.disabled = true;
+                
+                withdrawForm.submit();
+            });
         }
-
-    .btn-white {
-        background: #fff;
-        color: #444;
-        transition: all 0.2s ease;
-    }
-
-        .btn-white:hover {
-            background: #f8f9fa;
-            color: #000;
-        }
-
-    .card {
-        border-radius: 1.25rem !important;
-    }
-</style>
+    });
+</script>

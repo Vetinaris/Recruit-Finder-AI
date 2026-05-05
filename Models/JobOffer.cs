@@ -29,6 +29,9 @@ namespace Recruit_Finder_AI.Models
         [Required]
         public string Description { get; set; } = string.Empty;
 
+        [Required]
+        public string Requirements { get; set; } = string.Empty;
+
         public string SalaryType { get; set; } = "Undisclosed";
         public decimal? MinimumSalary { get; set; }
         public decimal? MaximumSalary { get; set; }
@@ -42,8 +45,12 @@ namespace Recruit_Finder_AI.Models
 
         public bool IsVisible { get; set; } = true;
 
+        public string? AiAnalysisStatus { get; set; }
+        public string? AiAnalysisComment { get; set; }
+
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? ExpirationDate { get; set; }
+        public virtual ICollection<JobApplication> Applications { get; set; } = new List<JobApplication>();
     }
 }

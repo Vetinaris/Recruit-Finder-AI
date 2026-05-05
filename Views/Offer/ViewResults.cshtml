@@ -1,0 +1,142 @@
+﻿@model IEnumerable<Recruit_Finder_AI.Models.JobApplication>
+@section Styles {
+    <link rel="stylesheet" href="~/css/offer.css" />
+}
+@{
+    ViewData["Title"] = "Applications for Offer";
+    var offerTitle = ViewBag.OfferTitle ?? "Job Offer Results";
+    int counter = 1;
+}
+
+<div class="container py-5">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div class="d-flex align-items-center">
+            <a href="javascript:history.back()" class="btn btn-link text-muted p-0 me-3">
+                <i class="bi bi-arrow-left fs-4"></i>
+            </a>
+            <div>
+                <h1 class="fw-bold h3 mb-0">Applications</h1>
+                <p class="text-muted mb-0">Candidates for position: <strong>@offerTitle</strong></p>
+            </div>
+        </div>
+        <div class="badge bg-soft-primary text-primary rounded-pill px-3 py-2 fw-bold">
+            Total: @Model.Count()
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead class="bg-light border-bottom">
+                    <tr>
+                        <th class="ps-4 py-3 text-uppercase small fw-bold text-muted">Candidate</th>
+                        <th class="py-3 text-uppercase small fw-bold text-muted text-center">Message</th>
+                        <th class="py-3 text-uppercase small fw-bold text-muted text-center">Applied Date</th>
+                        <th class="py-3 text-uppercase small fw-bold text-muted text-center pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted">
+                                <div class="py-4">
+                                    <i class="bi bi-people display-4 d-block mb-3 opacity-25"></i>
+                                    <p class="fw-medium">No applications received yet for this offer.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var app in Model)
+                    {
+                        <tr class="transition-row">
+                            <td class="ps-4 py-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle-numbered me-3 bg-soft-primary text-primary fw-bold">
+                                        @counter
+                                    </div>
+                                    <div>
+                                        <div class="text-dark fs-5">
+                                            @if (app.Cv != null)
+                                            {
+                                                @($"{app.Cv.Name} {app.Cv.Surname}")
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted italic small">Name Hidden</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td class="text-center">
+                                @if (!string.IsNullOrEmpty(app.Message))
+                                {
+                                    <div class="glass-actions">
+                                        <button class="btn action-btn text-info"
+                                                type="button"
+                                                data-bs-toggle="collapse"
+                                                data-bs-target="#msg-@app.Id"
+                                                title="View Message">
+                                            <i class="bi bi-chat-left-text-fill"></i>
+                                        </button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small opacity-50">No message</span>
+                                }
+                            </td>
+
+                            <td class="text-center">
+                                <div class="small text-muted fw-medium">
+                                    <div class="text-dark">@app.AppliedAt.ToString("dd MMM yyyy")</div>
+                                    <div class="x-small opacity-75">@app.AppliedAt.ToString("HH:mm")</div>
+                                </div>
+                            </td>
+
+                            <td class="text-center pe-4">
+                                <div class="btn-group glass-actions">
+                                    <a asp-controller="Offer" asp-action="CvView" asp-route-id="@app.CvId"
+                                           class="btn action-btn text-primary" title="View Full CV">
+                                        <i class="bi bi-file-earmark-person-fill"></i>
+                                    </a>
+
+                                    <a asp-controller="Offer" asp-action="DownloadCv" asp-route-id="@app.CvId"
+                                           class="btn action-btn text-success" title="Download PDF">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+
+                        @if (!string.IsNullOrEmpty(app.Message))
+                        {
+                            <tr class="border-0">
+                                <td colspan="4" class="p-0 border-0">
+                                    <div class="collapse" id="msg-@app.Id">
+                                        <div class="message-bubble-container">
+                                            <div class="message-bubble-card">
+                                                <div class="d-flex align-items-center mb-3">
+                                                    <div class="icon-shape bg-soft-info text-info rounded-circle me-2" style="width: 32px; height: 32px;">
+                                                        <i class="bi bi-chat-dots-fill small"></i>
+                                                    </div>
+                                                    <span class="fw-bold small text-uppercase text-info tracking-wider">Candidate's Message</span>
+                                                </div>
+                                                <div class="message-content">
+                                                    <p class="mb-0 text-dark">@app.Message</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        counter++;
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

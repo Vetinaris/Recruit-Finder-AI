@@ -1,0 +1,302 @@
+﻿@using System.Text.Encodings.Web
+@model IEnumerable<Recruit_Finder_AI.Models.JobOffer>
+@section Styles {
+    <link rel="stylesheet" href="~/css/offer.css" />
+}
+@{
+    ViewData["Title"] = "Closed Listings";
+}
+
+<div class="container py-5">
+    <div class="d-flex align-items-center mb-4">
+        <a asp-action="MyListings" class="btn btn-link text-muted p-0 me-3">
+            <i class="bi bi-arrow-left fs-4"></i>
+        </a>
+        <div>
+            <h1 class="fw-bold h3 mb-0">Closed & Expired Listings</h1>
+            <p class="text-muted mb-0">History of your recruitment processes</p>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead class="bg-light border-bottom">
+                    <tr>
+                        <th class="ps-4 py-3 text-uppercase small fw-bold text-muted" style="min-width: 300px;">Offer Details</th>
+                        <th class="py-3 text-uppercase small fw-bold text-muted text-center">Category</th>
+                        <th class="py-3 text-uppercase small fw-bold text-muted text-center">Status</th>
+                        <th class="py-3 text-uppercase small fw-bold text-muted text-center pe-4" style="width: 200px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        bool isVerified = item.AiAnalysisStatus == "Verified";
+                        <tr id="row-@item.Id" class="transition-row">
+                            <td class="ps-4 py-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon-shape bg-soft-primary text-primary rounded-3 me-3 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                                        <i class="bi bi-briefcase-fill"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark d-flex align-items-center">
+                                            @item.Title
+                                        </div>
+                                        <div class="text-muted small">
+                                            <i class="bi bi-calendar-x me-1"></i>
+                                            @(item.ExpirationDate?.ToString("dd MMM yyyy") ?? "Manually closed")
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            
+                            <td class="text-center">
+                                <span class="badge bg-soft-primary text-primary rounded-pill px-3 py-2 fw-semibold">@item.Category</span>
+                            </td>
+
+                            <td class="text-center" id="status-container-@item.Id">
+                                @if (isVerified)
+                                {
+                                    <span class="badge rounded-pill bg-soft-success text-success px-3 py-2 border border-success border-opacity-10">
+                                        <i class="bi bi-check-circle-fill me-1"></i> Analysis Ready
+                                    </span>
+                                }
+                                else if (item.AiAnalysisStatus == "Pending")
+                                {
+                                    <span class="badge rounded-pill bg-soft-warning text-warning px-3 py-2 border border-warning border-opacity-10 ai-status-pending" data-offer-id="@item.Id">
+                                        <span class="spinner-border spinner-border-sm me-1" role="status"></span> Processing
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge rounded-pill bg-soft-secondary text-secondary px-3 py-2 border border-secondary border-opacity-10">
+                                        Archived
+                                    </span>
+                                }
+                            </td>
+
+                            <td class="text-center pe-4">
+                                <div class="btn-group glass-actions">
+
+                                    <a asp-action="ViewResults" asp-route-id="@item.Id"
+                                           class="btn action-btn text-info" title="View Applications">
+                                        <i class="bi bi-person-lines-fill"></i>
+                                    </a>
+
+                                    <div class="vr"></div>
+
+                                    <div id="ai-button-container-@item.Id">
+                                        @if (item.AiAnalysisStatus == "Verified" || item.AiAnalysisStatus == "ManualReview")
+                                        {
+                                            <a asp-action="AiAnalysisDetails" asp-route-id="@item.Id"
+                                                   class="btn action-btn text-success" title="AI Analysis">
+                                                <i class="bi bi-robot"></i>
+                                            </a>
+                                        }
+                                        else if (item.AiAnalysisStatus == "Pending")
+                                        {
+                                            <button class="btn action-btn text-warning" disabled>
+                                                <i class="bi bi-robot"></i>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn action-btn" style="color: #6f42c1;"
+                                                    onclick="openAiModal('@item.Id', '@(JavaScriptEncoder.Default.Encode(item.Title))')">
+                                                <i class="bi bi-robot"></i>
+                                            </button>
+                                        }
+                                    </div>
+
+                                    <div class="vr"></div>
+
+                                    <button class="btn action-btn text-success"
+                                            onclick="openReopenModal('@item.Id', '@(JavaScriptEncoder.Default.Encode(item.Title))')">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                    </button>
+
+                                    <div class="vr"></div>
+
+                                    <button class="btn action-btn text-danger"
+                                            onclick="openDeleteModal('@item.Id', '@(JavaScriptEncoder.Default.Encode(item.Title))')">
+                                        <i class="bi bi-trash3-fill"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="aiVerificationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 custom-main-shadow rounded-4">
+            <div class="modal-header border-0 pb-0 d-flex justify-content-end">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="aiVerificationForm" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body text-center px-4 pb-4">
+                    <div class="icon-box-circle mb-4" style="background-color: rgba(111, 66, 193, 0.1); color: #6f42c1;">
+                        <i class="bi bi-robot"></i>
+                    </div>
+                    <h3 class="fw-bold text-dark mb-2">Request AI Analysis?</h3>
+                    <p class="text-muted mb-0">
+                        Are you sure you want to start the analysis for:<br>
+                        <span class="fw-bold" style="color: #6f42c1;" id="aiOfferTitle"></span>
+                    </p>
+                    <p class="x-small text-muted mt-3">
+                        <i class="bi bi-info-circle me-1"></i> The process may take up to a minute.
+                    </p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center gap-2 pb-5">
+                    <button type="button" class="btn btn-light rounded-pill px-4 fw-semibold border hover-shift" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn rounded-pill px-4 fw-bold shadow-sm hover-lift text-white"
+                            style="background-color: #6f42c1; border-color: #6f42c1;">
+                        Confirm & Start
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="reopenOfferModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 custom-main-shadow rounded-4">
+            <div class="modal-header border-0 pb-0 d-flex justify-content-end">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="reopenOfferForm" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body text-center px-4 pb-4">
+                    <div class="icon-box-circle bg-soft-success text-success mb-4">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </div>
+                    <h3 class="fw-bold text-dark mb-2">Reactivate Offer?</h3>
+                    <p class="text-muted mb-0">
+                        Move this offer back to the active list:<br>
+                        <span class="fw-bold text-success" id="reopenOfferTitle"></span>
+                    </p>
+                    <p class="x-small text-muted mt-3">
+                        <i class="bi bi-info-circle me-1"></i> It will be visible to candidates for 30 days.
+                    </p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center gap-2 pb-5">
+                    <button type="button" class="btn btn-light rounded-pill px-4 fw-semibold border hover-shift" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm hover-lift">
+                        Confirm & Reactivate
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteOfferModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 custom-main-shadow rounded-4">
+            <div class="modal-header border-0 pb-0 d-flex justify-content-end">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="deleteOfferForm" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body text-center px-4 pb-4">
+                    <div class="icon-box-circle bg-soft-danger text-danger mb-4">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                    <h3 class="fw-bold text-dark mb-2">Permanent Delete?</h3>
+                    <p class="text-muted mb-0">
+                        Are you sure you want to delete:<br>
+                        <span class="fw-bold text-danger" id="deleteOfferTitle"></span>
+                    </p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center gap-2 pb-5">
+                    <button type="button" class="btn btn-light rounded-pill px-4 fw-semibold border hover-shift" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm hover-lift">
+                        Delete Forever
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openAiModal(offerId, offerTitle) {
+            document.getElementById('aiOfferTitle').innerText = offerTitle;
+            const form = document.getElementById('aiVerificationForm');
+            form.action = '/Offer/VerifyOffer/' + offerId;
+            new bootstrap.Modal(document.getElementById('aiVerificationModal')).show();
+        }
+
+        function openReopenModal(offerId, offerTitle) {
+            document.getElementById('reopenOfferTitle').innerText = offerTitle;
+            const form = document.getElementById('reopenOfferForm');
+            form.action = '/Offer/ReopenOffer/' + offerId;
+            new bootstrap.Modal(document.getElementById('reopenOfferModal')).show();
+        }
+
+        function openDeleteModal(offerId, offerTitle) {
+            document.getElementById('deleteOfferTitle').innerText = offerTitle;
+            const form = document.getElementById('deleteOfferForm');
+            form.action = '/Offer/Delete/' + offerId;
+            new bootstrap.Modal(document.getElementById('deleteOfferModal')).show();
+        }
+
+        function checkStatus() {
+            const pendingElements = document.querySelectorAll('.ai-status-pending');
+
+            pendingElements.forEach(el => {
+                const offerId = el.getAttribute('data-offer-id');
+
+                fetch(`/Offer/GetAiStatus/${offerId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === "Verified") {
+                            updateRowToVerified(offerId);
+                        }
+                    })
+                    .catch(error => console.error('Error fetching status:', error));
+            });
+        }
+
+        function updateRowToVerified(id) {
+            const row = document.getElementById(`row-${id}`);
+            if (row) {
+                row.classList.remove('bg-light-subtle');
+                row.classList.add('bg-success-subtle');
+            }
+
+            const titleBadge = document.getElementById(`verified-badge-${id}`);
+            if (titleBadge) {
+                titleBadge.innerHTML = `<span class="badge bg-success ms-2 small" style="font-size: 0.7rem;"><i class="bi bi-patch-check-fill me-1"></i>AI Verified</span>`;
+            }
+
+            const statusCont = document.getElementById(`status-container-${id}`);
+            if (statusCont) {
+                statusCont.innerHTML = `<span class="badge rounded-pill bg-success px-3 py-2">Analysis Ready</span>`;
+            }
+
+            const btnCont = document.getElementById(`ai-button-container-${id}`);
+            if (btnCont) {
+                btnCont.innerHTML = `
+                    <a href="/Offer/AiAnalysisDetails/${id}" class="btn action-btn text-success" title="View AI Analysis Results">
+                        <i class="bi bi-robot"></i>
+                    </a>`;
+            }
+        }
+
+        setInterval(() => {
+            if (document.querySelectorAll('.ai-status-pending').length > 0) {
+                checkStatus();
+            }
+        }, 3000);
+    </script>
+}

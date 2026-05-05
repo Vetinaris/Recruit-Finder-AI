@@ -1,0 +1,105 @@
+﻿:root {
+    --primary-ai: #4361ee;
+    --secondary-ai: #4cc9f0;
+    --transition-speed: 0.3s;
+}
+
+.transition-hover {
+    transition: all var(--transition-speed) cubic-bezier(.25, .8, .25, 1);
+    border-radius: 20px;
+    background-color: #ffffff;
+}
+
+    .transition-hover:hover {
+        transform: translateY(-7px);
+        box-shadow: 0 0.8rem 2.5rem rgba(67, 97, 238, 0.12) !important;
+    }
+
+.icon-shape {
+    width: 65px;
+    height: 65px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-speed) ease-in-out;
+}
+
+.transition-hover:hover .icon-shape {
+    background-color: var(--primary-ai) !important;
+    color: #ffffff !important;
+}
+
+.bg-light-primary {
+    background-color: #f0f3ff;
+}
+
+.card-title {
+    font-size: 1.15rem;
+}
+
+.icon-circle {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    font-size: 2rem;
+    color: #ffffff;
+    background: linear-gradient(135deg, #4361ee, #4cc9f0) !important;
+    box-shadow: 0 4px 10px rgba(67, 97, 238, 0.2);
+}
+
+.hover-lift {
+    transition: all 0.2s ease;
+}
+
+    .hover-lift:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(72, 149, 239, 0.2);
+    }
+
+.accordion-button {
+    font-size: 1.1rem;
+    transition: all var(--transition-speed) ease;
+}
+
+    .accordion-button:not(.collapsed) {
+        background-color: rgba(67, 97, 238, 0.05);
+        color: var(--primary-ai);
+    }
+
+    .accordion-button:focus {
+        box-shadow: none;
+    }
+
+.accordion-item {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+    .accordion-item:last-child {
+        border-bottom: none !important;
+    }
+
+.lh-lg ul li {
+    margin-bottom: 8px;
+}
+
+section p {
+    color: #5c5f7a;
+    line-height: 1.6;
+}
+
+h3 {
+    font-size: 1.25rem;
+    letter-spacing: -0.5px;
+}
+
+.list-group-item i {
+    position: relative;
+    top: 2px;
+}
+
+.x-small {
+    font-size: 0.75rem;
+}

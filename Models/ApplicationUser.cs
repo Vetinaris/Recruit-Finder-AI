@@ -10,6 +10,9 @@ namespace Recruit_Finder_AI.Models
         public string? NIP { get; set; }
         public string? CompanyAddress { get; set; }
 
+        public byte[]? ProfilePicture { get; set; }
+        public string? ProfilePictureContentType { get; set; }
+
         public bool IsEmployer { get; set; }
         public DateTime? PasswordExpiration { get; set; } = DateTime.UtcNow.AddDays(30);
         public virtual ICollection<PasswordHistory> PasswordHistories { get; set; } = new List<PasswordHistory>();
@@ -18,6 +21,8 @@ namespace Recruit_Finder_AI.Models
         public bool IsPermanentBan { get; set; } = false;
         [MaxLength(500)]
         public string? BanReason { get; set; }
+        [MaxLength(1000)]
+        public string? BanDescription { get; set; }
         public virtual ICollection<Cv> Cvs { get; set; } = new List<Cv>();
     }
     public class PasswordHistory

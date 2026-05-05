@@ -7,12 +7,13 @@ using Recruit_Finder_AI.Data;
 using Recruit_Finder_AI.Entities;
 using Recruit_Finder_AI.Models;
 using Recruit_Finder_AI.Services;
+using Recruit_Finder_AI.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Recruit_Finder_AI.ViewModels;
 
 namespace Recruit_Finder_AI.Controllers
 {
@@ -25,13 +26,16 @@ namespace Recruit_Finder_AI.Controllers
         private readonly AuditService _auditService;
         private readonly SettingsService _settingsService;
         private readonly NotificationService _notificationService;
+        private readonly IConfiguration _configuration;
+        private readonly EmailService _emailService;
 
         public AdminController(UserManager<ApplicationUser> userManager,
                                RoleManager<IdentityRole> roleManager,
                                Recruit_Finder_AIContext context,
                                AuditService auditService,
                                SettingsService settingsService,
-                               NotificationService notificationService)
+                               NotificationService notificationService,
+            IConfiguration configuration, EmailService emailService)
         {
             _userManager = userManager;
             _roleManager = roleManager;
@@ -39,6 +43,8 @@ namespace Recruit_Finder_AI.Controllers
             _auditService = auditService;
             _settingsService = settingsService;
             _notificationService = notificationService;
+            _configuration = configuration;
+            _emailService = emailService;
         }
 
         private async Task<AdminIndexViewModel> LoadIndexModel(AdminIndexViewModel model)
@@ -57,7 +63,10 @@ namespace Recruit_Finder_AI.Controllers
                     Email = user.Email,
                     LockoutEnd = user.LockoutEnd,
                     PasswordExpiration = user.PasswordExpiration,
-                    PrimaryRole = primaryRole
+                    PrimaryRole = primaryRole,
+                    BanReason = user.BanReason,
+                    IsPermanentBan = user.IsPermanentBan,
+                    BanDescription = user.BanDescription
                 };
             });
 
@@ -84,17 +93,16 @@ namespace Recruit_Finder_AI.Controllers
                     PasswordExpiration = user.PasswordExpiration,
                     PrimaryRole = primaryRole,
                     BanReason = user.BanReason,
-                    IsPermanentBan = user.IsPermanentBan
+                    IsPermanentBan = user.IsPermanentBan,
+                    BanDescription = user.BanDescription
                 });
             }
 
-            var viewModel = new AdminIndexViewModel
-            {
-                Users = usersWithRoles
-            };
+            var viewModel = new AdminIndexViewModel { Users = usersWithRoles };
             return View(viewModel);
         }
 
+        [HttpGet]
         public async Task<IActionResult> EditUser(string id)
         {
             var user = await _userManager.FindByIdAsync(id);
@@ -103,25 +111,28 @@ namespace Recruit_Finder_AI.Controllers
                 TempData["ErrorMessage"] = "No user to edit found.";
                 return RedirectToAction("Index");
             }
+
             var userRoles = await _userManager.GetRolesAsync(user);
             var allRoles = await _roleManager.Roles.Select(r => r.Name).ToListAsync();
-            DateTime? passwordExpirationLocal = user.PasswordExpiration.HasValue
-                ? user.PasswordExpiration.Value.ToLocalTime()
-                : (DateTime?)null;
+
+            DateTime? passwordExpirationLocal = user.PasswordExpiration?.ToLocalTime();
 
             var model = new EditUserViewModel
             {
                 Id = user.Id,
                 UserName = user.UserName,
                 Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
                 IsLocked = user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow,
                 LockoutEndDisplay = user.LockoutEnd,
                 PasswordExpiration = passwordExpirationLocal,
-                ForcePasswordReset = user.PasswordExpiration.HasValue && user.PasswordExpiration.Value.ToUniversalTime() <= DateTime.UtcNow,
+                ForcePasswordReset = user.PasswordExpiration.HasValue && user.PasswordExpiration.Value <= DateTime.UtcNow,
                 CompanyName = user.CompanyName,
                 NIP = user.NIP,
                 CompanyAddress = user.CompanyAddress,
                 IsEmployer = user.IsEmployer,
+                ProfilePicture = user.ProfilePicture,
+
                 AvailableRoles = allRoles.Select(role => new UserRoleViewModel
                 {
                     RoleName = role,
@@ -137,11 +148,7 @@ namespace Recruit_Finder_AI.Controllers
         public async Task<IActionResult> EditUser(EditUserViewModel model)
         {
             var user = await _userManager.FindByIdAsync(model.Id);
-            if (user == null)
-            {
-                TempData["ErrorMessage"] = "No user to update found.";
-                return RedirectToAction("Index");
-            }
+            if (user == null) return RedirectToAction("Index");
 
             if (!ModelState.IsValid)
             {
@@ -154,67 +161,63 @@ namespace Recruit_Finder_AI.Controllers
                 return View(model);
             }
 
+            bool resetEmailSent = false;
+
+            bool isCurrentlyExpiredInDb = user.PasswordExpiration.HasValue && user.PasswordExpiration.Value <= DateTime.UtcNow;
+
+            if (model.ForcePasswordReset)
+            {
+                if (!isCurrentlyExpiredInDb)
+                {
+                    var code = new Random().Next(100000, 999999).ToString();
+                    await _userManager.RemoveAuthenticationTokenAsync(user, "ManualReset", "ResetCode");
+                    await _userManager.SetAuthenticationTokenAsync(user, "ManualReset", "ResetCode", code);
+                    resetEmailSent = await _emailService.SendPasswordResetCodeAsync(user.Email, code);
+                }
+
+                user.PasswordExpiration = DateTime.UtcNow.AddDays(-1);
+            }
+            else
+            {
+                user.PasswordExpiration = model.PasswordExpiration?.ToUniversalTime();
+
+                await _userManager.RemoveAuthenticationTokenAsync(user, "ManualReset", "ResetCode");
+            }
+
             user.Email = model.Email;
             user.UserName = model.UserName;
             user.CompanyName = model.CompanyName;
             user.NIP = model.NIP;
             user.CompanyAddress = model.CompanyAddress;
             user.IsEmployer = model.IsEmployer;
+
             bool isCurrentlyLocked = await _userManager.IsLockedOutAsync(user);
             if (model.IsLocked && !isCurrentlyLocked)
-            {
                 await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue);
-            }
             else if (!model.IsLocked && isCurrentlyLocked)
             {
                 await _userManager.SetLockoutEndDateAsync(user, null);
                 await _userManager.ResetAccessFailedCountAsync(user);
             }
 
-            if (model.ForcePasswordReset)
-            {
-                user.PasswordExpiration = DateTime.UtcNow.AddDays(-1);
-            }
-            else
-            {
-                user.PasswordExpiration = model.PasswordExpiration?.ToUniversalTime();
-            }
-
             var currentRoles = await _userManager.GetRolesAsync(user);
-            var selectedRoleNames = model.AvailableRoles?
-                .Where(r => r.IsSelected)
-                .Select(r => r.RoleName)
-                .ToList() ?? new List<string>();
-
-            var rolesToRemove = currentRoles.Except(selectedRoleNames).ToList();
-            var rolesToAdd = selectedRoleNames.Except(currentRoles).ToList();
-
-            if (rolesToRemove.Any()) await _userManager.RemoveFromRolesAsync(user, rolesToRemove);
-            if (rolesToAdd.Any()) await _userManager.AddToRolesAsync(user, rolesToAdd);
+            var selectedRoles = model.AvailableRoles?.Where(r => r.IsSelected).Select(r => r.RoleName).ToList() ?? new List<string>();
+            await _userManager.RemoveFromRolesAsync(user, currentRoles.Except(selectedRoles));
+            await _userManager.AddToRolesAsync(user, selectedRoles.Except(currentRoles));
 
             var result = await _userManager.UpdateAsync(user);
-
             if (result.Succeeded)
             {
                 await _userManager.UpdateSecurityStampAsync(user);
 
-                await _auditService.LogActionAsync(
-                    User.Identity.Name,
-                    "ADMIN_EDIT_USER",
-                    $"Edited user {user.UserName}. Roles: {string.Join(", ", selectedRoleNames)}",
-                    true,
-                    user.Id
-                );
+                string msg = "User updated successfully.";
+                if (resetEmailSent) msg += " New reset code has been sent.";
 
-                TempData["SuccessMessage"] = $"User {user.UserName} updated successfully.";
+                TempData["SuccessMessage"] = msg;
                 return RedirectToAction("Index");
             }
 
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
-
+            foreach (var error in result.Errors) ModelState.AddModelError("", error.Description);
             return View(model);
         }
 
@@ -229,38 +232,26 @@ namespace Recruit_Finder_AI.Controllers
                 return RedirectToAction("Index");
             }
 
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+            var code = new Random().Next(100000, 999999).ToString();
+
+            await _userManager.RemoveAuthenticationTokenAsync(user, "ManualReset", "ResetCode");
+            await _userManager.SetAuthenticationTokenAsync(user, "ManualReset", "ResetCode", code);
+
             user.PasswordExpiration = DateTime.UtcNow.AddDays(-1);
+
+            await _userManager.UpdateSecurityStampAsync(user);
+
             var result = await _userManager.UpdateAsync(user);
 
             if (result.Succeeded)
             {
-
-                try
-                {
-                    await _context.SaveChangesAsync();
-                }
-                catch (Exception)
-                {
-
-                }
+                bool emailSent = await _emailService.SendPasswordResetCodeAsync(user.Email, code);
+                TempData["SuccessMessage"] = $"Reset forced for {user.UserName}." + (emailSent ? " Code sent." : " Email failed.");
             }
-
-            await _auditService.LogActionAsync(
-                User.Identity.Name,
-                "ADMIN_FORCE_PASSWORD_RESET",
-                result.Succeeded
-                    ? $"Admin forced password reset for user {user.UserName}."
-                    : $"Failed to force password reset for user {user.UserName}.",
-                result.Succeeded,
-                user.Id
-            );
-
-            TempData[result.Succeeded ? "SuccessMessage" : "ErrorMessage"] =
-                result.Succeeded
-                    ? $"User {user.UserName} will be required to change password."
-                    : $"Error setting password reset for {user.UserName}.";
+            else
+            {
+                TempData["ErrorMessage"] = "Database update failed.";
+            }
 
             return RedirectToAction("Index");
         }
@@ -297,36 +288,18 @@ namespace Recruit_Finder_AI.Controllers
         public async Task<IActionResult> UnlockUser(string id)
         {
             var user = await _userManager.FindByIdAsync(id);
-            if (user == null)
-            {
-                TempData["ErrorMessage"] = "User not found.";
-                return RedirectToAction("Index");
-            }
+            if (user == null) return NotFound();
 
             user.LockoutEnd = null;
             user.AccessFailedCount = 0;
             user.IsPermanentBan = false;
             user.BanReason = null;
+            user.BanDescription = null;
 
             var result = await _userManager.UpdateAsync(user);
+            await _auditService.LogActionAsync(User.Identity.Name, "ADMIN_UNLOCK_USER", $"Unlocked {user.UserName}", result.Succeeded, user.Id);
 
-            await _auditService.LogActionAsync(
-                User.Identity.Name,
-                "ADMIN_UNLOCK_USER",
-                result.Succeeded ? $"Admin unlocked user {user.UserName}." : $"Failed to unlock user {user.UserName}.",
-                result.Succeeded,
-                user.Id
-            );
-
-            if (result.Succeeded)
-            {
-                TempData["SuccessMessage"] = $"User {user.UserName} has been unlocked.";
-            }
-            else
-            {
-                TempData["ErrorMessage"] = "Failed to unlock user.";
-            }
-
+            if (result.Succeeded) TempData["SuccessMessage"] = $"User {user.UserName} unlocked.";
             return RedirectToAction("Index");
         }
 
@@ -340,11 +313,9 @@ namespace Recruit_Finder_AI.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> Settings()
         {
             var model = await _settingsService.GetAdminSettingsAsync();
-
             return View(model);
         }
         private readonly List<string> _banReasons = new List<string>
@@ -365,19 +336,17 @@ namespace Recruit_Finder_AI.Controllers
             var user = await _userManager.FindByIdAsync(id);
             if (user == null || user.Id == _userManager.GetUserId(User)) return BadRequest();
 
-            string finalReason = reason == "Other (requires description)" ? customReason ?? "No detailed reason provided" : reason;
-
             user.IsPermanentBan = true;
-            user.BanReason = finalReason;
+            user.BanReason = (reason == "Other" && !string.IsNullOrWhiteSpace(customReason)) ? customReason : reason;
+            user.BanDescription = customReason;
 
             await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue);
-
             var result = await _userManager.UpdateAsync(user);
 
-            await _auditService.LogActionAsync(User.Identity.Name, "ADMIN_PERMABAN",
-                $"Permanent ban for {user.Email}. Reason: {finalReason}", result.Succeeded, user.Id);
+            string auditDetails = $"Permanent Ban. Reason: {user.BanReason}. " +
+                                 (!string.IsNullOrEmpty(customReason) ? $"Additional Notes: {customReason}" : "");
 
-            TempData["SuccessMessage"] = $"User {user.UserName} has been permanently banned.";
+            await _auditService.LogActionAsync(User.Identity.Name, "ADMIN_PERMABAN", auditDetails, result.Succeeded, user.Id);
             return RedirectToAction(nameof(Index));
         }
 
@@ -388,90 +357,64 @@ namespace Recruit_Finder_AI.Controllers
             var user = await _userManager.FindByIdAsync(id);
             if (user == null) return NotFound();
 
-            string finalReason = reason == "Other (requires description)" ? customReason ?? "No detailed reason provided" : reason;
-            var endDate = DateTimeOffset.UtcNow.AddMonths(months);
-
-            user.BanReason = finalReason;
+            user.BanReason = (reason == "Other" && !string.IsNullOrWhiteSpace(customReason)) ? customReason : reason;
+            user.BanDescription = customReason;
             user.IsPermanentBan = false;
 
-            var result = await _userManager.SetLockoutEndDateAsync(user, endDate);
+            var result = await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.AddMonths(months));
             await _userManager.UpdateAsync(user);
 
-            await _auditService.LogActionAsync(User.Identity.Name, "ADMIN_TEMP_BAN",
-                $"Banned {user.Email} for {months} months. Reason: {finalReason}", true, user.Id);
+            string auditDetails = $"Temp Ban ({months} mo). Reason: {user.BanReason}. " +
+                                 (!string.IsNullOrEmpty(customReason) ? $"Additional Notes: {customReason}" : "");
 
-            TempData["SuccessMessage"] = $"User {user.UserName} has been banned until {endDate:dd.MM.yyyy}.";
+            await _auditService.LogActionAsync(User.Identity.Name, "ADMIN_TEMP_BAN", auditDetails, true, user.Id);
             return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> Settings(AdminSettingsViewModel model)
         {
-
             if (!ModelState.IsValid)
             {
+                TempData["ErrorMessage"] = "Validation failed. Please check your input.";
                 return View(model);
             }
 
             var success = await _settingsService.SaveAdminSettingsAsync(model);
 
-            await _auditService.LogActionAsync(
-                User.Identity.Name,
-                "ADMIN_SETTINGS_UPDATE",
-                success ? "System settings modified." : "System settings modification failed.",
-                success,
-                _userManager.GetUserId(User)
-            );
+            await _auditService.LogActionAsync(User.Identity.Name, "ADMIN_SETTINGS_UPDATE", success ? "Success" : "Failed", success, _userManager.GetUserId(User));
 
             if (success)
             {
-                TempData["SuccessMessage"] = "System settings updated successfully.";
-
-                return RedirectToAction(nameof(Settings));
+                TempData["SuccessMessage"] = "Global Security Policy has been updated successfully.";
             }
             else
             {
-                ModelState.AddModelError(string.Empty, "An error occurred while saving settings to the database.");
-                return View(model);
+                TempData["ErrorMessage"] = "A database error occurred while saving settings.";
             }
+
+            return RedirectToAction(nameof(Settings));
         }
 
         [HttpGet]
-        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> ExportAuditLogs()
         {
-            var logs = await _context.AuditLogs
-                                     .OrderByDescending(l => l.Timestamp)
-                                     .ToListAsync();
-
+            var logs = await _context.AuditLogs.OrderByDescending(l => l.Timestamp).ToListAsync();
             var builder = new StringBuilder();
-
             builder.AppendLine("sep=;");
-
-            builder.AppendLine("Timestamp;User;Action;Status;IP Address;Details");
+            builder.AppendLine("Timestamp;Admin;Action;Status;Details");
 
             foreach (var log in logs)
             {
                 string safeDetails = log.Details?.Replace(";", "-").Replace("\r", "").Replace("\n", " ") ?? "";
                 string status = log.IsSuccess ? "Success" : "Failed";
 
-                builder.AppendLine($"{log.Timestamp:yyyy-MM-dd HH:mm:ss};{log.UserName};{log.Action};{status};{log.IpAddress};{safeDetails}");
+                builder.AppendLine($"{log.Timestamp:yyyy-MM-dd HH:mm:ss};{log.UserName};{log.Action};{status};{safeDetails}");
             }
 
             var csvData = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(builder.ToString())).ToArray();
-            string fileName = $"AuditLogs_{DateTime.Now:yyyyMMdd_HHmm}.csv";
-
-            await _auditService.LogActionAsync(
-                User.Identity.Name,
-                "ADMIN_EXPORT_LOGS",
-                $"Admin exported {logs.Count} logs to CSV file.",
-                true,
-                _userManager.GetUserId(User)
-            );
-
-            return File(csvData, "text/csv", fileName);
+            return File(csvData, "text/csv", $"AuditLogs_{DateTime.Now:yyyyMMdd}.csv");
         }
 
         [HttpGet]

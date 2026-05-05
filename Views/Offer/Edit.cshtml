@@ -1,144 +1,190 @@
 ﻿@model Recruit_Finder_AI.Models.JobOffer
-
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+@section Styles {
+    <link rel="stylesheet" href="~/css/offer.css" />
+}
 @{
-    ViewData["Title"] = "Edit Offer";
-    var categories = new List<string>
-    {
-        "IT", "Data Science", "Marketing", "Finance",
-        "Healthcare", "Engineering", "Sales", "Customer Service",
-        "Human Resources", "Design & Creative", "Logistics",
-        "Legal", "Education", "Construction", "Hospitality"
-    };
+    ViewData["Title"] = "Edit Job Offer";
+    var categories = ViewBag.Categories as List<string> ?? new List<string>();
     var jobTypes = new List<string> { "Full-time", "Part-time", "Contract", "Freelance", "B2B", "Internship" };
 }
 
-<div class="container py-5">
+<div class="container py-5" lang="en-US">
     <div class="row justify-content-center">
-        <div class="col-lg-11">
-            <div class="d-flex align-items-center mb-4">
-                <a asp-action="MyListings" class="btn btn-outline-secondary rounded-circle me-3 shadow-sm" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
-                    <i class="bi bi-arrow-left"></i>
-                </a>
-                <h2 class="fw-bold mb-0">Update Job Listing</h2>
+        <div class="col-lg-10">
+            <div class="text-center mb-5">
+                <div class="icon-shape bg-soft-primary text-primary rounded-circle mb-3 mx-auto shadow-sm" style="width: 80px; height: 80px; font-size: 2.5rem; display: flex; align-items: center; justify-content: center;">
+                    <i class="bi bi-pencil-square"></i>
+                </div>
+                <h1 class="fw-bold display-6 mb-1">Update <span class="text-primary">Job Offer</span></h1>
+                <p class="text-muted fs-5">Keep your job details up to date for the best AI matching results.</p>
             </div>
 
-            <div class="card border-0 shadow-lg rounded-4">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden" style="border: 1px solid #f8f9fa !important;">
                 <div class="card-body p-4 p-md-5">
                     <form asp-action="Edit" id="editOfferForm">
-                        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small"></div>
+
                         <input type="hidden" asp-for="Id" />
                         <input type="hidden" asp-for="RecruiterId" />
-                        <input type="hidden" asp-for="Company" />
                         <input type="hidden" asp-for="CreatedAt" />
+                        <input type="hidden" asp-for="IsVisible" />
+                        <input type="hidden" asp-for="AiAnalysisStatus" />
+                        <input type="hidden" asp-for="AiAnalysisComment" />
 
-                        <div class="row g-4">
-                            <div class="col-md-7">
-                                <h5 class="fw-bold mb-4 text-primary border-bottom pb-2">General Information</h5>
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="bg-primary rounded-pill me-3" style="width: 4px; height: 24px;"></div>
+                            <h4 class="fw-bold mb-0 h5 text-dark">Basic Information</h4>
+                        </div>
 
-                                <div class="mb-3">
-                                    <label asp-for="Title" class="form-label fw-bold small text-uppercase">Job Title</label>
-                                    <input asp-for="Title" class="form-control rounded-3 py-2" placeholder="e.g. Senior C# Developer" />
-                                    <span asp-validation-for="Title" class="text-danger small"></span>
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label asp-for="Category" class="form-label fw-bold small text-uppercase">Category</label>
-                                        <select asp-for="Category" id="categorySelect" class="form-select rounded-3">
-                                            @foreach (var cat in categories)
-                                            {
-                                                <option value="@cat">@cat</option>
-                                            }
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label asp-for="Subcategory" class="form-label fw-bold small text-uppercase">Subcategory</label>
-                                        <input asp-for="Subcategory" id="subcategoryInput" list="subcategoryList" class="form-control rounded-3" placeholder="e.g. Backend" />
-                                        <datalist id="subcategoryList">
-                                        </datalist>
-                                        <span asp-validation-for="Subcategory" class="text-danger small"></span>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label asp-for="JobType" class="form-label fw-bold small text-uppercase">Job Type</label>
-                                        <select asp-for="JobType" class="form-select rounded-3">
-                                            @foreach (var type in jobTypes)
-                                            {
-                                                <option value="@type">@type</option>
-                                            }
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label asp-for="Location" class="form-label fw-bold small text-uppercase">Location</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-geo-alt text-muted"></i></span>
-                                        <input asp-for="Location" class="form-control rounded-3 border-start-0" placeholder="e.g. Warsaw, Poland or Remote" />
-                                    </div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label asp-for="RequiredLanguages" class="form-label fw-bold small text-uppercase">Required Languages</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-translate text-muted"></i></span>
-                                        <input asp-for="RequiredLanguages" id="languagesInput" class="form-control rounded-3 border-start-0" placeholder="e.g. English, Polish, German" />
-                                    </div>
-                                    <small class="text-muted">Separate multiple languages with commas.</small>
-                                </div>
+                        <div class="row g-3 mb-5">
+                            <div class="col-md-12">
+                                <label asp-for="Title" class="text-muted small text-uppercase fw-bold mb-1 d-block">Job Title</label>
+                                <input asp-for="Title" class="form-control border-light-subtle shadow-sm rounded-pill" required />
+                                <span asp-validation-for="Title" class="text-danger small"></span>
                             </div>
 
-                            <div class="col-md-5">
-                                <div class="p-4 bg-light rounded-4 border h-100 shadow-sm">
-                                    <h5 class="fw-bold mb-3"><i class="bi bi-gear-fill me-2 text-primary"></i>Offer Settings</h5>
-
-                                    <div class="mb-4">
-                                        <label asp-for="ExpirationDate" class="form-label fw-bold small text-uppercase">Expiration Date</label>
-                                        <input asp-for="ExpirationDate" class="form-control rounded-3" type="date" min="@DateTime.Now.ToString("yyyy-MM-dd")" />
-                                        <span asp-validation-for="ExpirationDate" class="text-danger small"></span>
-                                    </div>
-
-                                    <h5 class="fw-bold mb-3 border-top pt-3"><i class="bi bi-cash-stack me-2 text-success"></i>Compensation</h5>
-
-                                    <div class="mb-3">
-                                        <label class="form-label fw-bold small text-uppercase">Salary Display</label>
-                                        <select id="salaryTypeEdit" asp-for="SalaryType" class="form-select rounded-3">
-                                            <option value="none">Undisclosed</option>
-                                            <option value="negotiable">Negotiable</option>
-                                            <option value="fixed">Fixed Monthly</option>
-                                            <option value="range">Salary Range</option>
-                                        </select>
-                                    </div>
-
-                                    <div id="salaryInputsArea" class="@((Model.SalaryType == "none" || Model.SalaryType == "negotiable") ? "d-none" : "")">
-                                        <div class="mb-3">
-                                            <label id="minLabel" class="small fw-bold">Amount (EUR)</label>
-                                            <input asp-for="MinimumSalary" id="minSalary" class="form-control rounded-3" type="number" step="0.01" />
-                                        </div>
-                                        <div id="maxSalBox" class="@(Model.SalaryType != "range" ? "d-none" : "")">
-                                            <label class="small fw-bold">Max Salary (EUR)</label>
-                                            <input asp-for="MaximumSalary" id="maxSalary" class="form-control rounded-3" type="number" step="0.01" />
-                                        </div>
-                                        <div id="salaryError" class="text-danger small mt-2 d-none">
-                                            <i class="bi bi-exclamation-circle me-1"></i>Max salary cannot be less than min salary.
-                                        </div>
-                                    </div>
-                                </div>
+                            <div class="col-md-6">
+                                <label asp-for="Category" class="text-muted small text-uppercase fw-bold mb-1 d-block">Category</label>
+                                <select asp-for="Category" id="categorySelect" class="form-select border-light-subtle shadow-sm rounded-pill" required>
+                                    @foreach (var cat in categories)
+                                    {
+                                        <option value="@cat">@cat</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="Category" class="text-danger small"></span>
                             </div>
 
-                            <div class="col-12 mt-2">
-                                <label asp-for="Description" class="form-label fw-bold text-primary small text-uppercase">Job Description</label>
-                                <textarea asp-for="Description" class="form-control rounded-4 shadow-sm" rows="12" placeholder="Write about responsibilities, requirements, and benefits..."></textarea>
-                                <span asp-validation-for="Description" class="text-danger small"></span>
+                            <div class="col-md-6">
+                                <label asp-for="Subcategory" class="text-muted small text-uppercase fw-bold mb-1 d-block">Subcategory</label>
+                                <input asp-for="Subcategory" id="subcategoryInput" list="subcategoryList" class="form-control border-light-subtle shadow-sm rounded-pill" required />
+                                <datalist id="subcategoryList"></datalist>
+                                <span asp-validation-for="Subcategory" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="JobType" class="text-muted small text-uppercase fw-bold mb-1 d-block">Employment Type</label>
+                                <select asp-for="JobType" class="form-select border-light-subtle shadow-sm rounded-pill" required>
+                                    @foreach (var type in jobTypes)
+                                    {
+                                        <option value="@type">@type</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="JobType" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="Location" class="text-muted small text-uppercase fw-bold mb-1 d-block">Location</label>
+                                <input asp-for="Location" class="form-control border-light-subtle shadow-sm rounded-pill" required />
+                                <span asp-validation-for="Location" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="Company" class="text-muted small text-uppercase fw-bold mb-1 d-block">Company Name</label>
+                                <input asp-for="Company" class="form-control border-light-subtle shadow-sm rounded-pill bg-light" readonly />
                             </div>
                         </div>
 
-                        <div class="d-flex gap-2 mt-5 pt-4 border-top">
-                            <button type="submit" id="submitBtn" class="btn btn-primary btn-lg rounded-pill px-5 shadow hover-lift">
-                                <i></i>Save Changes
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="bg-primary rounded-pill me-3" style="width: 4px; height: 24px;"></div>
+                            <h4 class="fw-bold mb-0 h5 text-dark">Offer Expiration</h4>
+                        </div>
+
+                        <div class="row g-3 mb-5 p-3 rounded-4 bg-light mx-0 border border-light-subtle shadow-sm">
+                            <div class="col-md-6">
+                                <label asp-for="ExpirationDate" class="text-muted small text-uppercase fw-bold mb-2 d-block">Expiration Date</label>
+                                <input asp-for="ExpirationDate" type="date" class="form-control border-light-subtle shadow-sm rounded-pill" min="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                                <span asp-validation-for="ExpirationDate" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="bg-primary rounded-pill me-3" style="width: 4px; height: 24px;"></div>
+                            <h4 class="fw-bold mb-0 h5 text-dark">Compensation</h4>
+                        </div>
+
+                        <div class="row g-3 mb-5 p-3 rounded-4 bg-light mx-0 border border-light-subtle shadow-sm">
+                            <div class="col-md-4">
+                                <label class="text-muted small text-uppercase fw-bold mb-2 d-block">Salary Type</label>
+                                <select id="salaryType" asp-for="SalaryType" class="form-select border-light-subtle shadow-sm rounded-pill">
+                                    <option value="none">Not Disclosed</option>
+                                    <option value="negotiable">Negotiable</option>
+                                    <option value="fixed">Fixed Monthly</option>
+                                    <option value="range">Salary Range</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-8 @(Model.SalaryType == "fixed" ? "" : "d-none")" id="fixedSalaryGroup">
+                                <label class="text-muted small text-uppercase fw-bold mb-2 d-block">Monthly Amount (Gross)</label>
+                                <div class="input-group">
+                                    <input type="text" name="MinimumSalary" id="fixedSalaryInput" value="@(Model.SalaryType == "fixed" ? Model.MinimumSalary?.ToString("F0") : "")"
+                                           class="form-control salary-int border-light-subtle shadow-sm rounded-start-pill px-4"
+                                           placeholder="0" inputmode="numeric" @(Model.SalaryType == "fixed" ? "" : "disabled") />
+                                    <span class="input-group-text bg-white border-light-subtle rounded-end-pill px-3 fw-bold text-primary">EUR</span>
+                                </div>
+                            </div>
+
+                            <div class="col-md-8 @(Model.SalaryType == "range" ? "" : "d-none")" id="rangeSalaryGroup">
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <label class="text-muted small text-uppercase fw-bold mb-1 d-block">Min Salary</label>
+                                        <div class="input-group">
+                                            <input type="text" id="minSalary" name="MinimumSalary" value="@(Model.SalaryType == "range" ? Model.MinimumSalary?.ToString("F0") : "")"
+                                                   class="form-control salary-int border-light-subtle shadow-sm rounded-start-pill"
+                                                   placeholder="From" inputmode="numeric" @(Model.SalaryType == "range" ? "" : "disabled") />
+                                            <span class="input-group-text bg-white border-light-subtle px-2 fw-bold text-primary" style="font-size: 0.8rem;">EUR</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="text-muted small text-uppercase fw-bold mb-1 d-block">Max Salary</label>
+                                        <div class="input-group">
+                                            <input type="text" id="maxSalary" name="MaximumSalary" value="@(Model.SalaryType == "range" ? Model.MaximumSalary?.ToString("F0") : "")"
+                                                   class="form-control salary-int border-light-subtle shadow-sm"
+                                                   placeholder="To" inputmode="numeric" @(Model.SalaryType == "range" ? "" : "disabled") />
+                                            <span class="input-group-text bg-white border-light-subtle rounded-end-pill px-2 fw-bold text-primary" style="font-size: 0.8rem;">EUR</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="salaryError" class="text-danger small mt-1 d-none">Max salary must be greater than min!</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="bg-primary rounded-pill me-3" style="width: 4px; height: 24px;"></div>
+                            <h4 class="fw-bold mb-0 h5 text-dark">Required Languages</h4>
+                        </div>
+
+                        <div class="row g-3 mb-5 p-3 rounded-4 bg-light mx-0 border border-light-subtle shadow-sm">
+                            <div class="col-md-12">
+                                <label asp-for="RequiredLanguages" class="text-muted small text-uppercase fw-bold mb-1 d-block">Languages (comma separated)</label>
+                                <input asp-for="RequiredLanguages" id="languagesInput" class="form-control border-light-subtle shadow-sm rounded-pill" required />
+                                <span asp-validation-for="RequiredLanguages" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="bg-primary rounded-pill me-3" style="width: 4px; height: 24px;"></div>
+                            <h4 class="fw-bold mb-0 h5 text-dark">Job Details</h4>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Description" class="text-muted small text-uppercase fw-bold mb-1 d-block">About the Role</label>
+                            <textarea asp-for="Description" class="form-control border-light-subtle shadow-sm rounded-4 mb-4" rows="5" required></textarea>
+                            <span asp-validation-for="Description" class="text-danger small"></span>
+
+                            <label asp-for="Requirements" class="text-muted small text-uppercase fw-bold mb-1 d-block">Job Requirements</label>
+                            <textarea asp-for="Requirements" class="form-control border-light-subtle shadow-sm rounded-4" rows="8" required></textarea>
+                            <span asp-validation-for="Requirements" class="text-danger small"></span>
+                        </div>
+
+                        <div class="d-flex flex-column flex-md-row gap-3 pt-4 border-top">
+                            <button type="submit" id="submitBtn" class="btn btn-primary btn-lg rounded-pill px-5 shadow hover-lift fw-bold">
+                                Save Changes
                             </button>
-                            <a asp-action="MyListings" class="btn btn-light btn-lg rounded-pill px-4">Cancel</a>
+                            <a asp-action="MyListings" class="btn btn-light btn-lg rounded-pill px-4 border shadow-sm">
+                                Cancel
+                            </a>
                         </div>
                     </form>
                 </div>
@@ -150,92 +196,116 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const sType = document.getElementById("salaryTypeEdit");
-            const inputsArea = document.getElementById("salaryInputsArea");
-            const maxBox = document.getElementById("maxSalBox");
-            const minLabel = document.getElementById("minLabel");
-            
-            const minInput = document.getElementById("minSalary");
-            const maxInput = document.getElementById("maxSalary");
-            const errorMsg = document.getElementById("salaryError");
-            const submitBtn = document.getElementById("submitBtn");
+        $(document).ready(function () {
+            function removeEmojis(text) {
+                var regex = /[^\w\s\d.,!@@#$%^&*()\-=_+\[\]{}|;:'"<>\/?\\ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/gu;
+                return text.replace(regex, '');
+            }
 
-            const categorySelect = document.getElementById("categorySelect");
-            const subcategoryInput = document.getElementById("subcategoryInput");
-            const subcategoryList = document.getElementById("subcategoryList");
+            $(document).on('input', 'input[type="text"], textarea', function() {
+                var originalValue = $(this).val();
+                var cleanedValue = removeEmojis(originalValue);
+                
+                if (originalValue !== cleanedValue) {
+                    $(this).val(cleanedValue);
+                }
+            });
+
+            const minSalaryInput = $('#minSalary');
+            const maxSalaryInput = $('#maxSalary');
+            const fixedSalaryInput = $('#fixedSalaryInput');
+            const salaryError = $('#salaryError');
+            const salaryType = $('#salaryType');
+            const fixedGroup = $('#fixedSalaryGroup');
+            const rangeGroup = $('#rangeSalaryGroup');
+
+            function validateSalaryInputs() {
+                let isValid = true;
+                const type = salaryType.val();
+
+                fixedSalaryInput.removeClass('input-validation-error');
+                minSalaryInput.removeClass('input-validation-error');
+                maxSalaryInput.removeClass('input-validation-error');
+                salaryError.addClass('d-none');
+
+                if (type === 'fixed') {
+                    if (!fixedSalaryInput.val().trim()) {
+                        fixedSalaryInput.addClass('input-validation-error');
+                        isValid = false;
+                    }
+                } else if (type === 'range') {
+                    const min = parseInt(minSalaryInput.val()) || 0;
+                    const max = parseInt(maxSalaryInput.val()) || 0;
+
+                    if (!minSalaryInput.val().trim()) {
+                        minSalaryInput.addClass('input-validation-error');
+                        isValid = false;
+                    }
+                    if (!maxSalaryInput.val().trim()) {
+                        maxSalaryInput.addClass('input-validation-error');
+                        isValid = false;
+                    }
+
+                    if (isValid && max > 0 && min >= max) {
+                        salaryError.text('Max salary must be greater than min!');
+                        salaryError.removeClass('d-none');
+                        maxSalaryInput.addClass('input-validation-error');
+                        isValid = false;
+                    }
+                }
+                return isValid;
+            }
+
+            $('#editOfferForm').on('submit', function (e) {
+                const isSalaryValid = validateSalaryInputs();
+                const isFormValid = $(this).valid();
+
+                if (!isFormValid || !isSalaryValid) {
+                    if (!isSalaryValid) {
+                        e.preventDefault();
+                        $('html, body').animate({
+                            scrollTop: $("#salaryType").offset().top - 150
+                        }, 200);
+                    }
+                }
+            });
+
+            salaryType.on('change', function() {
+                const val = $(this).val();
+                fixedGroup.addClass('d-none');
+                rangeGroup.addClass('d-none');
+                fixedSalaryInput.prop('disabled', true);
+                minSalaryInput.prop('disabled', true);
+                maxSalaryInput.prop('disabled', true);
+
+                if (val === 'fixed') {
+                    fixedGroup.removeClass('d-none');
+                    fixedSalaryInput.prop('disabled', false);
+                } else if (val === 'range') {
+                    rangeGroup.removeClass('d-none');
+                    minSalaryInput.prop('disabled', false);
+                    maxSalaryInput.prop('disabled', false);
+                }
+                validateSalaryInputs();
+            });
+
+            $(document).on('input', '.salary-int', function () {
+                this.value = this.value.replace(/[^0-9]/g, '');
+                validateSalaryInputs();
+            });
+
             const subcatMap = @Html.Raw(Json.Serialize(ViewBag.SubcategoryMap ?? new Dictionary<string, List<string>>()));
-
-            function updateSubcategories(isInitialLoad = false) {
-                const selectedCat = categorySelect.value;
-                subcategoryList.innerHTML = "";
-
+            $('#categorySelect').on('change', function() {
+                const list = $('#subcategoryList');
+                list.empty();
+                const selectedCat = $(this).val();
                 if (subcatMap[selectedCat]) {
                     subcatMap[selectedCat].forEach(sub => {
-                        const option = document.createElement("option");
-                        option.value = sub;
-                        subcategoryList.appendChild(option);
+                        list.append($('<option>').val(sub));
                     });
                 }
-        
-                if (!isInitialLoad) {
-                    subcategoryInput.value = "";
-                }
-            }
-
-            categorySelect.addEventListener("change", () => updateSubcategories(false));
-    
-            updateSubcategories(true);
-
-            function validateSalary() {
-                if (sType.value === "range") {
-                    const min = parseFloat(minInput.value) || 0;
-                    const max = parseFloat(maxInput.value) || 0;
-
-                    if (max > 0 && max < min) {
-                        errorMsg.classList.remove("d-none");
-                        submitBtn.disabled = true;
-                    } else {
-                        errorMsg.classList.add("d-none");
-                        submitBtn.disabled = false;
-                    }
-                } else {
-                    errorMsg.classList.add("d-none");
-                    submitBtn.disabled = false;
-                }
-            }
-
-            function updateFields() {
-                const val = sType.value;
-
-                if (val === "none" || val === "negotiable") {
-                    inputsArea.classList.add("d-none");
-                } else {
-                    inputsArea.classList.remove("d-none");
-                }
-
-                if (val === "range") {
-                    maxBox.classList.remove("d-none");
-                    minLabel.innerText = "Min Salary (EUR)";
-                } else {
-                    maxBox.classList.add("d-none");
-                    minLabel.innerText = "Amount (EUR)";
-                }
-                validateSalary();
-            }
-
-            sType.addEventListener("change", updateFields);
-            minInput.addEventListener("input", validateSalary);
-            maxInput.addEventListener("input", validateSalary);
-            
-            updateFields();
-
-             const langInput = document.getElementById("languagesInput");
-                langInput.addEventListener("blur", function() {
-                if(this.value) {
-                this.value = this.value.split(',').map(s => s.trim()).filter(s => s !== "").join(', ');
-            }
-        });
+            });
+            $('#categorySelect').trigger('change');
         });
     </script>
 }

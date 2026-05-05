@@ -1,0 +1,187 @@
+﻿.form-control {
+    border-color: #f1f1f1 !important;
+    background-color: #fcfcfc;
+    transition: all 0.2s ease-in-out;
+}
+
+    .form-control:focus {
+        background-color: #fff;
+        border-color: #4361ee !important;
+        box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.1);
+    }
+
+    .form-control.input-validation-error,
+    input.input-validation-error {
+        border-color: #dc3545 !important;
+        background-color: rgba(220, 53, 69, 0.02) !important;
+        box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.1) !important;
+    }
+
+.company-field-error {
+    border: 2px solid #dc3545 !important;
+}
+
+input:disabled {
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+textarea {
+    resize: none;
+}
+
+.nav-pills .nav-link {
+    color: #6c757d;
+    font-weight: 500;
+    border-radius: 12px;
+    padding: 12px 18px;
+    margin-bottom: 5px;
+    transition: all 0.25s ease;
+    display: flex;
+    align-items: center;
+    border: 1px solid transparent;
+}
+
+    .nav-pills .nav-link:hover:not(.active) {
+        background-color: #f1f4ff;
+        color: #4361ee;
+        transform: translateX(5px);
+    }
+
+    .nav-pills .nav-link.active {
+        background-color: #4361ee !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 12px rgba(67, 97, 238, 0.2);
+    }
+
+    .nav-pills .nav-link i {
+        margin-right: 12px;
+        font-size: 1.1rem;
+    }
+
+.card {
+    border: 1px solid #f1f1f1 !important;
+    transition: all 0.3s ease;
+    animation: fadeInScale 0.4s ease-out;
+}
+
+.icon-circle {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    font-size: 1.8rem;
+    flex-shrink: 0;
+}
+
+    .icon-circle.large {
+        width: 70px;
+        height: 70px;
+        font-size: 2.2rem;
+    }
+
+    .icon-circle.small {
+        width: 40px;
+        height: 40px;
+        font-size: 1.2rem;
+    }
+
+    .icon-circle.ai-gradient {
+        background: linear-gradient(135deg, var(--primary-ai), var(--secondary-ai)) !important;
+    }
+
+    .icon-circle.success-gradient {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+    }
+
+    .icon-circle i {
+        line-height: 0;
+    }
+
+.divider .line {
+    flex: 1;
+    height: 1px;
+    background-color: #eee;
+}
+
+.border-dashed {
+    border-style: dashed !important;
+    border-width: 2px !important;
+    border-color: #dee2e6 !important;
+}
+
+.bg-soft-success {
+    background-color: rgba(25, 135, 84, 0.1);
+}
+
+.hover-lift {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+    .hover-lift:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 15px rgba(67, 97, 238, 0.25) !important;
+    }
+
+.hover-link:hover {
+    text-decoration: underline !important;
+}
+
+.hover-shake:hover {
+    animation: shake 0.5s;
+    animation-iteration-count: infinite;
+}
+
+@keyframes shake {
+    0% {
+        transform: translate(1px, 1px) rotate(0deg);
+    }
+
+    10% {
+        transform: translate(-1px, -2px) rotate(-1deg);
+    }
+
+    20% {
+        transform: translate(-3px, 0px) rotate(1deg);
+    }
+
+    30% {
+        transform: translate(3px, 2px) rotate(0deg);
+    }
+
+    40% {
+        transform: translate(1px, -1px) rotate(1deg);
+    }
+
+    50% {
+        transform: translate(-1px, 2px) rotate(-1deg);
+    }
+
+    60% {
+        transform: translate(-3px, 1px) rotate(0deg);
+    }
+
+    100% {
+        transform: translate(1px, -2px) rotate(-1deg);
+    }
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1.5rem !important;
+    }
+}

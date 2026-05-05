@@ -7,6 +7,12 @@ using Recruit_Finder_AI.Models;
 using Recruit_Finder_AI.Services;
 using System.Security.AccessControl;
 using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
+
 
 namespace Recruit_Finder_AI.Controllers
 {
@@ -15,17 +21,22 @@ namespace Recruit_Finder_AI.Controllers
         private readonly Recruit_Finder_AIContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly NotificationService _notificationService;
+        private readonly IConfiguration _configuration;
+        private readonly IHttpClientFactory _httpClientFactory;
 
         public OfferController(
             Recruit_Finder_AIContext context,
             UserManager<ApplicationUser> userManager,
-            NotificationService notificationService)
+            NotificationService notificationService,
+            IConfiguration configuration,
+            IHttpClientFactory httpClientFactory)
         {
             _context = context;
             _userManager = userManager;
             _notificationService = notificationService;
+            _configuration = configuration;
+            _httpClientFactory = httpClientFactory;
         }
-
         public async Task<IActionResult> List(
         string category,
         string? subcategory,
@@ -123,33 +134,86 @@ namespace Recruit_Finder_AI.Controllers
 
             return View(await query.ToListAsync());
         }
-
-        public async Task<IActionResult> Details(int? id)
+        public async Task<IActionResult> ClosedListings()
         {
-            if (id == null) return NotFound();
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            var offer = await _context.JobOffers
-                .Include(o => o.User)
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var closedOffers = await _context.JobOffers
+                .Where(o => o.RecruiterId == userId && (!o.IsVisible || (o.ExpirationDate.HasValue && o.ExpirationDate < DateTime.Now)))
+                .OrderByDescending(o => o.CreatedAt)
+                .ToListAsync();
 
-            if (offer == null) return NotFound();
+            return View(closedOffers);
+        }
+        [Authorize]
+        public async Task<IActionResult> CvView(int id)
+        {
+            var userId = _userManager.GetUserId(User);
 
-            bool isStaff = User.IsInRole("MODERATOR") || User.IsInRole("ADMIN");
-            bool isAuthorBanned = offer.User?.LockoutEnd > DateTimeOffset.UtcNow;
+            var application = await _context.Applications
+                .Include(a => a.JobOffer)
+                .Include(a => a.Cv)
+                .FirstOrDefaultAsync(a => a.CvId == id && a.JobOffer.RecruiterId == userId);
 
-            if (!offer.IsVisible || isAuthorBanned)
+            if (application == null)
             {
-                if (!isStaff)
-                {
-                    var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                    if (offer.RecruiterId != currentUserId)
-                    {
-                        return NotFound();
-                    }
-                }
+                var ownCv = await _context.Cvs.FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
+                if (ownCv == null) return NotFound();
+
+                ViewBag.OfferTitle = "Your Profile";
+                return View(ownCv);
             }
 
+            ViewBag.OfferTitle = application.JobOffer.Title;
+
+            return View(application.Cv);
+        }
+        [Authorize]
+        public async Task<IActionResult> AiAnalysisDetails(int id)
+        {
+            var offer = await _context.JobOffers.FindAsync(id);
+            var userId = _userManager.GetUserId(User);
+
+            if (offer == null || (offer.RecruiterId != userId && !User.IsInRole("ADMIN")))
+                return NotFound();
+
             return View(offer);
+        }
+        [Authorize]
+        public async Task<IActionResult> ViewResults(int id)
+        {
+            var userId = _userManager.GetUserId(User);
+
+            var applications = await _context.Applications
+                .Include(a => a.JobOffer)
+                .Include(a => a.Cv)
+                .Where(a => a.JobOfferId == id && a.JobOffer.RecruiterId == userId)
+                .OrderByDescending(a => a.AppliedAt)
+                .ToListAsync();
+
+            if (applications == null) return NotFound();
+
+            ViewBag.OfferTitle = applications.FirstOrDefault()?.JobOffer.Title;
+
+            return View(applications);
+        }
+        public async Task<IActionResult> Details(int id)
+        {
+            var jobOffer = await _context.JobOffers
+                .Include(j => j.User)
+                .FirstOrDefaultAsync(m => m.Id == id);
+
+            if (jobOffer == null) return NotFound();
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (userId != null)
+            {
+                ViewBag.UserApplication = await _context.Applications
+                    .FirstOrDefaultAsync(a => a.JobOfferId == id && a.CandidateId == userId);
+            }
+
+            return View(jobOffer);
         }
 
         public async Task<IActionResult> HideOffer(int id)
@@ -231,38 +295,17 @@ namespace Recruit_Finder_AI.Controllers
             TempData["StatusMessage"] = "Offer is now visible to everyone.";
             return Redirect(Request.Headers["Referer"].ToString() ?? Url.Action("List", new { category = offer.Category }));
         }
-
         [Authorize]
         public async Task<IActionResult> Create()
         {
             var user = await _userManager.GetUserAsync(User);
-
             if (user == null || !user.IsEmployer)
             {
-                TempData["ErrorMessage"] = "Your account is pending moderator verification. You cannot post offers yet.";
+                TempData["ErrorMessage"] = "Your account is pending moderator verification.";
                 return RedirectToAction(nameof(MyListings));
             }
 
-            ViewBag.Categories = new List<string>
-            {
-                "IT", "Data Science", "Marketing", "Finance",
-                "Healthcare", "Engineering", "Sales", "Customer Service",
-                "Human Resources", "Design & Creative", "Logistics",
-                "Legal", "Education", "Construction", "Hospitality"
-            }; ;
-            ViewBag.JobTypes = new List<string> { "Full-time", "Part-time", "Contract", "Freelance", "B2B", "Internship" };
-
-            var existingSubcats = await _context.JobOffers
-                .Select(o => new { o.Category, o.Subcategory })
-                .Where(o => !string.IsNullOrEmpty(o.Subcategory))
-                .Distinct()
-                .ToListAsync();
-
-            var subcatMap = existingSubcats
-                .GroupBy(x => x.Category)
-                .ToDictionary(g => g.Key, g => g.Select(x => x.Subcategory).ToList());
-
-            ViewBag.SubcategoryMap = subcatMap;
+            await PrepareViewBags();
 
             var model = new JobOffer { Company = user.CompanyName };
             return View(model);
@@ -271,24 +314,26 @@ namespace Recruit_Finder_AI.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
-        public async Task<IActionResult> Create(JobOffer offer, string duration, DateTime? customDate)
+        public async Task<IActionResult> Create(JobOffer offer, string duration, DateTime? customDate, string SalaryType)
         {
-            offer.RecruiterId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            offer.CreatedAt = DateTime.UtcNow;
-            if (!string.IsNullOrWhiteSpace(offer.RequiredLanguages))
-            {
-                var langList = offer.RequiredLanguages
-                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(l => char.ToUpper(l.Trim()[0]) + l.Trim().Substring(1).ToLower())
-                    .Distinct()
-                    .ToList();
+            var user = await _userManager.GetUserAsync(User);
 
-                offer.RequiredLanguages = string.Join(", ", langList);
-            }
-            if (!string.IsNullOrWhiteSpace(offer.Subcategory))
+            offer.RecruiterId = user.Id;
+            offer.CreatedAt = DateTime.UtcNow;
+            offer.Company = user.CompanyName;
+            offer.IsVisible = true;
+
+            offer.SalaryType = SalaryType;
+            if (SalaryType == "none" || SalaryType == "negotiable")
             {
-                offer.Subcategory = char.ToUpper(offer.Subcategory.Trim()[0]) + offer.Subcategory.Trim().Substring(1).ToLower();
+                offer.MinimumSalary = null;
+                offer.MaximumSalary = null;
             }
+            else if (SalaryType == "fixed")
+            {
+                offer.MaximumSalary = null;
+            }
+
             offer.ExpirationDate = duration switch
             {
                 "1w" => DateTime.UtcNow.AddDays(7),
@@ -296,19 +341,23 @@ namespace Recruit_Finder_AI.Controllers
                 "3m" => DateTime.UtcNow.AddMonths(3),
                 "1y" => DateTime.UtcNow.AddYears(1),
                 "custom" => customDate,
-                "manual" => null,
                 _ => null
             };
 
             ModelState.Remove("RecruiterId");
             ModelState.Remove("User");
+            ModelState.Remove("Applications");
+            ModelState.Remove("Company");
 
             if (ModelState.IsValid)
             {
                 _context.Add(offer);
                 await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Offer created successfully!";
                 return RedirectToAction(nameof(MyListings));
             }
+
+            await PrepareViewBags();
             return View(offer);
         }
 
@@ -323,24 +372,7 @@ namespace Recruit_Finder_AI.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (offer.RecruiterId != userId) return Forbid();
 
-            ViewBag.Categories = new List<string>
-            {
-                "IT", "Data Science", "Marketing", "Finance",
-                "Healthcare", "Engineering", "Sales", "Customer Service",
-                "Human Resources", "Design & Creative", "Logistics",
-                "Legal", "Education", "Construction", "Hospitality"
-            };
-
-            var existingSubcats = await _context.JobOffers
-                .Select(o => new { o.Category, o.Subcategory })
-                .Where(o => !string.IsNullOrEmpty(o.Subcategory))
-                .Distinct()
-                .ToListAsync();
-
-            ViewBag.SubcategoryMap = existingSubcats
-                .GroupBy(x => x.Category)
-                .ToDictionary(g => g.Key, g => g.Select(x => x.Subcategory).ToList());
-
+            await PrepareViewBags();
             return View(offer);
         }
 
@@ -351,37 +383,47 @@ namespace Recruit_Finder_AI.Controllers
         {
             if (id != offer.Id) return NotFound();
 
+            var existingOffer = await _context.JobOffers.FindAsync(id);
+            if (existingOffer == null) return NotFound();
+
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (offer.RecruiterId != userId) return Forbid();
+            if (existingOffer.RecruiterId != userId) return Forbid();
 
-            if (!string.IsNullOrWhiteSpace(offer.RequiredLanguages))
-            {
-                var langList = offer.RequiredLanguages
-                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(l => char.ToUpper(l.Trim()[0]) + l.Trim().Substring(1).ToLower())
-                    .Distinct()
-                    .ToList();
-
-                offer.RequiredLanguages = string.Join(", ", langList);
-            }
-
-            ModelState.Remove("RecruiterId");
             ModelState.Remove("User");
+            ModelState.Remove("RecruiterId");
+            ModelState.Remove("Applications");
 
             if (ModelState.IsValid)
             {
                 try
                 {
-                    _context.Update(offer);
+                    existingOffer.Title = offer.Title;
+                    existingOffer.Category = offer.Category;
+                    existingOffer.Subcategory = offer.Subcategory;
+                    existingOffer.JobType = offer.JobType;
+                    existingOffer.Location = offer.Location;
+                    existingOffer.Description = offer.Description;
+                    existingOffer.Requirements = offer.Requirements;
+                    existingOffer.RequiredLanguages = offer.RequiredLanguages;
+                    existingOffer.ExpirationDate = offer.ExpirationDate;
+                    existingOffer.SalaryType = offer.SalaryType;
+                    existingOffer.MinimumSalary = offer.MinimumSalary;
+                    existingOffer.MaximumSalary = offer.MaximumSalary;
+
+
                     await _context.SaveChangesAsync();
+
+                    TempData["SuccessMessage"] = "Offer updated successfully!";
+                    return RedirectToAction(nameof(MyListings));
                 }
                 catch (DbUpdateConcurrencyException)
                 {
                     if (!_context.JobOffers.Any(e => e.Id == offer.Id)) return NotFound();
                     else throw;
                 }
-                return RedirectToAction(nameof(MyListings));
             }
+
+            await PrepareViewBags();
             return View(offer);
         }
         [HttpPost]
@@ -406,40 +448,537 @@ namespace Recruit_Finder_AI.Controllers
         }
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize]
         public async Task<IActionResult> ReopenOffer(int id)
         {
             var offer = await _context.JobOffers.FindAsync(id);
             if (offer == null) return NotFound();
 
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (offer.RecruiterId != userId) return Forbid();
-
-            offer.ExpirationDate = null;
             offer.IsVisible = true;
+            offer.ExpirationDate = DateTime.Now.AddDays(30);
+
+            offer.AiAnalysisStatus = null;
+            offer.AiAnalysisComment = null;
+
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(MyListings));
+        }
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> SelectForApplication(int jobId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var offer = await _context.JobOffers.FindAsync(jobId);
+
+            if (offer == null) return NotFound();
+
+            if (offer.RecruiterId == userId)
+            {
+                TempData["ErrorMessage"] = "You cannot apply to your own job offer.";
+                return RedirectToAction("Details", new { id = jobId });
+            }
+
+            var alreadyApplied = await _context.Applications
+                .AnyAsync(a => a.JobOfferId == jobId && a.CandidateId == userId);
+
+            if (alreadyApplied)
+            {
+                TempData["ErrorMessage"] = "You have already submitted an application for this position.";
+                return RedirectToAction("Details", new { id = jobId });
+            }
+
+            var userResumes = await _context.Cvs
+                .Where(c => c.UserId == userId)
+                .OrderByDescending(c => c.CreatedAt)
+                .ToListAsync();
+
+            if (!userResumes.Any())
+            {
+                TempData["ErrorMessage"] = "You need to create at least one CV before applying.";
+                return RedirectToAction("Create", "Cv");
+            }
+
+            var viewModel = new ApplyViewModel
+            {
+                JobOfferId = jobId,
+                JobOffer = offer,
+                UserResumes = userResumes
+            };
+
+            return View(viewModel);
+        }
+        [HttpPost]
+        [AllowAnonymous]
+        [IgnoreAntiforgeryToken]
+        public async Task<IActionResult> UpdateAiResult([FromBody] AiResultModel data)
+        {
+            Console.WriteLine($"--- CALLBACK OTRZYMANY: OfferId={data.offerId}, Status={data.status} ---");
+
+            try
+            {
+                var offer = await _context.JobOffers.FindAsync(data.offerId);
+                if (offer != null)
+                {
+                    offer.AiAnalysisStatus = data.status;
+                    offer.AiAnalysisComment = data.message;
+
+                    await _context.SaveChangesAsync();
+                    return Ok(new { message = "Data updated successfully" });
+                }
+                return NotFound();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Błąd aktualizacji: {ex.Message}");
+                return StatusCode(500);
+            }
+        }
+
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SubmitApplication(ApplyViewModel model)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var offer = await _context.JobOffers.FindAsync(model.JobOfferId);
+
+            if (offer == null) return NotFound();
+
+            if (offer.RecruiterId == userId) return Forbid();
+
+            var alreadyApplied = await _context.Applications
+                .AnyAsync(a => a.JobOfferId == model.JobOfferId && a.CandidateId == userId);
+
+            if (alreadyApplied)
+            {
+                TempData["ErrorMessage"] = "Application already sent.";
+                return RedirectToAction("Details", new { id = model.JobOfferId });
+            }
+
+            var application = new JobApplication
+            {
+                JobOfferId = model.JobOfferId,
+                CvId = model.SelectedCvId,
+                CandidateId = userId,
+                AppliedAt = DateTime.UtcNow,
+                Message = model.Message,
+                Status = "Pending"
+            };
+
+            _context.Applications.Add(application);
+
+            await _notificationService.SendAsync(
+                offer.RecruiterId,
+                "New Application",
+                $"Someone applied for your offer: '{offer.Title}'.",
+                Url.Action("Details", "Offer", new { id = offer.Id })
+            );
+
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Application sent successfully!";
+            return RedirectToAction("Details", new { id = model.JobOfferId });
+        }
+
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> WithdrawApplication(int jobId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var application = await _context.Applications
+                .Include(a => a.JobOffer)
+                .FirstOrDefaultAsync(a => a.JobOfferId == jobId && a.CandidateId == userId);
+
+            if (application == null)
+            {
+                return NotFound();
+            }
+
+            if (application.JobOffer.ExpirationDate.HasValue &&
+                application.JobOffer.ExpirationDate.Value <= DateTime.UtcNow)
+            {
+                TempData["ErrorMessage"] = "You cannot withdraw your application because the job offer is already closed.";
+                return RedirectToAction("Details", new { id = jobId });
+            }
+
+            if (application.Status != "Pending")
+            {
+                TempData["ErrorMessage"] = "You cannot withdraw an application that has already been processed by the recruiter.";
+                return RedirectToAction("Details", new { id = jobId });
+            }
+
+            _context.Applications.Remove(application);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Your application has been withdrawn.";
+            return RedirectToAction("Details", new { id = jobId });
+        }
+        private async Task PrepareViewBags()
+        {
+            ViewBag.Categories = new List<string>
+    {
+        "IT", "Data Science", "Marketing", "Finance",
+        "Healthcare", "Engineering", "Sales", "Customer Service",
+        "Human Resources", "Design & Creative", "Logistics",
+        "Legal", "Education", "Construction", "Hospitality", "Other"
+    };
+
+            var existingSubcats = await _context.JobOffers
+                .Where(o => !string.IsNullOrEmpty(o.Subcategory))
+                .Select(o => new { o.Category, o.Subcategory })
+                .Distinct()
+                .ToListAsync();
+
+            ViewBag.SubcategoryMap = existingSubcats
+                .GroupBy(x => x.Category)
+                .ToDictionary(g => g.Key, g => g.Select(x => x.Subcategory).ToList());
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> VerifyOffer(int id)
+        {
+            var offer = await _context.JobOffers.FindAsync(id);
+            if (offer == null) return NotFound();
+
+            offer.AiAnalysisStatus = "Pending";
+            offer.AiAnalysisComment = "Analysis in progress...";
 
             _context.Update(offer);
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = "Offer has been reopened and is now live.";
-            return RedirectToAction(nameof(MyListings));
+            bool sentToAi = await SendOfferToPythonAi(offer);
+
+            if (!sentToAi)
+            {
+                offer.AiAnalysisStatus = null;
+                offer.AiAnalysisComment = "AI Service is temporarily unavailable.";
+                await _context.SaveChangesAsync();
+                TempData["ErrorMessage"] = "Could not contact AI Service. Please try again later.";
+            }
+            else
+            {
+                TempData["SuccessMessage"] = "AI Analysis requested successfully!";
+            }
+
+            return RedirectToAction(nameof(ClosedListings));
         }
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         [Authorize]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var offer = await _context.JobOffers.FindAsync(id);
+            var offer = await _context.JobOffers
+                .Include(o => o.Applications)
+                .FirstOrDefaultAsync(o => o.Id == id);
+
             if (offer == null) return NotFound();
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (offer.RecruiterId != userId) return Forbid();
 
+            if (offer.Applications != null && offer.Applications.Any())
+            {
+                _context.Applications.RemoveRange(offer.Applications);
+            }
+
             _context.JobOffers.Remove(offer);
+
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = "Offer deleted successfully.";
+            TempData["SuccessMessage"] = "Offer and all related applications deleted successfully.";
             return RedirectToAction(nameof(MyListings));
         }
+        [HttpGet]
+        public async Task<IActionResult> GetAiStatus(int id)
+        {
+            var offer = await _context.JobOffers.FindAsync(id);
+            if (offer == null) return NotFound();
+
+            return Json(new { status = offer.AiAnalysisStatus });
+        }
+        private async Task<bool> SendOfferToPythonAi(JobOffer offer)
+        {
+            try
+            {
+                var aiUrl = _configuration["AiService:OfferAnalysisUrl"];
+                var apiKey = _configuration["AiService:ApiKey"];
+
+                Console.WriteLine($"Próba wysłania do: {aiUrl} z kluczem: {apiKey}");
+
+                var client = _httpClientFactory.CreateClient();
+                client.DefaultRequestHeaders.Clear();
+                client.DefaultRequestHeaders.Add("X-AI-Key", apiKey);
+
+                var payload = new
+                {
+                    offerIds = new List<int> { offer.Id },
+                    title = offer.Title,
+                    company = offer.Company,
+                    category = offer.Category,
+                    description = offer.Description,
+                    requirements = offer.Requirements,
+                    location = offer.Location,
+                    timestamp = DateTime.UtcNow
+                };
+
+                var json = JsonSerializer.Serialize(payload);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync(aiUrl, content);
+
+                Console.WriteLine($"Status odpowiedzi AI: {response.StatusCode}"); // LOG
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"KRYTYCZNY BŁĄD HTTP: {ex.Message}");
+                return false;
+            }
+        }
+        [HttpGet]
+        [Authorize]
+        public async Task<IActionResult> DownloadCv(int id)
+        {
+            var userId = _userManager.GetUserId(User);
+
+            var cv = await _context.Cvs
+                .FirstOrDefaultAsync(c => c.Id == id &&
+                    (c.UserId == userId || _context.Applications.Any(a => a.CvId == id && a.JobOffer.RecruiterId == userId)));
+
+            if (cv == null) return NotFound();
+
+            var pdf = GenerateCvDocument(cv);
+            byte[] pdfBytes = pdf.GeneratePdf();
+            return File(pdfBytes, "application/pdf", $"CV_{cv.Name}_{cv.Surname}.pdf");
+        }
+
+        private IDocument GenerateCvDocument(Cv cv)
+        {
+            QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
+            var primaryColor = Colors.Blue.Darken4;
+            var accentColor = Colors.Grey.Lighten3;
+            var textColor = Colors.BlueGrey.Darken4;
+            var mutedText = Colors.BlueGrey.Lighten1;
+            var sidebarBackgroundColor = Colors.Grey.Lighten5;
+            var user = _context.Users.FirstOrDefault(u => u.Id == cv.UserId);
+            byte[]? photoData = cv.IncludePhoto ? user?.ProfilePicture : null;
+
+            return Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.A4);
+                    page.Margin(0);
+                    page.DefaultTextStyle(x => x.FontSize(10).FontFamily(Fonts.Verdana).FontColor(textColor));
+
+                    page.Background().Row(row =>
+                    {
+                        row.ConstantItem(180).Background(sidebarBackgroundColor);
+                        row.RelativeItem().Background(Colors.White);
+                    });
+
+                    page.Content().Row(row =>
+                    {
+                        row.ConstantItem(180).Background(Colors.Grey.Lighten5).Padding(20).Column(col =>
+                        {
+                            if (photoData != null)
+                            {
+                                col.Item().AlignCenter().Width(120).Height(120).Image(photoData).FitArea();
+                            }
+                            else
+                            {
+                                col.Item().AlignCenter().Width(100).Height(100).Background(Colors.Grey.Lighten3);
+                            }
+                            col.Item().PaddingVertical(10);
+
+                            col.Item().Text("CONTACT").FontSize(11).ExtraBold().FontColor(primaryColor).LetterSpacing(0.1f);
+                            col.Item().PaddingVertical(5).LineHorizontal(1.5f).LineColor(primaryColor);
+
+                            var contactInfo = new[] {
+                                ("Phone", cv.PhoneNumber),
+                                ("E-mail", cv.Email),
+                                ("Address", cv.Address)
+                            };
+
+                            foreach (var (label, value) in contactInfo)
+                            {
+                                if (!string.IsNullOrEmpty(value))
+                                {
+                                    col.Item().PaddingTop(8).Column(c => {
+                                        c.Item().Text(label).FontSize(7).SemiBold().FontColor(mutedText);
+                                        c.Item().Text(value).FontSize(9);
+                                    });
+                                }
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(cv.Languages))
+                            {
+                                col.Item().PaddingTop(25).Text("LANGUAGES").FontSize(11).ExtraBold().FontColor(primaryColor);
+                                col.Item().PaddingVertical(5).LineHorizontal(1.5f).LineColor(primaryColor);
+                                foreach (var lang in cv.Languages.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries))
+                                {
+                                    col.Item().Text(lang.Trim()).FontSize(9);
+                                }
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(cv.Skills))
+                            {
+                                col.Item().PaddingTop(25).Text("SKILLS").FontSize(11).ExtraBold().FontColor(primaryColor);
+                                col.Item().PaddingVertical(5).LineHorizontal(1.5f).LineColor(primaryColor);
+                                foreach (var skill in cv.Skills.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries))
+                                {
+                                    col.Item().Text(skill.Trim()).FontSize(9);
+                                }
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(cv.Interests))
+                            {
+                                col.Item().PaddingTop(25).Text("INTERESTS").FontSize(11).ExtraBold().FontColor(primaryColor);
+                                col.Item().PaddingVertical(5).LineHorizontal(1.5f).LineColor(primaryColor);
+                                foreach (var hobby in cv.Interests.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries))
+                                {
+                                    col.Item().Text(hobby.Trim()).FontSize(9);
+                                }
+                            }
+                        });
+
+                        row.RelativeItem().Padding(35).Column(col =>
+                        {
+                            col.Item().Row(r => {
+                                r.RelativeItem().Column(c => {
+                                    c.Item().Text($"{cv.Name} {cv.Surname}").FontSize(26).ExtraBold().FontColor(primaryColor);
+                                    c.Item().PaddingTop(2).Text("CANDIDATE").FontSize(12).Medium().FontColor(mutedText).LetterSpacing(0.2f);
+                                });
+                            });
+
+                            col.Item().PaddingVertical(15);
+
+                            void BuildSectionHeader(string title)
+                            {
+                                col.Item().PaddingTop(15).Column(c => {
+                                    c.Item().Text(title.ToUpper()).FontSize(13).ExtraBold().FontColor(primaryColor).LetterSpacing(0.1f);
+                                    c.Item().PaddingVertical(4).LineHorizontal(1.5f).LineColor(primaryColor);
+                                });
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(cv.ProfessionalExperience))
+                            {
+                                BuildSectionHeader("Experience");
+
+                                var expEntries = cv.ProfessionalExperience.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries);
+                                foreach (var entry in expEntries)
+                                {
+                                    col.Item().PaddingTop(10).Row(rowExp =>
+                                    {
+                                        rowExp.ConstantItem(15).Layers(layers =>
+                                        {
+                                            layers.PrimaryLayer().AlignCenter().LineVertical(0.5f).LineColor(accentColor);
+                                            layers.Layer().AlignCenter().PaddingTop(4).Component(new TimePoint(primaryColor));
+                                        });
+
+                                        rowExp.RelativeItem().PaddingLeft(10).PaddingBottom(10).Column(textCol =>
+                                        {
+                                            var parts = entry.Split(new[] { ':', ']' }, StringSplitOptions.RemoveEmptyEntries);
+                                            if (parts.Length >= 2)
+                                            {
+                                                var date = parts[0].Replace("[", "").Trim();
+                                                var name = parts[1].Trim();
+                                                var desc = parts.Length > 2 ? string.Join(":", parts.Skip(2)).Trim() : "";
+
+                                                textCol.Item().Text(name).FontSize(11).Bold();
+                                                textCol.Item().Text(date).FontSize(8).SemiBold().FontColor(primaryColor);
+                                                if (!string.IsNullOrEmpty(desc))
+                                                    textCol.Item().PaddingTop(3).Text(desc).FontSize(9).FontColor(Colors.Grey.Darken2).LineHeight(1.3f);
+                                            }
+                                            else textCol.Item().Text(entry.Trim()).FontSize(9);
+                                        });
+                                    });
+                                }
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(cv.Education))
+                            {
+                                BuildSectionHeader("Education");
+                                var eduEntries = cv.Education.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries);
+                                foreach (var entry in eduEntries)
+                                {
+                                    col.Item().PaddingTop(10).Row(rowEdu =>
+                                    {
+                                        rowEdu.ConstantItem(15).Layers(layers =>
+                                        {
+                                            layers.PrimaryLayer().AlignCenter().LineVertical(0.5f).LineColor(accentColor);
+                                            layers.Layer().AlignCenter().PaddingTop(4).Component(new TimePoint(primaryColor));
+                                        });
+
+                                        rowEdu.RelativeItem().PaddingLeft(10).PaddingBottom(10).Column(textCol =>
+                                        {
+                                            var parts = entry.Split(new[] { ':', ']' }, StringSplitOptions.RemoveEmptyEntries);
+                                            if (parts.Length >= 2)
+                                            {
+                                                var date = parts[0].Replace("[", "").Trim();
+                                                var school = parts[1].Trim();
+                                                var field = parts.Length > 2 ? string.Join(":", parts.Skip(2)).Trim() : "";
+
+                                                textCol.Item().Text(school).FontSize(11).Bold();
+                                                textCol.Item().Text(date).FontSize(8).SemiBold().FontColor(primaryColor);
+                                                if (!string.IsNullOrEmpty(field))
+                                                    textCol.Item().PaddingTop(3).Text(field).FontSize(9).FontColor(Colors.Grey.Darken2);
+                                            }
+                                            else textCol.Item().Text(entry.Trim()).FontSize(9);
+                                        });
+                                    });
+                                }
+                            }
+
+                            if (!string.IsNullOrEmpty(cv.Portfolio))
+                            {
+                                BuildSectionHeader("Portfolio / Links");
+                                col.Item().PaddingTop(8).Column(linkCol =>
+                                {
+                                    var links = cv.Portfolio.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
+                                    foreach (var link in links)
+                                    {
+                                        linkCol.Item().Text(link.Trim()).FontSize(9).FontColor(textColor);
+                                    }
+                                });
+                            }
+
+                            col.Item().AlignBottom().PaddingTop(30).Text("I hereby give consent for my personal data to be processed for the purpose of the recruitment process.").FontSize(7).FontColor(Colors.Grey.Medium).Italic();
+                        });
+                    });
+
+                    page.Footer().PaddingBottom(10).Row(row =>
+                    {
+                        row.ConstantItem(180);
+
+                        row.RelativeItem().PaddingHorizontal(35).AlignRight().Text(text =>
+                        {
+                            text.Span("Generated by ").FontSize(8).FontColor(mutedText);
+                            text.Span("Recruit Finder AI").FontSize(8).SemiBold().FontColor(primaryColor);
+                        });
+                    });
+                });
+            });
+        }
+        private class TimePoint : IComponent
+        {
+            private readonly string _color;
+            public TimePoint(string color) => _color = color;
+
+            public void Compose(IContainer container)
+            {
+                string svgKropka = $@"
+        <svg height='10' width='10'>
+          <circle cx='5' cy='5' r='3.5' fill='white' />
+          <circle cx='5' cy='5' r='2' fill='{_color}' />
+        </svg>";
+
+                container.Width(10).Height(10).Svg(svgKropka);
+            }
+        }
     }
+
 }
