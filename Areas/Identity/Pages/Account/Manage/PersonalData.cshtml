@@ -5,14 +5,21 @@
     ViewData["ActivePage"] = ManageNavPages.PersonalData;
 }
 
-<h3 class="fw-bold mb-4">@ViewData["Title"]</h3>
+<h3 class="fw-bold mb-4 text-dark">@ViewData["Title"]</h3>
 
 <div class="row">
-    <div class="col-md-8">
-        <div class="card border-0 bg-light rounded-4 p-4 mb-4">
-            <div class="d-flex align-items-start">
-                <i class="bi bi-info-circle-fill text-primary fs-4 me-3 mt-1"></i>
-                <div>
+    <div class="col-lg-10">
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4" style="border: 1px solid #f8f9fa !important;">
+            <div class="card-body p-4 p-md-5">
+                <div class="d-flex align-items-center mb-4">
+                    <div class="bg-primary rounded-circle text-white me-3 d-flex align-items-center justify-content-center"
+                         style="width: 40px; height: 40px; min-width: 40px;">
+                        <i class="bi bi-info-circle-fill"></i>
+                    </div>
+                    <h4 class="mb-0 fw-bold text-dark">Account Information</h4>
+                </div>
+
+                <div class="bg-light p-4 rounded-4 border border-light-subtle">
                     <p class="mb-3 text-secondary">
                         Your account contains personal data that you have shared with us to enable AI-powered job matching and recruitment services.
                     </p>
@@ -23,18 +30,28 @@
             </div>
         </div>
 
-        <div class="card border-1 border-danger-subtle rounded-4 p-4 shadow-sm">
-            <h5 class="fw-bold text-danger mb-3">
-                <i class="bi bi-exclamation-octagon me-2"></i>Critical Action
-            </h5>
-            <p class="small text-muted mb-4">
-                <strong>Deleting this data will permanently remove your account.</strong> All your job listings, uploaded CVs, and AI analysis results will be lost forever and cannot be recovered.
-            </p>
-            
-            <div class="d-grid d-md-block">
-                <a id="delete" asp-page="DeletePersonalData" class="btn btn-danger btn-lg rounded-pill px-5 shadow-sm">
-                    <i class="bi bi-trash3 me-2"></i>Delete My Account
-                </a>
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden" style="border: 1px solid #f8f9fa !important;">
+            <div class="card-body p-4 p-md-5">
+                <div class="d-flex align-items-center mb-4">
+                    <div class="bg-danger rounded-circle text-white me-3 d-flex align-items-center justify-content-center"
+                         style="width: 40px; height: 40px; min-width: 40px;">
+                        <i class="bi bi-exclamation-octagon-fill"></i>
+                    </div>
+                    <h4 class="mb-0 fw-bold text-danger">Critical Action</h4>
+                </div>
+
+                <div class="alert alert-danger border-0 rounded-4 shadow-sm mb-5 p-4 bg-light border-start border-danger border-4">
+                    <p class="small text-dark mb-0">
+                        <strong class="text-danger">Deleting this data will permanently remove your account.</strong>
+                        All your job listings, uploaded CVs, and AI analysis results will be lost forever and cannot be recovered.
+                    </p>
+                </div>
+
+                <div class="pt-2">
+                    <a id="delete" asp-page="DeletePersonalData" class="btn btn-danger btn-lg rounded-pill px-5 shadow hover-lift fw-bold">
+                        Delete My Account
+                    </a>
+                </div>
             </div>
         </div>
     </div>

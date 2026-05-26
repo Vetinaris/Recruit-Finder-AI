@@ -1,6 +1,7 @@
-using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using NuGet.Protocol.Plugins;
 using Recruit_Finder_AI.Models;
+using System.Diagnostics;
 
 namespace Recruit_Finder_AI.Controllers
 {
@@ -23,11 +24,16 @@ namespace Recruit_Finder_AI.Controllers
                 "IT", "Data Science", "Marketing", "Finance",
                 "Healthcare", "Engineering", "Sales", "Customer Service",
                 "Human Resources", "Design & Creative", "Logistics",
-                "Legal", "Education", "Construction", "Hospitality"
+                "Legal", "Education", "Construction", "Hospitality" , "Other"
             };
             return View(categories);
         }
         public IActionResult Privacy()
+        {
+            return View();
+        }
+
+        public IActionResult TermsOfService()
         {
             return View();
         }

@@ -1,4 +1,7 @@
 ﻿@model Recruit_Finder_AI.Models.Cv
+@section Styles {
+    <link rel="stylesheet" href="~/css/cv.css" />
+}
 @{
     ViewData["Title"] = "Edit Resume";
 }
@@ -39,90 +42,49 @@
                             <div class="col-md-6">
                                 <label asp-for="Name" class="form-label small fw-bold text-muted text-uppercase">First Name</label>
                                 <input asp-for="Name" class="form-control rounded-pill border-light-subtle shadow-sm px-4" />
+                                <span asp-validation-for="Name" class="text-danger small"></span>
                             </div>
                             <div class="col-md-6">
                                 <label asp-for="Surname" class="form-label small fw-bold text-muted text-uppercase">Last Name</label>
                                 <input asp-for="Surname" class="form-control rounded-pill border-light-subtle shadow-sm px-4" />
+                                <span asp-validation-for="Surname" class="text-danger small"></span>
+                            </div>
+                            <div class="col-12 mt-4">
+                                <div class="bg-light p-3 rounded-4 border border-light-subtle d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-white rounded-circle shadow-sm p-2 me-3" style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+                                            <i class="bi bi-person-bounding-box text-primary fs-4"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 fw-bold">Use Profile Picture</h6>
+                                            <small class="text-muted">Show your account photo on your generated CV</small>
+                                        </div>
+                                    </div>
+                                    <div class="form-check form-switch fs-4">
+                                        <input class="form-check-input" type="checkbox" role="switch" asp-for="IncludePhoto" id="useProfilePic">
+                                    </div>
+                                </div>
                             </div>
                             <div class="col-md-6">
                                 <label asp-for="Email" class="form-label small fw-bold text-muted text-uppercase">Email Address</label>
-                                <input asp-for="Email" class="form-control rounded-pill border-light-subtle shadow-sm px-4" />
+                                <input asp-for="Email" type="email" class="form-control rounded-pill border-light-subtle shadow-sm px-4" placeholder="john@example.com" />
+                                <span asp-validation-for="Email" class="text-danger small"></span>
                             </div>
                             <div class="col-md-6">
                                 <label asp-for="PhoneNumber" class="form-label small fw-bold text-muted text-uppercase">Phone Number</label>
-                                <input asp-for="PhoneNumber" type="tel" class="form-control rounded-pill border-light-subtle shadow-sm px-4" oninput="this.value = this.value.replace(/[^0-9+ ]/g, '')" />
+                                <input asp-for="PhoneNumber" type="tel" class="form-control rounded-pill border-light-subtle shadow-sm px-4" />
+                                <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
                             </div>
                             <div class="col-md-8">
                                 <label asp-for="Address" class="form-label small fw-bold text-muted text-uppercase">Address</label>
                                 <input asp-for="Address" class="form-control rounded-pill border-light-subtle shadow-sm px-4" />
+                                <span asp-validation-for="Address" class="text-danger small"></span>
                             </div>
                             <div class="col-md-4">
                                 <label asp-for="DateOfBirth" class="form-label small fw-bold text-muted text-uppercase">Date of Birth</label>
                                 <input asp-for="DateOfBirth" type="date" class="form-control rounded-pill border-light-subtle shadow-sm px-4" />
+                                <span asp-validation-for="DateOfBirth" class="text-danger small"></span>
                             </div>
-                        </div>
-
-                        <div class="d-flex align-items-center mb-4">
-                            <div class="bg-primary rounded-circle p-2 text-white me-3" style="width: 35px; height: 35px; display: flex; align-items: center; justify-content: center;">
-                                <i class="bi bi-translate"></i>
-                            </div>
-                            <h4 class="mb-0 fw-bold text-dark">Languages</h4>
-                        </div>
-
-                        <div class="bg-light p-4 rounded-4 mb-5 border border-light-subtle">
-                            <div class="row g-3 align-items-end mb-3">
-                                <div class="col-md-5">
-                                    <label class="form-label small fw-bold text-muted">LANGUAGE</label>
-                                    <input type="text" id="langName" class="form-control rounded-pill border-light-subtle shadow-sm px-4" placeholder="e.g. English">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label small fw-bold text-muted">LEVEL</label>
-                                    <select id="langLevel" class="form-select rounded-pill border-light-subtle shadow-sm px-4">
-                                        <option value="A1">A1</option><option value="A2">A2</option>
-                                        <option value="B1">B1</option><option value="B2">B2</option>
-                                        <option value="C1">C1</option><option value="C2">C2</option>
-                                        <option value="Native">Native</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-3">
-                                    <button type="button" onclick="addLanguage()" class="btn btn-primary w-100 rounded-pill fw-bold shadow-sm">Add</button>
-                                </div>
-                            </div>
-                            <div id="languageBadges" class="d-flex flex-wrap gap-2"></div>
-                            <input type="hidden" asp-for="Languages" id="hiddenLanguages" />
-                        </div>
-
-                        <div class="d-flex align-items-center mb-4">
-                            <div class="bg-primary rounded-circle p-2 text-white me-3" style="width: 35px; height: 35px; display: flex; align-items: center; justify-content: center;">
-                                <i class="bi bi-book-fill"></i>
-                            </div>
-                            <h4 class="mb-0 fw-bold text-dark">Education</h4>
-                        </div>
-                        
-                        <div class="bg-light p-4 rounded-4 mb-5 border border-light-subtle">
-                            <div class="row g-3 mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label small fw-bold text-muted">START DATE</label>
-                                    <input type="month" id="eduStart" class="form-control rounded-pill border-light-subtle shadow-sm px-4">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label small fw-bold text-muted">END DATE</label>
-                                    <input type="month" id="eduEnd" class="form-control rounded-pill border-light-subtle shadow-sm px-4">
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label small fw-bold text-muted">SCHOOL / UNIVERSITY NAME</label>
-                                    <input type="text" id="eduName" class="form-control rounded-pill border-light-subtle shadow-sm px-4">
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label small fw-bold text-muted">DESCRIPTION / FIELD OF STUDY</label>
-                                    <textarea id="eduDesc" class="form-control rounded-4 border-light-subtle shadow-sm px-4" rows="2"></textarea>
-                                </div>
-                                <div class="col-12 text-end">
-                                    <button type="button" onclick="addEducation()" class="btn btn-primary rounded-pill fw-bold shadow-sm px-4">Add Education</button>
-                                </div>
-                            </div>
-                            <div id="eduList" class="mt-3 d-flex flex-column gap-2"></div>
-                            <input type="hidden" asp-for="Education" id="hiddenEducation" />
                         </div>
 
                         <div class="d-flex align-items-center mb-4">
@@ -132,7 +94,7 @@
                             <h4 class="mb-0 fw-bold text-dark">Work Experience</h4>
                         </div>
 
-                        <div class="bg-light p-4 rounded-4 mb-5 border border-light-subtle">
+                        <div id="section-experience" class="bg-light p-4 rounded-4 mb-5 border border-light-subtle">
                             <div class="row g-3 mb-3">
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold text-muted">START DATE</label>
@@ -156,26 +118,98 @@
                             </div>
                             <div id="expList" class="mt-3 d-flex flex-column gap-2"></div>
                             <input type="hidden" asp-for="ProfessionalExperience" id="hiddenExperience" />
+                            <span id="val-experience" class="text-danger small d-none">At least one work experience is required.</span>
+                        </div>
+
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="bg-primary rounded-circle p-2 text-white me-3" style="width: 35px; height: 35px; display: flex; align-items: center; justify-content: center;">
+                                <i class="bi bi-book-fill"></i>
+                            </div>
+                            <h4 class="mb-0 fw-bold text-dark">Education</h4>
+                        </div>
+
+                        <div id="section-education" class="bg-light p-4 rounded-4 mb-5 border border-light-subtle">
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">START DATE</label>
+                                    <input type="month" id="eduStart" class="form-control rounded-pill border-light-subtle shadow-sm px-4">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">END DATE</label>
+                                    <input type="month" id="eduEnd" class="form-control rounded-pill border-light-subtle shadow-sm px-4">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label small fw-bold text-muted">SCHOOL / UNIVERSITY NAME</label>
+                                    <input type="text" id="eduName" class="form-control rounded-pill border-light-subtle shadow-sm px-4">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label small fw-bold text-muted">DESCRIPTION / FIELD OF STUDY</label>
+                                    <textarea id="eduDesc" class="form-control rounded-4 border-light-subtle shadow-sm px-4" rows="2"></textarea>
+                                </div>
+                                <div class="col-12 text-end">
+                                    <button type="button" onclick="addEducation()" class="btn btn-primary rounded-pill fw-bold shadow-sm px-4">Add Education</button>
+                                </div>
+                            </div>
+                            <div id="eduList" class="mt-3 d-flex flex-column gap-2"></div>
+                            <input type="hidden" asp-for="Education" id="hiddenEducation" />
+                            <span id="val-education" class="text-danger small d-none">At least one education entry is required.</span>
+                        </div>
+
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="bg-primary rounded-circle p-2 text-white me-3" style="width: 35px; height: 35px; display: flex; align-items: center; justify-content: center;">
+                                <i class="bi bi-translate"></i>
+                            </div>
+                            <h4 class="mb-0 fw-bold text-dark">Languages</h4>
+                        </div>
+
+                        <div id="section-languages" class="bg-light p-4 rounded-4 mb-5 border border-light-subtle">
+                            <div class="row g-3 align-items-end mb-3">
+                                <div class="col-md-5">
+                                    <label class="form-label small fw-bold text-muted">LANGUAGE</label>
+                                    <input type="text" id="langName" class="form-control rounded-pill border-light-subtle shadow-sm px-4" placeholder="e.g. English">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-muted">LEVEL</label>
+                                    <select id="langLevel" class="form-select rounded-pill border-light-subtle shadow-sm px-4">
+                                        <option value="A1">A1</option>
+                                        <option value="A2">A2</option>
+                                        <option value="B1">B1</option>
+                                        <option value="B2">B2</option>
+                                        <option value="C1">C1</option>
+                                        <option value="C2">C2</option>
+                                        <option value="Native">Native</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <button type="button" onclick="addLanguage()" class="btn btn-primary w-100 rounded-pill fw-bold shadow-sm">Add</button>
+                                </div>
+                            </div>
+                            <div id="languageBadges" class="d-flex flex-wrap gap-2"></div>
+                            <input type="hidden" asp-for="Languages" id="hiddenLanguages" />
+                            <span id="val-languages" class="text-danger small d-none">Please add at least one language.</span>
                         </div>
 
                         <div class="row g-4 mb-5">
                             <div class="col-12">
                                 <label asp-for="Skills" class="form-label small fw-bold text-muted text-uppercase">Skills</label>
                                 <textarea asp-for="Skills" class="form-control rounded-4 border-light-subtle shadow-sm p-4" rows="2"></textarea>
+                                <span asp-validation-for="Skills" class="text-danger small"></span>
                             </div>
                             <div class="col-12">
-                                <label asp-for="Interests" class="form-label small fw-bold text-muted text-uppercase">Interests</label>
-                                <input asp-for="Interests" class="form-control rounded-pill border-light-subtle shadow-sm px-4" />
+                                <label asp-for="Interests" class="form-label small fw-bold text-muted text-uppercase">Interests </label>
+                                <input asp-for="Interests" class="form-control rounded-pill border-light-subtle shadow-sm px-4" placeholder="Travel, Photography, AI..." />
+                                <small class="text-muted d-block mt-2 ms-2">Optional: Share your hobbies if you'd like to show more of your personality.</small>
                             </div>
                             <div class="col-12">
                                 <label class="form-label small fw-bold text-muted text-uppercase">Portfolio / Links</label>
                                 <div id="portfolioContainer"></div>
                                 <input type="hidden" asp-for="Portfolio" id="hiddenPortfolio" />
+                                <small class="text-muted d-block mt-2 ms-2">Optional: You can leave this blank if you don't have a portfolio.</small>
                             </div>
                         </div>
 
                         <div class="d-flex gap-3 pt-4 border-top">
-                            <button type="submit" onclick="prepareSubmit()" id="saveBtn" class="btn btn-primary btn-lg rounded-pill px-5 shadow hover-lift fw-bold">
+                            <button type="submit" id="saveBtn" class="btn btn-primary btn-lg rounded-pill px-5 shadow hover-lift fw-bold">
                                 Save Changes
                             </button>
                             <a asp-action="Index" class="btn btn-light btn-lg rounded-pill px-4 border shadow-sm">Cancel</a>
@@ -187,31 +221,39 @@
     </div>
 </div>
 
-<style>
-    .bg-soft-primary { background-color: rgba(67, 97, 238, 0.08); }
-    .form-control, .form-select { border-color: #f1f1f1 !important; background-color: #fcfcfc; }
-    .form-control:focus, .form-select:focus { background-color: #fff; border-color: #4361ee !important; box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.1); }
-    .dynamic-badge { background: white; border: 1px solid #dee2e6; padding: 12px 20px; border-radius: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-    .language-badge { background: white; color: #4361ee; border: 1px solid #4361ee; padding: 8px 16px; border-radius: 50px; display: inline-flex; align-items: center; gap: 10px; font-weight: 600; }
-    .remove-badge { cursor: pointer; color: #dc3545; transition: 0.2s; }
-    .remove-badge:hover { transform: scale(1.2); }
-    .hover-lift { transition: transform 0.2s; }
-    .hover-lift:hover { transform: translateY(-3px); }
-    textarea { resize: none; }
-</style>
-
 @section Scripts {
+    <partial name="_ValidationScriptsPartial" />
     <script>
         let languages = [];
         let educations = [];
         let experiences = [];
+        let validationAttempted = false;
 
-        function formatTitleCase(str) {
-            if (!str) return "";
-            return str.toLowerCase().replace(/\b\w/g, s => s.toUpperCase());
-        }
+        $(document).ready(function () {
+            function removeEmojis(text) {
+                var regex = /[^\w\s\d.,!@@#$%^&*()\-=_+\[\]{}|;:'"<>\/?\\ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/gu;
+                return text.replace(regex, '');
+            }
 
-        document.addEventListener('DOMContentLoaded', function() {
+            $(document).on('input change paste', 'input[type="text"], input[type="email"], input[type="url"], textarea', function() {
+                var el = this;
+                setTimeout(function() {
+                    var originalValue = $(el).val();
+                    var cleanedValue = removeEmojis(originalValue);
+                    if (originalValue !== cleanedValue) {
+                        $(el).val(cleanedValue);
+                    }
+                }, 0);
+            });
+
+            $(document).on('input', 'input[type="tel"]', function() {
+                var originalValue = $(this).val();
+                var cleanedValue = originalValue.replace(/[^\d+ \-]/g, '');
+                if (originalValue !== cleanedValue) {
+                    $(this).val(cleanedValue);
+                }
+            });
+
             const existingLangs = "@Html.Raw(Model.Languages)";
             if(existingLangs) {
                 languages = existingLangs.split(';').map(s => s.trim()).filter(s => s !== "");
@@ -236,14 +278,21 @@
             }
             addPortfolioField("");
             updateRemoveButtons();
+
+            $('#expName, #expStart').on('input', updateSectionValidation);
+            $('#eduName, #eduStart').on('input', updateSectionValidation);
+            $('#langName').on('input', updateSectionValidation);
         });
+
+        function formatTitleCase(str) {
+            if (!str) return "";
+            return str.toLowerCase().replace(/\b\w/g, s => s.toUpperCase());
+        }
 
         function parseExistingData(dataString) {
             return dataString.split(';').map(s => {
                 const match = s.match(/\[(.*?) - (.*?)\] (.*?): (.*)/);
-                if (match) {
-                    return { start: match[1], end: match[2], name: match[3], desc: match[4] };
-                }
+                if (match) return { start: match[1], end: match[2], name: match[3], desc: match[4] };
                 return null;
             }).filter(item => item !== null);
         }
@@ -253,50 +302,38 @@
             const end = document.getElementById('eduEnd').value || "Present";
             const name = document.getElementById('eduName').value.trim();
             const desc = document.getElementById('eduDesc').value.trim();
-            
             if (name && start) {
                 educations.push({ start, end, name, desc });
                 sortAndRenderEdu();
-                document.getElementById('eduName').value = '';
-                document.getElementById('eduDesc').value = '';
+                ['eduName', 'eduDesc', 'eduStart', 'eduEnd'].forEach(id => document.getElementById(id).value = '');
             }
         }
 
         function sortAndRenderEdu() {
             educations.sort((a, b) => b.start.localeCompare(a.start));
-            const formatted = educations.map(e => `[${e.start} - ${e.end}] ${e.name}: ${e.desc}`);
-            renderList('eduList', formatted, removeEducation);
+            renderList('eduList', educations, removeEducation);
         }
 
-        function removeEducation(i) {
-            educations.splice(i, 1);
-            sortAndRenderEdu();
-        }
+        function removeEducation(i) { educations.splice(i, 1); sortAndRenderEdu(); }
 
         function addExperience() {
             const start = document.getElementById('expStart').value;
             const end = document.getElementById('expEnd').value || "Present";
             const name = document.getElementById('expName').value.trim();
             const desc = document.getElementById('expDesc').value.trim();
-            
             if (name && start) {
                 experiences.push({ start, end, name, desc });
                 sortAndRenderExp();
-                document.getElementById('expName').value = '';
-                document.getElementById('expDesc').value = '';
+                ['expName', 'expDesc', 'expStart', 'expEnd'].forEach(id => document.getElementById(id).value = '');
             }
         }
 
         function sortAndRenderExp() {
             experiences.sort((a, b) => b.start.localeCompare(a.start));
-            const formatted = experiences.map(e => `[${e.start} - ${e.end}] ${e.name}: ${e.desc}`);
-            renderList('expList', formatted, removeExperience);
+            renderList('expList', experiences, removeExperience);
         }
 
-        function removeExperience(i) {
-            experiences.splice(i, 1);
-            sortAndRenderExp();
-        }
+        function removeExperience(i) { experiences.splice(i, 1); sortAndRenderExp(); }
 
         function addLanguage() {
             const nameInput = document.getElementById('langName');
@@ -313,6 +350,23 @@
         }
         function removeLanguage(i) { languages.splice(i, 1); renderList('languageBadges', languages, removeLanguage, true); }
 
+        function updateSectionValidation() {
+            if (!validationAttempted) return;
+
+            const check = (listId, sectionId, msgId, list, inputId) => {
+                const hasData = list.length > 0 || document.getElementById(inputId).value.trim() !== "";
+                document.getElementById(sectionId).classList.toggle('section-validation-error', !hasData);
+                document.getElementById(msgId).classList.toggle('d-none', hasData);
+                return hasData;
+            };
+
+            const v1 = check('expList', 'section-experience', 'val-experience', experiences, 'expName');
+            const v2 = check('eduList', 'section-education', 'val-education', educations, 'eduName');
+            const v3 = check('languageBadges', 'section-languages', 'val-languages', languages, 'langName');
+            
+            return v1 && v2 && v3;
+        }
+
         function renderList(containerId, array, removeFn, isBadge = false) {
             const container = document.getElementById(containerId);
             const hiddenId = containerId === 'languageBadges' ? 'hiddenLanguages' : (containerId === 'eduList' ? 'hiddenEducation' : 'hiddenExperience');
@@ -321,27 +375,44 @@
                 container.innerHTML = array.map((item, i) => `
                     <div class="language-badge">${item} <i class="bi bi-x-circle-fill remove-badge" onclick="${removeFn.name}(${i})"></i></div>
                 `).join('');
+                document.getElementById(hiddenId).value = array.join('; ');
             } else {
                 container.innerHTML = array.map((item, i) => `
-                    <div class="dynamic-badge"><span class="small text-dark fw-medium">${item}</span><i class="bi bi-trash remove-badge ms-3" onclick="${removeFn.name}(${i})"></i></div>
+                    <div class="dynamic-badge"><span class="small text-dark fw-medium">[${item.start} - ${item.end}] ${item.name}: ${item.desc}</span><i class="bi bi-trash remove-badge ms-3" onclick="${removeFn.name}(${i})"></i></div>
                 `).join('');
+                document.getElementById(hiddenId).value = array.map(e => `[${e.start} - ${e.end}] ${e.name}: ${e.desc}`).join('; ');
             }
-            document.getElementById(hiddenId).value = array.join('; ');
+            updateSectionValidation();
         }
 
         function addPortfolioField(val) {
             const container = document.getElementById('portfolioContainer');
             const div = document.createElement('div');
             div.className = 'input-group mb-2 portfolio-entry';
-            div.innerHTML = `<span class="input-group-text bg-white border-light-subtle rounded-start-pill px-3"><i class="bi bi-link-45deg text-primary"></i></span>
-                <input type="url" class="form-control border-light-subtle shadow-sm portfolio-input" value="${val}" placeholder="https://..." oninput="managePortfolioFields()">
-                <button type="button" class="btn btn-outline-danger rounded-end-pill px-3 remove-link" onclick="this.closest('.portfolio-entry').remove(); updateRemoveButtons();"><i class="bi bi-trash"></i></button>`;
+            div.innerHTML = `
+                <span class="input-group-text bg-white border-light-subtle rounded-start-pill px-3">
+                    <i class="bi bi-link-45deg text-primary"></i>
+                </span>
+                <input type="url" class="form-control border-light-subtle shadow-sm portfolio-input"
+                       value="${val}" placeholder="https://..." oninput="managePortfolioFields(this)">
+                <button type="button" class="btn btn-outline-danger rounded-end-pill px-3 remove-link"
+                        onclick="this.closest('.portfolio-entry').remove(); updateRemoveButtons();">
+                    <i class="bi bi-trash"></i>
+                </button>`;
             container.appendChild(div);
         }
 
-        function managePortfolioFields() {
+        function managePortfolioFields(inputElement) {
+            if (inputElement) {
+                inputElement.value = removeEmojis(inputElement.value);
+            }
+
             const inputs = document.querySelectorAll('.portfolio-input');
-            if (inputs.length > 0 && inputs[inputs.length - 1].value.trim() !== "") addPortfolioField("");
+            const lastInput = inputs[inputs.length - 1];
+
+            if (lastInput.value.trim() !== "") {
+                addPortfolioField("");
+            }
             updateRemoveButtons();
         }
 
@@ -350,14 +421,26 @@
             entries.forEach((el, i) => el.querySelector('.remove-link').classList.toggle('d-none', i === entries.length - 1));
         }
 
-        function prepareSubmit() {
+        function prepareSubmit(e) {
+            validationAttempted = true;
+            
+            if (document.getElementById('expName').value.trim() && document.getElementById('expStart').value) addExperience();
+            if (document.getElementById('eduName').value.trim() && document.getElementById('eduStart').value) addEducation();
+
+            const isSectionsValid = updateSectionValidation();
+            const isFormValid = $('#cvForm').valid();
+
+            if (!isSectionsValid || !isFormValid) {
+                e.preventDefault();
+                return;
+            }
+
             const links = Array.from(document.querySelectorAll('.portfolio-input')).map(i => i.value.trim()).filter(v => v !== "");
             document.getElementById('hiddenPortfolio').value = links.join(', ');
             
             const btn = document.getElementById('saveBtn');
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
-            document.getElementById('cvForm').submit();
         }
     </script>
 }

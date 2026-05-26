@@ -58,10 +58,28 @@ public class ForgotPasswordConfirmationModel : PageModel
 
     public async Task<IActionResult> OnPostResendAsync()
     {
-        if (string.IsNullOrEmpty(Input.Email))
+        if (string.IsNullOrEmpty(Input.Email)) return Page();
+
+        var user = await _userManager.FindByEmailAsync(Input.Email);
+        if (user != null)
         {
-            return RedirectToPage("./ForgotPassword");
+            string newCode = RandomNumberGenerator.GetInt32(100000, 999999).ToString();
+
+            await _userManager.SetAuthenticationTokenAsync(user, "ManualReset", "ResetCode", newCode);
+
+            bool success = await _emailService.SendPasswordResetCodeAsync(user.Email, newCode);
+
+            if (success)
+            {
+                _logger.LogInformation($">>> [RESEND] Nowy kod dla {user.Email}: {newCode}");
+                TempData["StatusMessage"] = "A new verification code has been sent to your email.";
+            }
+            else
+            {
+                ModelState.AddModelError(string.Empty, "Failed to send email. Please try again later.");
+            }
         }
-        return RedirectToPage("./ForgotPassword", new { email = Input.Email });
+
+        return Page();
     }
 }

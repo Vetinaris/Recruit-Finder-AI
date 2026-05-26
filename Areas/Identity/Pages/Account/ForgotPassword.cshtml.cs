@@ -37,14 +37,6 @@ namespace Recruit_Finder_AI.Areas.Identity.Pages.Account
             public string Email { get; set; }
         }
 
-        public void OnGet(string email = null)
-        {
-            if (!string.IsNullOrEmpty(email))
-            {
-                Input = new InputModel { Email = email };
-            }
-        }
-
         public async Task<IActionResult> OnPostAsync()
         {
             if (ModelState.IsValid)
@@ -56,12 +48,12 @@ namespace Recruit_Finder_AI.Areas.Identity.Pages.Account
                     string shortCode = random.Next(100000, 999999).ToString();
 
                     await _userManager.SetAuthenticationTokenAsync(user, "ManualReset", "ResetCode", shortCode);
+
                     bool success = await _emailService.SendPasswordResetCodeAsync(Input.Email, shortCode);
 
                     if (success)
                     {
-                        await _auditService.LogAsync(user.UserName, "FORGOT_PASSWORD_PAGE", "Code sent", true, user.Id);
-                        TempData["StatusMessage"] = "A new code has been sent.";
+                        await _auditService.LogAsync(user.UserName, "FORGOT_PASSWORD_PAGE", "6-digit code sent via Python service", true, user.Id);
                     }
                 }
 

@@ -1,0 +1,75 @@
+﻿@section Styles {
+    <link rel="stylesheet" href="~/css/home.css" />
+}
+@{
+    ViewData["Title"] = "Terms of Service";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="text-center mb-5">
+                <div class="bg-primary text-white mb-3 mx-auto icon-circle shadow-sm">
+                    <i class="bi bi-file-earmark-text"></i>
+                </div>
+                <h1 class="fw-bold text-dark">Terms of Service</h1>
+                <p class="text-muted">Last updated: May 2026</p>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5">
+                <div class="card-body">
+                    <section class="mb-5">
+                        <h3 class="fw-bold text-primary mb-3">1. Acceptance of Terms</h3>
+                        <p>By accessing and using <strong>RecruitFinder AI</strong>, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our platform.</p>
+                    </section>
+
+                    <section class="mb-5">
+                        <h3 class="fw-bold text-primary mb-3">2. AI CV Creator & Services</h3>
+                        <p>Our platform provides advanced tools for job seekers and recruiters, including:</p>
+                        <ul class="list-group list-group-flush mb-3">
+                            <li class="list-group-item border-0 px-0 d-flex">
+                                <i class="bi bi-check-circle-fill text-success me-2 flex-shrink-0"></i>
+                                <span><strong>AI-Powered CV Creator:</strong> Users can utilize our built-in creator to build professional resumes.</span>
+                            </li>
+                            <li class="list-group-item border-0 px-0 d-flex align-items-center">
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                <span><strong>PDF Downloads:</strong> Once generated, you have the right to download and export your CV in professional formats for your personal job applications.</span>
+                            </li>
+                            <li class="list-group-item border-0 px-0 d-flex align-items-center">
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                <span><strong>AI Screening:</strong> Recruiters use our AI to rank candidates based on skill relevance.</span>
+                            </li>
+                        </ul>
+                        <p class="small text-muted"><em>Note: While our AI assists in optimization, users are responsible for the factual accuracy of the information provided in their CVs.</em></p>
+                    </section>
+
+                    <section class="mb-5">
+                        <h3 class="fw-bold text-primary mb-3">3. User Responsibilities</h3>
+                        <p>When using our CV creator and dashboard, you agree to:</p>
+                        <ul>
+                            <li>Provide accurate and truthful information.</li>
+                            <li>Maintain the security of your account credentials.</li>
+                            <li>Not use the AI tools to generate misleading or fraudulent content.</li>
+                        </ul>
+                    </section>
+
+                    <section class="mb-5">
+                        <h3 class="fw-bold text-primary mb-3">4. Intellectual Property</h3>
+                        <p>While you retain ownership of the personal data within your CV, the design templates, AI algorithms, and platform interface remain the exclusive property of RecruitFinder AI.</p>
+                    </section>
+
+                    <section class="mb-0">
+                        <h3 class="fw-bold text-primary mb-3">5. Contact Us</h3>
+                        <p>If you have any questions regarding these terms, please contact our support team at <a href="mailto:support@recruitfinder.ai" class="text-primary text-decoration-none fw-bold">support@recruitfinder.ai</a>.</p>
+                    </section>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <a asp-controller="Home" asp-action="Index" class="btn btn-outline-primary rounded-pill px-4 hover-lift">
+                    <i class="bi bi-arrow-left me-2"></i> Back to Home
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,32 +1,212 @@
 ﻿@model Recruit_Finder_AI.Models.JobOffer
+@{
+    ViewData["Title"] = "AI Analysis Details";
+    var aiReports = ViewBag.AiReports as List<Recruit_Finder_AI.Models.AiApplicationReport> ?? new List<Recruit_Finder_AI.Models.AiApplicationReport>();
+
+    // Używamy silnie typowanej listy naszej klasy pomocniczej z bloku @functions
+    List<RankingItem> aiRanking = null;
+
+    if (Model.Applications != null && Model.Applications.Any())
+    {
+        aiRanking = (from app in Model.Applications
+                     join report in aiReports on app.Id equals report.JobApplicationId
+                     select new RankingItem
+                     {
+                         Application = app,
+                         Report = report
+                     })
+                     .OrderByDescending(x => x.Report.Score)
+                     .Take(10)
+                     .ToList();
+    }
+    else
+    {
+        aiRanking = new List<RankingItem>();
+    }
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/offer.css" />
+}
 
 <div class="container py-5">
-    <div class="card border-0 shadow-lg rounded-4">
-        <div class="card-header bg-success text-white p-4 rounded-top-4">
-            <h2 class="mb-0"><i class="bi bi-robot me-2"></i> AI Verification Report</h2>
+    <div class="card border-0 shadow-lg rounded-4 overflow-hidden mb-4">
+        <!-- BANER AI VERIFICATION -->
+        <div class="card-header bg-success text-white p-4 rounded-top-4" style="background: linear-gradient(135deg, #198754, #157347) !important;">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0"><i class="bi bi-robot me-2"></i> AI Verification Report</h2>
+                @if (aiReports.Any())
+                {
+                    <a asp-action="ExportAiResultsToCsv" asp-route-id="@Model.Id" class="btn btn-light btn-sm rounded-pill fw-bold px-3 text-success">
+                        <i class="bi bi-file-earmark-spreadsheet-fill me-1"></i> Export to CSV
+                    </a>
+                }
+            </div>
         </div>
+
         <div class="card-body p-4">
             <h4 class="fw-bold">@Model.Title</h4>
-            <p class="text-muted">Analysis for: <strong>@Model.Company</strong></p>
+            <p class="text-muted mb-3">Analysis for recruitment at: <strong>@Model.Company</strong></p>
 
-            <hr />
+            <!-- GŁÓWNY STATUS ANALIZY -->
+            <div class="p-3 bg-light rounded-3 border mb-3">
+                <h6 class="fw-bold text-success mb-2">
+                    <i class="bi bi-shield-check me-2"></i> Main Analysis Status: @Model.AiAnalysisStatus
+                </h6>
+                <p class="mb-0 text-secondary" style="white-space: pre-line;">
+                    @Model.AiAnalysisComment
+                </p>
+            </div>
 
-            <div class="mt-4">
-                <h5 class="fw-bold text-success">
-                    <i class="bi bi-shield-check me-2"></i> Analysis Result: @Model.AiAnalysisStatus
-                </h5>
-                <div class="p-4 bg-light rounded-3 border">
-                    <p class="mb-0" style="white-space: pre-line;">
-                        @Model.AiAnalysisComment
-                    </p>
+            <!-- PODGLĄD SZCZEGÓŁÓW OFERTY PRACY (ZWIJANY PANEL) -->
+            <div class="accordion mb-4" id="offerDetailsAccordion">
+                <div class="accordion-item border rounded-3 overflow-hidden shadow-sm">
+                    <h2 class="accordion-header" id="headingOffer">
+                        <button class="accordion-button collapsed bg-light fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOffer" aria-expanded="false" aria-controls="collapseOffer">
+                            <i class="bi bi-briefcase-fill text-primary me-2"></i> View Job Offer Details & Requirements
+                        </button>
+                    </h2>
+                    <div id="collapseOffer" class="accordion-collapse collapse" aria-labelledby="headingOffer" data-bs-parent="#offerDetailsAccordion">
+                        <div class="accordion-body bg-white">
+                            <div class="row g-3 mb-3">
+                                <div class="col-6 col-md-3">
+                                    <span class="text-muted small text-uppercase fw-bold d-block">Category</span>
+                                    <span class="text-dark fw-medium">@Model.Category / @Model.Subcategory</span>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <span class="text-muted small text-uppercase fw-bold d-block">Job Type</span>
+                                    <span class="text-dark fw-medium">@Model.JobType</span>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <span class="text-muted small text-uppercase fw-bold d-block">Location</span>
+                                    <span class="text-dark fw-medium">@Model.Location</span>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <span class="text-muted small text-uppercase fw-bold d-block">Languages</span>
+                                    <span class="text-dark fw-medium">@Model.RequiredLanguages</span>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <span class="text-muted small text-uppercase fw-bold d-block">Salary Info</span>
+                                    <span class="text-dark fw-medium">
+                                        @if (Model.SalaryType == "fixed")
+                                        {
+                                            <span>@Model.MinimumSalary EUR (Fixed Monthly)</span>
+                                        }
+                                        else if (Model.SalaryType == "range")
+                                        {
+                                            <span>@Model.MinimumSalary - @Model.MaximumSalary EUR</span>
+                                        }
+                                        else if (Model.SalaryType == "negotiable")
+                                        {
+                                            <span>Negotiable</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Not Disclosed</span>
+                                        }
+                                    </span>
+                                </div>
+                            </div>
+
+                            <hr class="my-3" />
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <h6 class="fw-bold text-primary mb-2"><i class="bi bi-file-earmark-text me-1"></i> About the Role</h6>
+                                    <p class="text-secondary small mb-0" style="white-space: pre-line; line-height: 1.5;">@Model.Description</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="fw-bold text-primary mb-2"><i class="bi bi-list-check me-1"></i> Job Requirements</h6>
+                                    <p class="text-secondary small mb-0" style="white-space: pre-line; line-height: 1.5;">@Model.Requirements</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
+            <!-- SZCZEGÓŁOWY INTELIGENTNY RANKING TOP 10 KANDYDATÓW -->
+            @if (aiRanking != null && aiRanking.Any())
+            {
+                <h4 class="fw-bold mb-3" style="color: #4e227d;">
+                    <i class="bi bi-trophy-fill text-warning me-2"></i> Top AI Candidate Ranking (Gemma 3:4b)
+                </h4>
+                <div class="row row-cols-1 row-cols-md-2 g-4 mb-4">
+                    @foreach (var candidate in aiRanking)
+                    {
+                        var cv = candidate.Application.Cv;
+                        string candidateName = cv != null ? $"{cv.Name} {cv.Surname}" : "Hidden Name";
+
+                        var prosList = candidate.Report.Pros?.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
+                        var consList = candidate.Report.Cons?.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
+
+                        <div class="col">
+                            <div class="card h-100 border-0 shadow-sm rounded-3 bg-white p-3 border-start border-4 @(candidate.Report.Score >= 80 ? "border-warning" : "border-purple")" style="border-color: @(candidate.Report.Score >= 80 ? "#ffc107" : "#6f42c1") !important; border: 1px solid #eee;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h5 class="fw-bold mb-0 text-dark">
+                                        @candidateName
+                                    </h5>
+                                    <span class="badge fs-6 rounded-pill @(candidate.Report.Score >= 80 ? "bg-success" : candidate.Report.Score >= 50 ? "bg-info" : "bg-secondary")">
+                                        @candidate.Report.Score% Match
+                                    </span>
+                                </div>
+
+                                <p class="text-muted small mb-3 italic">"@candidate.Report.Description"</p>
+
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <span class="fw-bold text-success small d-block mb-1"><i class="bi bi-plus-circle-fill me-1"></i> Pros:</span>
+                                        <ul class="ps-3 mb-0 small text-secondary">
+                                            @foreach (var pro in prosList)
+                                            {
+                                                <li>@pro.TrimStart('-', ' ')</li>
+                                            }
+                                            @if (!prosList.Any())
+                                            {
+                                                <li class="text-muted italic">None listed</li>
+                                            }
+                                        </ul>
+                                    </div>
+                                    <div class="col-6">
+                                        <span class="fw-bold text-danger small d-block mb-1"><i class="bi bi-dash-circle-fill me-1"></i> Cons:</span>
+                                        <ul class="ps-3 mb-0 small text-secondary">
+                                            @foreach (var con in consList)
+                                            {
+                                                <li>@con.TrimStart('-', ' ')</li>
+                                            }
+                                            @if (!consList.Any())
+                                            {
+                                                <li class="text-muted italic">None listed</li>
+                                            }
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info border-0 shadow-sm p-4 rounded-3">
+                    <i class="bi bi-info-circle-fill me-2 fs-5"></i> No active AI reports are currently linked or saved for this offer. Trigger the AI analysis first.
+                </div>
+            }
+
             <div class="mt-4">
-                <a asp-action="ClosedListings" class="btn btn-outline-secondary rounded-pill">
-                    Back to History
+                <a asp-action="ViewResults" asp-route-id="@Model.Id" class="btn btn-outline-secondary rounded-pill px-4">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Applications List
                 </a>
             </div>
         </div>
     </div>
 </div>
+
+@functions {
+    // Silnie typowana klasa wewnętrzna widoku, gwarantująca brak błędów typowania dynamicznego
+    public class RankingItem
+    {
+        public Recruit_Finder_AI.Models.JobApplication Application { get; set; }
+        public Recruit_Finder_AI.Models.AiApplicationReport Report { get; set; }
+    }
+}

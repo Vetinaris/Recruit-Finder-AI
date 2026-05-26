@@ -13,6 +13,9 @@ namespace Recruit_Finder_AI.ViewModels
         [EmailAddress]
         [Display(Name = "Email Address")]
         public string Email { get; set; }
+        [Display(Name = "Phone Number")]
+        [RegularExpression(@"^[0-9+\-\s]*$", ErrorMessage = "Phone number contains invalid characters.")]
+        public string? PhoneNumber { get; set; }
         [Display(Name = "Account Locked")]
         public bool IsLocked { get; set; }
         public DateTimeOffset? LockoutEndDisplay { get; set; }
@@ -26,5 +29,7 @@ namespace Recruit_Finder_AI.ViewModels
         public string? NIP { get; set; }
         public string? CompanyAddress { get; set; }
         public bool IsEmployer { get; set; }
+
+        public byte[]? ProfilePicture { get; set; }
     }
 }

@@ -1,17 +1,24 @@
 ﻿@model IEnumerable<Recruit_Finder_AI.Models.ApplicationUser>
+@section Styles {
+    <link rel="stylesheet" href="~/css/moderator.css" asp-append-version="true" />
+}
 @{
     ViewData["Title"] = "Moderator Panel";
+    var pendingCount = Model.Count();
 }
 
 <div class="container py-5">
-    <div class="row mb-4 align-items-center">
-        <div class="col">
-            <h2 class="fw-bold mb-0 text-dark">Verification Queue</h2>
-            <p class="text-muted mb-0">Review and manage employer business applications.</p>
+    <div class="row align-items-center mb-5 gy-4">
+        <div class="col-lg-6 text-center text-lg-start">
+            <h1 class="fw-bold display-6 mb-1">Verification Queue</h1>
+            <p class="text-muted mb-0">
+                You have <span class="fw-bold text-primary">@pendingCount</span> applications waiting for review.
+            </p>
         </div>
-        <div class="col-auto">
-            <span class="badge bg-soft-primary text-primary rounded-pill px-3 py-2">
-                <i class="bi bi-clock-history me-1"></i> @Model.Count() Pending Requests
+        
+        <div class="col-lg-6 text-center text-lg-end">
+            <span class="badge bg-soft-primary text-primary rounded-pill px-4 py-2 fs-6 border border-primary border-opacity-10 shadow-sm">
+                Secure Moderator Session
             </span>
         </div>
     </div>
@@ -19,166 +26,165 @@
     @if (TempData["SuccessMessage"] != null)
     {
         <div class="alert alert-success border-0 shadow-sm rounded-4 alert-dismissible fade show mb-4" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+            <div class="d-flex align-items-center">
+                <div class="icon-shape bg-success text-white rounded-circle me-3" style="width:30px; height:30px;">
+                    <i class="bi bi-check-lg"></i>
+                </div>
+                <div>@TempData["SuccessMessage"]</div>
+            </div>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
 
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light border-bottom">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table" style="min-width: 900px;">
+                <thead class="bg-light border-bottom">
+                    <tr>
+                        <th class="ps-4 py-3 text-uppercase small fw-bold text-muted">User Email</th>
+                        <th class="py-3 text-uppercase small fw-bold text-muted">Company Details</th>
+                        <th class="py-3 text-uppercase small fw-bold text-muted text-center">NIP / Tax ID</th>
+                        <th class="py-3 text-uppercase small fw-bold text-muted text-center pe-4" style="width: 250px;">Management</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
                         <tr>
-                            <th class="ps-4 py-3 text-uppercase small fw-bold text-muted">User Email</th>
-                            <th class="py-3 text-uppercase small fw-bold text-muted">Company Details</th>
-                            <th class="py-3 text-uppercase small fw-bold text-muted text-center">NIP / Tax ID</th>
-                            <th class="pe-4 py-3 text-uppercase small fw-bold text-muted text-end">Management</th>
+                            <td colspan="4" class="text-center py-5">
+                                <div class="py-4">
+                                    <i class="bi bi-patch-check text-muted display-1 mb-3 d-block"></i>
+                                    <h4 class="fw-bold text-muted">All caught up!</h4>
+                                    <p class="text-muted mb-0">No pending verification requests at the moment.</p>
+                                </div>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @if (!Model.Any())
-                        {
-                            <tr>
-                                <td colspan="4" class="text-center py-5">
-                                    <i class="bi bi-inbox text-muted d-block mb-2" style="font-size: 2.5rem;"></i>
-                                    <p class="text-muted mb-0">Great job! All applications have been processed.</p>
-                                </td>
-                            </tr>
-                        }
-                        @foreach (var user in Model)
-                        {
-                            <tr>
-                                <td class="ps-4">
-                                    <div class="fw-bold text-dark">@user.Email</div>
-                                    <small class="text-muted">Registered: @user.EmailConfirmed</small>
-                                </td>
-                                <td>
-                                    <div class="fw-semibold">@user.CompanyName</div>
-                                    <div class="small text-muted text-truncate" style="max-width: 250px;">
-                                        <i class="bi bi-geo-alt me-1"></i>@user.CompanyAddress
+                    }
+                    @foreach (var user in Model)
+                    {
+                        <tr>
+                            <td class="ps-4 py-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon-shape bg-soft-primary text-primary rounded-3 me-3 flex-shrink-0" style="width: 45px; height: 45px;">
+                                        <i class="bi bi-person-badge-fill"></i>
                                     </div>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge bg-light text-dark border fw-mono px-3 py-2">@user.NIP</span>
-                                </td>
-                                <td class="pe-4 text-end">
-                                    <div class="btn-group shadow-sm rounded-pill overflow-hidden">
-                                        <button type="button" class="btn btn-white btn-sm px-3 border-end text-success fw-bold" 
-                                                data-bs-toggle="modal" data-bs-target="#approveModal-@user.Id">
-                                            <i class="bi bi-check2 me-1"></i> Approve
-                                        </button>
-                                        
-                                        <button type="button" class="btn btn-white btn-sm px-3 border-end text-warning fw-bold" 
-                                                data-bs-toggle="modal" data-bs-target="#declineModal-@user.Id">
-                                            <i class="bi bi-x-lg me-1"></i> Decline
-                                        </button>
-                                        
-                                        <button type="button" class="btn btn-white btn-sm px-3 text-danger fw-bold" 
-                                                data-bs-toggle="modal" data-bs-target="#fraudModal-@user.Id">
-                                            <i class="bi bi-shield-exclamation me-1"></i> Fraud
-                                        </button>
+                                    <div>
+                                        <div class="fw-bold text-dark fs-6">@user.Email</div>
+                                        <div class="small text-muted">Confirmed: @(user.EmailConfirmed ? "Yes" : "No")</div>
                                     </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark">@user.CompanyName</div>
+                                <div class="small text-muted text-truncate" style="max-width: 250px;">
+                                    <i class="bi bi-geo-alt me-1"></i>@user.CompanyAddress
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark border fw-mono px-3 py-2 rounded-3 shadow-sm">
+                                    @user.NIP
+                                </span>
+                            </td>
+                            <td class="text-center pe-4">
+                                <div class="btn-group glass-actions">
+                                    <button type="button" class="btn action-btn text-success"
+                                            data-bs-toggle="modal" data-bs-target="#approveModal-@user.Id" title="Approve">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                    </button>
 
-                                    <div class="modal fade" id="approveModal-@user.Id" tabindex="-1" aria-hidden="true">
-                                        <div class="modal-dialog modal-dialog-centered">
-                                            <div class="modal-content border-0 shadow rounded-4 text-start">
-                                                <div class="modal-header border-0 pb-0">
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    <div class="vr"></div>
+
+                                    <button type="button" class="btn action-btn text-warning"
+                                            data-bs-toggle="modal" data-bs-target="#declineModal-@user.Id" title="Decline">
+                                        <i class="bi bi-dash-circle-fill"></i>
+                                    </button>
+
+                                    <div class="vr"></div>
+
+                                    <button type="button" class="btn action-btn text-danger"
+                                            data-bs-toggle="modal" data-bs-target="#fraudModal-@user.Id" title="Report Fraud">
+                                        <i class="bi bi-shield-x"></i>
+                                    </button>
+                                </div>
+
+                                
+                                <div class="modal fade" id="approveModal-@user.Id" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content border-0 custom-main-shadow rounded-4">
+                                            <div class="modal-header border-0 pb-0 d-flex justify-content-end">
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body text-center px-4 pb-4">
+                                                <div class="icon-box-circle bg-soft-success text-success mb-4">
+                                                    <i class="bi bi-patch-check"></i>
                                                 </div>
-                                                <div class="modal-body text-center p-4">
-                                                    <div class="icon-shape bg-soft-success text-success rounded-circle mb-3 mx-auto" style="width: 70px; height: 70px; font-size: 2rem; display: flex; align-items: center; justify-content: center;">
-                                                        <i class="bi bi-patch-check"></i>
-                                                    </div>
-                                                    <h4 class="fw-bold">Approve Company?</h4>
-                                                    <p class="text-muted">This will grant <strong>@user.CompanyName</strong> the Employer role and allow them to post jobs.</p>
-                                                    <form asp-action="Approve" method="post" class="mt-4">
-                                                        <input type="hidden" name="userId" value="@user.Id" />
-                                                        <div class="d-grid gap-2">
-                                                            <button type="submit" class="btn btn-success btn-lg rounded-pill">Confirm Approval</button>
-                                                            <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Cancel</button>
-                                                        </div>
-                                                    </form>
-                                                </div>
+                                                <h3 class="fw-bold text-dark mb-2">Approve Company?</h3>
+                                                <p class="text-muted mb-0">This will grant <strong>@user.CompanyName</strong> full employer access.</p>
+                                            </div>
+                                            <div class="modal-footer border-0 justify-content-center gap-2 pb-5">
+                                                <button type="button" class="btn btn-light rounded-pill px-4 fw-semibold border hover-shift" data-bs-dismiss="modal">Cancel</button>
+                                                <form asp-action="Approve" method="post" class="m-0">
+                                                    <input type="hidden" name="userId" value="@user.Id" />
+                                                    <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm hover-lift">Confirm Approval</button>
+                                                </form>
                                             </div>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div class="modal fade" id="declineModal-@user.Id" tabindex="-1" aria-hidden="true">
-                                        <div class="modal-dialog modal-dialog-centered text-start">
-                                            <div class="modal-content border-0 shadow rounded-4">
-                                                <div class="modal-body p-5 text-center">
-                                                    <div class="text-warning mb-3" style="font-size: 3rem;"><i class="bi bi-exclamation-circle"></i></div>
-                                                    <h4 class="fw-bold">Decline Application?</h4>
-                                                    <p class="text-muted">The user will be notified that their data (NIP: @user.NIP) was insufficient. They can try again later.</p>
-                                                    <form asp-action="Decline" method="post" class="mt-4">
-                                                        <input type="hidden" name="userId" value="@user.Id" />
-                                                        <div class="d-grid gap-2">
-                                                            <button type="submit" class="btn btn-warning btn-lg rounded-pill">Decline Request</button>
-                                                            <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Go Back</button>
-                                                        </div>
-                                                    </form>
+                                <div class="modal fade" id="declineModal-@user.Id" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content border-0 custom-main-shadow rounded-4">
+                                            <div class="modal-header border-0 pb-0 d-flex justify-content-end">
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body text-center px-4 pb-4">
+                                                <div class="icon-box-circle bg-soft-warning text-warning mb-4">
+                                                    <i class="bi bi-exclamation-triangle"></i>
                                                 </div>
+                                                <h3 class="fw-bold text-dark mb-2">Decline Request?</h3>
+                                                <p class="text-muted mb-0">The user will be notified that their application (NIP: @user.NIP) was rejected.</p>
+                                            </div>
+                                            <div class="modal-footer border-0 justify-content-center gap-2 pb-5">
+                                                <button type="button" class="btn btn-light rounded-pill px-4 fw-semibold border hover-shift" data-bs-dismiss="modal">Go Back</button>
+                                                <form asp-action="Decline" method="post" class="m-0">
+                                                    <input type="hidden" name="userId" value="@user.Id" />
+                                                    <button type="submit" class="btn btn-warning rounded-pill px-4 fw-bold shadow-sm hover-lift text-white">Decline Now</button>
+                                                </form>
                                             </div>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div class="modal fade" id="fraudModal-@user.Id" tabindex="-1" aria-hidden="true">
-                                        <div class="modal-dialog modal-dialog-centered text-start">
-                                            <div class="modal-content border-0 shadow rounded-4 bg-danger text-white">
-                                                <div class="modal-body p-5 text-center">
-                                                    <div class="mb-3" style="font-size: 3.5rem;"><i class="bi bi-shield-fire"></i></div>
-                                                    <h3 class="fw-bold text-white">Report Security Fraud?</h3>
-                                                    <p class="text-white-50">This is a serious action. All administrators will be alerted to ban <strong>@user.Email</strong> for impersonation.</p>
-                                                    <form asp-action="ReportFakeCompany" method="post" class="mt-4">
-                                                        <input type="hidden" name="userId" value="@user.Id" />
-                                                        <div class="d-grid gap-2">
-                                                            <button type="submit" class="btn btn-light btn-lg rounded-pill fw-bold text-danger">REPORT FRAUD</button>
-                                                            <button type="button" class="btn btn-link text-white text-decoration-none" data-bs-dismiss="modal">Cancel</button>
-                                                        </div>
-                                                    </form>
+                                <div class="modal fade" id="fraudModal-@user.Id" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content border-0 custom-main-shadow rounded-4">
+                                            <div class="modal-header border-0 pb-0 d-flex justify-content-end">
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body text-center px-4 pb-4">
+                                                <div class="icon-box-circle bg-soft-danger text-danger mb-4">
+                                                    <i class="bi bi-shield-lock-fill"></i>
                                                 </div>
+                                                <h3 class="fw-bold text-dark mb-2">Report Fraud?</h3>
+                                                <p class="text-muted mb-0">This triggers a security alert and initiates a permanent ban for <strong>@user.Email</strong>.</p>
+                                            </div>
+                                            <div class="modal-footer border-0 justify-content-center gap-2 pb-5">
+                                                <button type="button" class="btn btn-light rounded-pill px-4 fw-semibold border hover-shift" data-bs-dismiss="modal">Cancel</button>
+                                                <form asp-action="ReportFakeCompany" method="post" class="m-0">
+                                                    <input type="hidden" name="userId" value="@user.Id" />
+                                                    <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm hover-lift">Report & Block</button>
+                                                </form>
                                             </div>
                                         </div>
                                     </div>
+                                </div>
 
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
-
-<style>
-    body { background-color: #f4f7f9; }
-    .bg-soft-primary { background-color: rgba(67, 97, 238, 0.1) !important; }
-    .bg-soft-success { background-color: rgba(45, 206, 137, 0.1) !important; }
-    
-    .btn-white {
-        background-color: #fff;
-        border-color: #f0f2f5;
-    }
-    .btn-white:hover {
-        background-color: #f8f9fa;
-        z-index: 1;
-    }
-
-    .fw-mono { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; }
-
-    .table-hover tbody tr:hover {
-        background-color: rgba(67, 97, 238, 0.02);
-    }
-
-    .modal-content {
-        border: none;
-    }
-    
-    .icon-shape {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-</style>

@@ -8,6 +8,7 @@ namespace Recruit_Finder_AI.Areas.Identity.Pages.Account
     {
         public void OnGet()
         {
+
         }
     }
 }

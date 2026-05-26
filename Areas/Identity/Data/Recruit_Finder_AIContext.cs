@@ -18,9 +18,9 @@ public class Recruit_Finder_AIContext : IdentityDbContext<ApplicationUser>
     public DbSet<SystemSetting> SystemSettings { get; set; }
     public DbSet<Notification> Notifications { get; set; }
     public DbSet<Cv> Cvs { get; set; }
-
     public DbSet<JobApplication> Applications { get; set; }
 
+    public DbSet<AiApplicationReport> AiApplicationReports { get; set; }
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
