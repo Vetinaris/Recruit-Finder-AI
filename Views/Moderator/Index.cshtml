@@ -65,9 +65,19 @@
                         <tr>
                             <td class="ps-4 py-4">
                                 <div class="d-flex align-items-center">
-                                    <div class="icon-shape bg-soft-primary text-primary rounded-3 me-3 flex-shrink-0" style="width: 45px; height: 45px;">
-                                        <i class="bi bi-person-badge-fill"></i>
-                                    </div>
+                                    @if (user.ProfilePicture != null && user.ProfilePicture.Length > 0)
+                                    {
+                                        <img src="data:@user.ProfilePictureContentType;base64,@Convert.ToBase64String(user.ProfilePicture)"
+                                             class="rounded-circle me-3 flex-shrink-0 shadow-sm border border-light-subtle"
+                                             style="width: 45px; height: 45px; object-fit: cover;"
+                                             alt="User avatar" />
+                                    }
+                                    else
+                                    {
+                                        <div class="icon-shape bg-soft-primary text-primary rounded-circle me-3 flex-shrink-0" style="width: 45px; height: 45px;">
+                                            <i class="bi bi-person fs-5"></i>
+                                        </div>
+                                    }
                                     <div>
                                         <div class="fw-bold text-dark fs-6">@user.Email</div>
                                         <div class="small text-muted">Confirmed: @(user.EmailConfirmed ? "Yes" : "No")</div>

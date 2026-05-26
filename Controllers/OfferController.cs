@@ -2,17 +2,20 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Recruit_Finder_AI.Data;
-using Recruit_Finder_AI.Models;
-using Recruit_Finder_AI.Services;
-using System.Security.AccessControl;
-using System.Security.Claims;
-using System.Text;
-using System.Text.Json;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
-
+using Recruit_Finder_AI.Data;
+using Recruit_Finder_AI.Entities;
+using Recruit_Finder_AI.Models;
+using Recruit_Finder_AI.Services;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Recruit_Finder_AI.Controllers
 {
@@ -37,16 +40,17 @@ namespace Recruit_Finder_AI.Controllers
             _configuration = configuration;
             _httpClientFactory = httpClientFactory;
         }
+
         public async Task<IActionResult> List(
-        string category,
-        string? subcategory,
-        string? searchString,
-        string? jobType,
-        string? salaryType,
-        int? minSalary,
-        string sortOrder,
-        string language,
-        bool showInactive = false)
+            string category,
+            string? subcategory,
+            string? searchString,
+            string? jobType,
+            string? salaryType,
+            int? minSalary,
+            string sortOrder,
+            string language,
+            bool showInactive = false)
         {
             var allOffersInCategory = await _context.JobOffers
                 .Where(o => o.Category == category)
@@ -134,6 +138,7 @@ namespace Recruit_Finder_AI.Controllers
 
             return View(await query.ToListAsync());
         }
+
         public async Task<IActionResult> ClosedListings()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -145,6 +150,7 @@ namespace Recruit_Finder_AI.Controllers
 
             return View(closedOffers);
         }
+
         [Authorize]
         public async Task<IActionResult> CvView(int id)
         {
@@ -165,20 +171,34 @@ namespace Recruit_Finder_AI.Controllers
             }
 
             ViewBag.OfferTitle = application.JobOffer.Title;
-
             return View(application.Cv);
         }
+
         [Authorize]
         public async Task<IActionResult> AiAnalysisDetails(int id)
         {
-            var offer = await _context.JobOffers.FindAsync(id);
             var userId = _userManager.GetUserId(User);
 
-            if (offer == null || (offer.RecruiterId != userId && !User.IsInRole("ADMIN")))
+            var offer = await _context.JobOffers
+                .Include(o => o.Applications)
+                    .ThenInclude(a => a.Cv)
+                    .ThenInclude(c => c.User)
+                .FirstOrDefaultAsync(o => o.Id == id && (o.RecruiterId == userId || User.IsInRole("ADMIN")));
+
+            if (offer == null)
                 return NotFound();
+
+            var applicationIds = offer.Applications.Select(a => a.Id).ToList();
+
+            var aiReports = await _context.AiApplicationReports
+                .Where(r => applicationIds.Contains(r.JobApplicationId))
+                .ToListAsync();
+
+            ViewBag.AiReports = aiReports;
 
             return View(offer);
         }
+
         [Authorize]
         public async Task<IActionResult> ViewResults(int id)
         {
@@ -187,16 +207,27 @@ namespace Recruit_Finder_AI.Controllers
             var applications = await _context.Applications
                 .Include(a => a.JobOffer)
                 .Include(a => a.Cv)
+                .Include(a => a.Candidate)
                 .Where(a => a.JobOfferId == id && a.JobOffer.RecruiterId == userId)
                 .OrderByDescending(a => a.AppliedAt)
                 .ToListAsync();
 
-            if (applications == null) return NotFound();
+            var offer = await _context.JobOffers.FirstOrDefaultAsync(o => o.Id == id && o.RecruiterId == userId);
+            if (offer == null) return NotFound();
 
-            ViewBag.OfferTitle = applications.FirstOrDefault()?.JobOffer.Title;
+            ViewBag.OfferTitle = offer.Title;
+            ViewBag.AiStatus = offer.AiAnalysisStatus;
+
+            var applicationIds = applications.Select(a => a.Id).ToList();
+            var aiReports = await _context.AiApplicationReports
+                .Where(r => applicationIds.Contains(r.JobApplicationId))
+                .ToListAsync();
+
+            ViewBag.AiReports = aiReports;
 
             return View(applications);
         }
+
         public async Task<IActionResult> Details(int id)
         {
             var jobOffer = await _context.JobOffers
@@ -295,6 +326,7 @@ namespace Recruit_Finder_AI.Controllers
             TempData["StatusMessage"] = "Offer is now visible to everyone.";
             return Redirect(Request.Headers["Referer"].ToString() ?? Url.Action("List", new { category = offer.Category }));
         }
+
         [Authorize]
         public async Task<IActionResult> Create()
         {
@@ -410,7 +442,6 @@ namespace Recruit_Finder_AI.Controllers
                     existingOffer.MinimumSalary = offer.MinimumSalary;
                     existingOffer.MaximumSalary = offer.MaximumSalary;
 
-
                     await _context.SaveChangesAsync();
 
                     TempData["SuccessMessage"] = "Offer updated successfully!";
@@ -426,6 +457,7 @@ namespace Recruit_Finder_AI.Controllers
             await PrepareViewBags();
             return View(offer);
         }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
@@ -439,13 +471,13 @@ namespace Recruit_Finder_AI.Controllers
 
             offer.ExpirationDate = DateTime.UtcNow;
 
-
             _context.Update(offer);
             await _context.SaveChangesAsync();
 
             TempData["SuccessMessage"] = "Recruitment has been closed.";
             return RedirectToAction(nameof(MyListings));
         }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ReopenOffer(int id)
@@ -463,6 +495,7 @@ namespace Recruit_Finder_AI.Controllers
 
             return RedirectToAction(nameof(MyListings));
         }
+
         [Authorize]
         [HttpGet]
         public async Task<IActionResult> SelectForApplication(int jobId)
@@ -507,29 +540,95 @@ namespace Recruit_Finder_AI.Controllers
 
             return View(viewModel);
         }
+
         [HttpPost]
         [AllowAnonymous]
         [IgnoreAntiforgeryToken]
         public async Task<IActionResult> UpdateAiResult([FromBody] AiResultModel data)
         {
-            Console.WriteLine($"--- CALLBACK OTRZYMANY: OfferId={data.offerId}, Status={data.status} ---");
-
+            Console.WriteLine($"--- CALLBACK RECEIVED: OfferId={data.offerId}, Status={data.status} ---");
             try
             {
-                var offer = await _context.JobOffers.FindAsync(data.offerId);
-                if (offer != null)
-                {
-                    offer.AiAnalysisStatus = data.status;
-                    offer.AiAnalysisComment = data.message;
+                var offer = await _context.JobOffers
+                    .Include(o => o.Applications)
+                    .FirstOrDefaultAsync(o => o.Id == data.offerId);
 
-                    await _context.SaveChangesAsync();
-                    return Ok(new { message = "Data updated successfully" });
+                if (offer == null)
+                {
+                    Console.WriteLine($"[AI CALLBACK ERROR] Offer for Id {data.offerId} was not found.");
+                    return NotFound();
                 }
-                return NotFound();
+
+                offer.AiAnalysisStatus = data.status;
+                offer.AiAnalysisComment = $"Analysis completed. Processed {data.results?.Count ?? 0} candidates.";
+
+                var applicationIds = offer.Applications.Select(a => a.Id).ToList();
+                var oldReports = await _context.AiApplicationReports
+                    .Where(r => applicationIds.Contains(r.JobApplicationId))
+                    .ToListAsync();
+
+                if (oldReports.Any())
+                {
+                    _context.AiApplicationReports.RemoveRange(oldReports);
+                }
+
+                if (data.results != null)
+                {
+                    foreach (var result in data.results)
+                    {
+                        if (applicationIds.Contains(result.applicationId))
+                        {
+                            var report = new AiApplicationReport
+                            {
+                                JobApplicationId = result.applicationId,
+                                Score = result.score,
+                                Description = result.description,
+                                Pros = result.pros != null ? string.Join("\n", result.pros) : string.Empty,
+                                Cons = result.cons != null ? string.Join("\n", result.cons) : string.Empty,
+                                AnalyzedAt = DateTime.UtcNow
+                            };
+                            _context.AiApplicationReports.Add(report);
+                        }
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                Console.WriteLine($"[AI CALLBACK SUCCESS] Reports for the offer {offer.Id} have been saved. Status: {data.status}");
+
+                if (!string.IsNullOrEmpty(data.status) &&
+            (data.status.Equals("Verified", StringComparison.OrdinalIgnoreCase) ||
+             data.status.Equals("Completed", StringComparison.OrdinalIgnoreCase) ||
+             data.status.Equals("Success", StringComparison.OrdinalIgnoreCase)))
+                {
+                    try
+                    {
+                        var newNotification = new Notification
+                        {
+                            UserId = offer.RecruiterId,
+                            Title = "AI Analysis Completed",
+                            Content = $"The AI candidate verification for your job offer '{offer.Title}' has finished. You can now review the scores.",
+                            ActionUrl = $"/Offer/AiAnalysisDetails/{offer.Id}",
+                            CreatedAt = DateTime.Now,
+                            IsRead = false,
+                            IsCompleted = false
+                        };
+
+                        _context.Notifications.Add(newNotification);
+                        await _context.SaveChangesAsync();
+
+                        Console.WriteLine($"[NOTIFICATION SUCCESS] Analysis completion notification sent to user {offer.RecruiterId}");
+                    }
+                    catch (Exception notifEx)
+                    {
+                        Console.WriteLine($"[NOTIFICATION CRITICAL ERROR] Failed to save notification in database: {notifEx.Message}");
+                    }
+                }
+
+                return Ok(new { message = "Data updated successfully and relationally saved" });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Błąd aktualizacji: {ex.Message}");
+                Console.WriteLine($"Relational update error: {ex.Message}");
                 return StatusCode(500);
             }
         }
@@ -543,7 +642,6 @@ namespace Recruit_Finder_AI.Controllers
             var offer = await _context.JobOffers.FindAsync(model.JobOfferId);
 
             if (offer == null) return NotFound();
-
             if (offer.RecruiterId == userId) return Forbid();
 
             var alreadyApplied = await _context.Applications
@@ -591,10 +689,7 @@ namespace Recruit_Finder_AI.Controllers
                 .Include(a => a.JobOffer)
                 .FirstOrDefaultAsync(a => a.JobOfferId == jobId && a.CandidateId == userId);
 
-            if (application == null)
-            {
-                return NotFound();
-            }
+            if (application == null) return NotFound();
 
             if (application.JobOffer.ExpirationDate.HasValue &&
                 application.JobOffer.ExpirationDate.Value <= DateTime.UtcNow)
@@ -615,15 +710,16 @@ namespace Recruit_Finder_AI.Controllers
             TempData["SuccessMessage"] = "Your application has been withdrawn.";
             return RedirectToAction("Details", new { id = jobId });
         }
+
         private async Task PrepareViewBags()
         {
             ViewBag.Categories = new List<string>
-    {
-        "IT", "Data Science", "Marketing", "Finance",
-        "Healthcare", "Engineering", "Sales", "Customer Service",
-        "Human Resources", "Design & Creative", "Logistics",
-        "Legal", "Education", "Construction", "Hospitality", "Other"
-    };
+            {
+                "IT", "Data Science", "Marketing", "Finance",
+                "Healthcare", "Engineering", "Sales", "Customer Service",
+                "Human Resources", "Design & Creative", "Logistics",
+                "Legal", "Education", "Construction", "Hospitality", "Other"
+            };
 
             var existingSubcats = await _context.JobOffers
                 .Where(o => !string.IsNullOrEmpty(o.Subcategory))
@@ -635,35 +731,99 @@ namespace Recruit_Finder_AI.Controllers
                 .GroupBy(x => x.Category)
                 .ToDictionary(g => g.Key, g => g.Select(x => x.Subcategory).ToList());
         }
+
+        [Authorize]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> VerifyOffer(int id)
         {
-            var offer = await _context.JobOffers.FindAsync(id);
+            var offer = await _context.JobOffers
+                .Include(o => o.Applications)
+                .ThenInclude(a => a.Cv)
+                .FirstOrDefaultAsync(o => o.Id == id);
+
             if (offer == null) return NotFound();
 
             offer.AiAnalysisStatus = "Pending";
             offer.AiAnalysisComment = "Analysis in progress...";
-
             _context.Update(offer);
             await _context.SaveChangesAsync();
 
             bool sentToAi = await SendOfferToPythonAi(offer);
-
             if (!sentToAi)
             {
-                offer.AiAnalysisStatus = null;
-                offer.AiAnalysisComment = "AI Service is temporarily unavailable.";
+                offer.AiAnalysisStatus = "Failed";
+                offer.AiAnalysisComment = "Could not reach the AI service or credentials invalid.";
+                _context.Update(offer);
                 await _context.SaveChangesAsync();
-                TempData["ErrorMessage"] = "Could not contact AI Service. Please try again later.";
+
+                TempData["ErrorMessage"] = "Failed to communicate with AI service.";
             }
             else
             {
-                TempData["SuccessMessage"] = "AI Analysis requested successfully!";
+                TempData["SuccessMessage"] = "AI Analysis has been queued successfully.";
             }
 
-            return RedirectToAction(nameof(ClosedListings));
+            return RedirectToAction(nameof(ViewResults), new { id = offer.Id });
         }
+
+        private async Task<bool> SendOfferToPythonAi(JobOffer offer)
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+
+                var pythonServiceUrl = _configuration["AiService:Url"]
+                    ?? throw new InvalidOperationException("Missing confu=iguration 'AiService:Url' in system.");
+
+                var apiKey = _configuration["AiService:ApiKey"]
+                    ?? throw new InvalidOperationException("Missing confu=iguration 'AiService:ApiKey' in system.");
+
+                var payload = new
+                {
+                    offerId = offer.Id,
+                    title = offer.Title,
+                    description = offer.Description,
+                    requirements = offer.Requirements,
+                    requiredLanguages = offer.RequiredLanguages ?? "Not specified",
+                    applications = offer.Applications.Select(app => new
+                    {
+                        applicationId = app.Id,
+                        cv = app.Cv != null ? new
+                        {
+                            name = app.Cv.Name,
+                            surname = app.Cv.Surname,
+                            experience = app.Cv.ProfessionalExperience,
+                            education = app.Cv.Education,
+                            skills = app.Cv.Skills,
+                            languages = app.Cv.Languages
+                        } : null
+                    }).ToList()
+                };
+
+                var jsonPayload = JsonSerializer.Serialize(payload);
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                client.DefaultRequestHeaders.Clear();
+                client.DefaultRequestHeaders.Add("X-AI-Key", apiKey);
+
+                var response = await client.PostAsync(pythonServiceUrl, content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return true;
+                }
+
+                Console.WriteLine($"Python AI Service returned error status: {response.StatusCode}");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Critical error during communication with Python AI: {ex.Message}");
+                return false;
+            }
+        }
+
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         [Authorize]
@@ -680,17 +840,29 @@ namespace Recruit_Finder_AI.Controllers
 
             if (offer.Applications != null && offer.Applications.Any())
             {
+                var applicationIds = offer.Applications.Select(a => a.Id).ToList();
+
+                var linkedAiReports = await _context.AiApplicationReports
+                    .Where(r => applicationIds.Contains(r.JobApplicationId))
+                    .ToListAsync();
+
+                if (linkedAiReports.Any())
+                {
+                    _context.AiApplicationReports.RemoveRange(linkedAiReports);
+                }
+
                 _context.Applications.RemoveRange(offer.Applications);
             }
 
             _context.JobOffers.Remove(offer);
-
             await _context.SaveChangesAsync();
 
             TempData["SuccessMessage"] = "Offer and all related applications deleted successfully.";
             return RedirectToAction(nameof(MyListings));
         }
+
         [HttpGet]
+        [Authorize]
         public async Task<IActionResult> GetAiStatus(int id)
         {
             var offer = await _context.JobOffers.FindAsync(id);
@@ -698,45 +870,150 @@ namespace Recruit_Finder_AI.Controllers
 
             return Json(new { status = offer.AiAnalysisStatus });
         }
-        private async Task<bool> SendOfferToPythonAi(JobOffer offer)
+
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> NotifySelectedCandidate(int applicationId, string jobTitle, string? returnView)
         {
-            try
+            var recruiterId = _userManager.GetUserId(User);
+
+            var application = await _context.Applications
+                .Include(a => a.JobOffer)
+                .FirstOrDefaultAsync(a => a.Id == applicationId && a.JobOffer.RecruiterId == recruiterId);
+
+            if (application == null)
             {
-                var aiUrl = _configuration["AiService:OfferAnalysisUrl"];
-                var apiKey = _configuration["AiService:ApiKey"];
+                return NotFound("Application not found or you don't have permission to perform this action.");
+            }
 
-                Console.WriteLine($"Próba wysłania do: {aiUrl} z kluczem: {apiKey}");
+            string title = "Application Update";
+            string content = $"Congratulations! You have been selected for the next stage of the recruitment process for the position: '{jobTitle}'. Please check your e-mail inbox for further instructions.";
 
-                var client = _httpClientFactory.CreateClient();
-                client.DefaultRequestHeaders.Clear();
-                client.DefaultRequestHeaders.Add("X-AI-Key", apiKey);
+            string actionUrl = Url.Action("Details", "Offer", new { id = application.JobOfferId });
 
-                var payload = new
+            await _notificationService.SendAsync(application.CandidateId, title, content, actionUrl);
+
+            TempData["SuccessMessage"] = "The candidate has been successfully notified!";
+
+            await _context.SaveChangesAsync();
+
+            if (returnView == "AiAnalysisDetails")
+            {
+                return RedirectToAction(nameof(AiAnalysisDetails), new { id = application.JobOfferId });
+            }
+
+            return RedirectToAction(nameof(ViewResults), new { id = application.JobOfferId });
+        }
+
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> ExportAiResultsToCsv(int id)
+        {
+            var userId = _userManager.GetUserId(User);
+
+            var dataToExport = await _context.Applications
+                .Include(a => a.Cv)
+                .Include(a => a.JobOffer)
+                .Where(a => a.JobOfferId == id && a.JobOffer.RecruiterId == userId)
+                .Select(a => new
                 {
-                    offerIds = new List<int> { offer.Id },
-                    title = offer.Title,
-                    company = offer.Company,
-                    category = offer.Category,
-                    description = offer.Description,
-                    requirements = offer.Requirements,
-                    location = offer.Location,
-                    timestamp = DateTime.UtcNow
+                    Candidate = a.Cv != null ? $"{a.Cv.Name} {a.Cv.Surname}" : "Hidden Name",
+                    Email = a.Cv != null ? a.Cv.Email : "N/A",
+                    Score = _context.AiApplicationReports.Where(r => r.JobApplicationId == a.Id).Select(r => r.Score).FirstOrDefault(),
+                    Description = _context.AiApplicationReports.Where(r => r.JobApplicationId == a.Id).Select(r => r.Description).FirstOrDefault()
+                })
+                .OrderByDescending(x => x.Score)
+                .ToListAsync();
+
+            if (!dataToExport.Any()) return NotFound("No data to export.");
+
+            var csvBuilder = new StringBuilder();
+            csvBuilder.AppendLine("Candidate;Email;AI Match (%);Profile Summary");
+
+            foreach (var item in dataToExport)
+            {
+                string cleanDesc = item.Description?.Replace(";", ",").Replace("\r", "").Replace("\n", " ") ?? "";
+                csvBuilder.AppendLine($"{item.Candidate};{item.Email};{item.Score};{cleanDesc}");
+            }
+
+            byte[] buffer = Encoding.UTF8.GetBytes(csvBuilder.ToString());
+            byte[] bom = new byte[] { 0xEF, 0xBB, 0xBF };
+            byte[] finalFile = new byte[bom.Length + buffer.Length];
+
+            Buffer.BlockCopy(bom, 0, finalFile, 0, bom.Length);
+            Buffer.BlockCopy(buffer, 0, finalFile, bom.Length, buffer.Length);
+
+            return File(finalFile, "text/csv", $"AI_Report_Offer_{id}.csv");
+        }
+
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> ExportAllCvDataToExcel(int id)
+        {
+            var userId = _userManager.GetUserId(User);
+
+            var dataToExport = await _context.Applications
+                .Include(a => a.Cv)
+                .Include(a => a.JobOffer)
+                .Where(a => a.JobOfferId == id && a.JobOffer.RecruiterId == userId)
+                .OrderBy(a => a.Cv != null ? a.Cv.Surname : "")
+                .ThenBy(a => a.Cv != null ? a.Cv.Name : "")
+                .ToListAsync();
+
+            var csvBuilder = new StringBuilder();
+
+            string[] headers = {
+                "Surname", "Name", "Email", "PhoneNumber", "DateOfBirth",
+                "Address", "ProfessionalExperience", "Education", "Languages",
+                "Skills", "Interests", "Portfolio", "Candidate Message"
+            };
+
+            csvBuilder.AppendLine(string.Join(";", headers));
+
+            string EscapeCsv(string? value)
+            {
+                if (string.IsNullOrEmpty(value)) return "\"N/A\"";
+                return $"\"{value.Replace("\"", "\"\"")}\"";
+            }
+
+            foreach (var app in dataToExport)
+            {
+                string dateOfBirthStr = app.Cv?.DateOfBirth.HasValue == true
+                    ? app.Cv.DateOfBirth.Value.ToString("yyyy-MM-dd")
+                    : "N/A";
+
+                string phoneNumberStr = app.Cv?.PhoneNumber ?? "N/A";
+
+                var row = new List<string>
+                {
+                    EscapeCsv(app.Cv?.Surname ?? "N/A"),
+                    EscapeCsv(app.Cv?.Name ?? "N/A"),
+                    EscapeCsv(app.Cv?.Email ?? "N/A"),
+                    EscapeCsv(phoneNumberStr),
+                    EscapeCsv(dateOfBirthStr),
+                    EscapeCsv(app.Cv?.Address ?? "N/A"),
+                    EscapeCsv(app.Cv?.ProfessionalExperience ?? "N/A"),
+                    EscapeCsv(app.Cv?.Education ?? "N/A"),
+                    EscapeCsv(app.Cv?.Languages ?? "N/A"),
+                    EscapeCsv(app.Cv?.Skills ?? "N/A"),
+                    EscapeCsv(app.Cv?.Interests ?? "N/A"),
+                    EscapeCsv(app.Cv?.Portfolio ?? "N/A"),
+                    EscapeCsv(app.Message ?? "")
                 };
 
-                var json = JsonSerializer.Serialize(payload);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                var response = await client.PostAsync(aiUrl, content);
-
-                Console.WriteLine($"Status odpowiedzi AI: {response.StatusCode}"); // LOG
-                return response.IsSuccessStatusCode;
+                csvBuilder.AppendLine(string.Join(";", row));
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"KRYTYCZNY BŁĄD HTTP: {ex.Message}");
-                return false;
-            }
+
+            var buffer = Encoding.UTF8.GetBytes(csvBuilder.ToString());
+            var bom = new byte[] { 0xEF, 0xBB, 0xBF };
+            var fileBytes = bom.Concat(buffer).ToArray();
+
+            string fileName = $"All_CVs_Offer_{id}_{DateTime.Now:yyyyMMdd}.csv";
+
+            return File(fileBytes, "text/csv", fileName);
         }
+
         [HttpGet]
         [Authorize]
         public async Task<IActionResult> DownloadCv(int id)
@@ -963,6 +1240,7 @@ namespace Recruit_Finder_AI.Controllers
                 });
             });
         }
+
         private class TimePoint : IComponent
         {
             private readonly string _color;
@@ -981,4 +1259,19 @@ namespace Recruit_Finder_AI.Controllers
         }
     }
 
+    public class AiResultModel
+    {
+        public int offerId { get; set; }
+        public string status { get; set; }
+        public List<AiCandidateAnalysisResult> results { get; set; }
+    }
+
+    public class AiCandidateAnalysisResult
+    {
+        public int applicationId { get; set; }
+        public int score { get; set; }
+        public string description { get; set; }
+        public List<string> pros { get; set; }
+        public List<string> cons { get; set; }
+    }
 }

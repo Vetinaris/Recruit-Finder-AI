@@ -2,13 +2,31 @@
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
 
+@{
+    ApplicationUser? currentUser = null;
+    if (SignInManager.IsSignedIn(User))
+    {
+        currentUser = await UserManager.GetUserAsync(User);
+    }
+}
+
 <ul class="navbar-nav align-items-lg-center">
-    @if (SignInManager.IsSignedIn(User))
+    @if (SignInManager.IsSignedIn(User) && currentUser != null)
     {
         <li class="nav-item dropdown w-100">
             <a id="manage" class="nav-link dropdown-toggle profile-nav-link d-flex align-items-center"
                    href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-person-circle text-primary me-2 fs-6"></i>
+                @if (currentUser.ProfilePicture != null && currentUser.ProfilePicture.Length > 0)
+                {
+                    <img src="data:@currentUser.ProfilePictureContentType;base64,@Convert.ToBase64String(currentUser.ProfilePicture)"
+                         class="rounded-circle me-2 shadow-sm border border-light-subtle"
+                         style="width: 28px; height: 28px; object-fit: cover;"
+                         alt="Profile picture" />
+                }
+                else
+                {
+                    <i class="bi bi-person-circle text-primary me-2 fs-5"></i>
+                }
                 <span class="fw-semibold">@UserManager.GetUserName(User)</span>
             </a>
             

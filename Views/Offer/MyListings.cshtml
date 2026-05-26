@@ -7,6 +7,26 @@
     ViewData["Title"] = "My Job Listings";
     bool isVerified = ViewBag.IsVerifiedEmployer ?? false;
     var totalOffers = Model.Count();
+
+    var categoryIcons = new Dictionary<string, string>
+    {
+        { "IT", "bi-cpu" },
+        { "Data Science", "bi-graph-up-arrow" },
+        { "Marketing", "bi-megaphone" },
+        { "Finance", "bi-cash-coin" },
+        { "Healthcare", "bi-hospital" },
+        { "Engineering", "bi-tools" },
+        { "Sales", "bi-currency-exchange" },
+        { "Customer Service", "bi-headset" },
+        { "Human Resources", "bi-people" },
+        { "Design & Creative", "bi-palette" },
+        { "Logistics", "bi-truck" },
+        { "Legal", "bi-shield-check" },
+        { "Education", "bi-mortarboard" },
+        { "Construction", "bi-building-gear" },
+        { "Hospitality", "bi-cup-hot" },
+        { "Other", "bi-three-dots" }
+    };
 }
 
 <div class="container py-5">
@@ -84,11 +104,15 @@
                         bool isExpired = item.ExpirationDate.HasValue && item.ExpirationDate < DateTime.Now;
                         bool canBeClosed = item.IsVisible && !isExpired;
 
+                        string iconClass = !string.IsNullOrEmpty(item.Category) && categoryIcons.ContainsKey(item.Category)
+                            ? categoryIcons[item.Category]
+                            : categoryIcons["Other"];
+
                         <tr class="@(item.IsVisible && !isExpired ? "" : "bg-light-subtle opacity-75")">
                             <td class="ps-4 py-4">
                                 <div class="d-flex align-items-center">
-                                    <div class="icon-shape bg-soft-primary text-primary rounded-3 me-3 flex-shrink-0" style="width: 45px; height: 45px;">
-                                        <i class="bi bi-briefcase-fill"></i>
+                                    <div class="icon-shape bg-soft-primary text-primary rounded-3 me-3 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                                        <i class="bi @iconClass" style="font-size: 1.2rem;"></i>
                                     </div>
                                     <div>
                                         <div class="fw-bold text-dark fs-6 text-wrap" style="max-width: 250px;">@item.Title</div>

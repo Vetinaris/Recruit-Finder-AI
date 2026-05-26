@@ -1,6 +1,7 @@
-﻿using System;
+﻿using Recruit_Finder_AI.Entities;
+using System;
 using System.ComponentModel.DataAnnotations;
-using Recruit_Finder_AI.Entities;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Recruit_Finder_AI.Models
 {
@@ -56,5 +57,19 @@ namespace Recruit_Finder_AI.Models
 
         public bool IsVerified { get; set; } = false;
         public string? AiFeedback { get; set; }
+
+        [NotMapped]
+        public bool HasPhoto => IncludePhoto && User?.ProfilePicture != null;
+
+        [NotMapped]
+        public string? PhotoUrl
+        {
+            get
+            {
+                if (User?.ProfilePicture == null) return null;
+                var base64 = Convert.ToBase64String(User.ProfilePicture);
+                return $"data:image/png;base64,{base64}";
+            }
+        }
     }
 }

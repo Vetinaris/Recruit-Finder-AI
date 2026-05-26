@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Recruit_Finder_AI.Data;
 
@@ -11,9 +12,11 @@ using Recruit_Finder_AI.Data;
 namespace Recruit_Finder_AI.Migrations
 {
     [DbContext(typeof(Recruit_Finder_AIContext))]
-    partial class Recruit_Finder_AIContextModelSnapshot : ModelSnapshot
+    [Migration("20260519083118_NewDesign")]
+    partial class NewDesign
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -249,42 +252,6 @@ namespace Recruit_Finder_AI.Migrations
                     b.HasKey("Key");
 
                     b.ToTable("SystemSettings");
-                });
-
-            modelBuilder.Entity("Recruit_Finder_AI.Models.AiApplicationReport", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("AnalyzedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Cons")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("JobApplicationId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Pros")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Score")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("JobApplicationId");
-
-                    b.ToTable("AiApplicationReports");
                 });
 
             modelBuilder.Entity("Recruit_Finder_AI.Models.ApplicationUser", b =>
@@ -688,17 +655,6 @@ namespace Recruit_Finder_AI.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Recruit_Finder_AI.Models.AiApplicationReport", b =>
-                {
-                    b.HasOne("Recruit_Finder_AI.Models.JobApplication", "JobApplication")
-                        .WithMany()
-                        .HasForeignKey("JobApplicationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("JobApplication");
                 });
 
             modelBuilder.Entity("Recruit_Finder_AI.Models.Cv", b =>

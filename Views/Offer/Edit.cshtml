@@ -94,7 +94,7 @@
                         <div class="row g-3 mb-5 p-3 rounded-4 bg-light mx-0 border border-light-subtle shadow-sm">
                             <div class="col-md-6">
                                 <label asp-for="ExpirationDate" class="text-muted small text-uppercase fw-bold mb-2 d-block">Expiration Date</label>
-                                <input asp-for="ExpirationDate" type="date" class="form-control border-light-subtle shadow-sm rounded-pill" min="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                                <input asp-for="ExpirationDate" type="date" class="form-control border-light-subtle shadow-sm rounded-pill" />
                                 <span asp-validation-for="ExpirationDate" class="text-danger small"></span>
                             </div>
                         </div>
