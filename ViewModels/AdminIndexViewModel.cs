@@ -16,6 +16,9 @@ namespace Recruit_Finder_AI.ViewModels
         public string? BanReason { get; set; }
         public bool IsPermanentBan { get; set; }
         public string? BanDescription { get; set; }
+
+        public byte[]? ProfilePicture { get; set; }
+        public string? ProfilePictureContentType { get; set; }
     }
 
     public class AdminIndexViewModel

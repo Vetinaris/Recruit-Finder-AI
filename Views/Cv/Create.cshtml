@@ -205,7 +205,7 @@
                                         <span class="input-group-text bg-white border-light-subtle rounded-start-pill px-3">
                                             <i class="bi bi-link-45deg text-primary"></i>
                                         </span>
-                                        <input type="url" class="form-control border-light-subtle shadow-sm portfolio-input" placeholder="https://..." oninput="this.value = removeEmojis(this.value); managePortfolioFields()">>
+                                        <input type="url" class="form-control border-light-subtle shadow-sm portfolio-input" placeholder="https://..." oninput="managePortfolioFields()">
                                         <button type="button" class="btn btn-outline-danger rounded-end-pill px-3 d-none remove-link" onclick="removeField(this)">
                                             <i class="bi bi-trash"></i>
                                         </button>
@@ -236,18 +236,27 @@
     <script>
         let validationAttempted = false;
         $(document).ready(function () {
-            function removeEmojis(text) {
-                var regex = /[^\w\s\d.,!@@#$%^&*()\-=_+\[\]{}|;:'"<>\/?\\ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/gu;
-                return text.replace(regex, '');
-            }
+                   function removeEmojis(text) {
+            if (!text) return '';
+           return text.replace(/[^\p{L}\p{N}\p{P}\p{Z}\$\^]/gu, '');
+        }
 
-            $(document).on('input', 'input[type="text"], input[type="email"], input[type="url"], textarea', function() {
-                var originalValue = $(this).val();
-                var cleanedValue = removeEmojis(originalValue);
-                if (originalValue !== cleanedValue) {
-                    $(this).val(cleanedValue);
-                }
-            });
+        $(document).on('input', 'input[type="text"], input[type="email"], input[type="url"], textarea', function() {
+            var originalValue = $(this).val();
+            var cleanedValue = removeEmojis(originalValue);
+
+            if (originalValue !== cleanedValue) {
+                var startPosition = this.selectionStart;
+                var endPosition = this.selectionEnd;
+
+                $(this).val(cleanedValue);
+
+                this.setSelectionRange(
+                    startPosition - (originalValue.length - cleanedValue.length),
+                    endPosition - (originalValue.length - cleanedValue.length)
+                );
+            }
+        });
 
             $(document).on('input', 'input[type="tel"]', function() {
                 var originalValue = $(this).val();
@@ -269,10 +278,10 @@
 
             @if (!ViewData.ModelState.IsValid)
             {
-                    <text>
-                        validationAttempted = true;
-                        updateSectionValidation();
-                    </text>
+                        <text>
+                                validationAttempted = true;
+                                updateSectionValidation();
+                        </text>
             }
 
             rebuildListsFromHidden();
@@ -280,7 +289,7 @@
 
         function formatTitleCase(str) {
             if (!str) return "";
-            return str.toLowerCase().replace(/\b\w/g, s => s.toUpperCase());
+            return str.replace(/\b\w/g, s => s.toUpperCase());
         }
 
         function sortByDate(a, b) {
@@ -414,11 +423,11 @@
             updateSectionValidation();
         }
 
-        function managePortfolioFields() {
+                function managePortfolioFields() {
             const container = document.getElementById('portfolioContainer');
             const entries = container.querySelectorAll('.portfolio-entry');
-            const lastInput = entries[entries.length - 1].querySelector('.portfolio-input');
-    
+            const lastEntry = entries[entries.length - 1];
+            const lastInput = lastEntry.querySelector('.portfolio-input');
             if (lastInput.value.trim() !== "") {
                 const newEntry = document.createElement('div');
                 newEntry.className = 'input-group mb-2 portfolio-entry';
@@ -434,10 +443,38 @@
             }
             updateRemoveButtons();
         }
-        function removeField(btn) { if (document.querySelectorAll('.portfolio-entry').length > 1) btn.closest('.portfolio-entry').remove(); updateRemoveButtons(); }
+
+        function removeField(btn) {
+            const container = document.getElementById('portfolioContainer');
+            const entries = container.querySelectorAll('.portfolio-entry');
+   
+            if (entries.length > 1) {
+                btn.closest('.portfolio-entry').remove();
+            } else {
+                entries[0].querySelector('.portfolio-input').value = "";
+            }
+            updateRemoveButtons();
+        }
+
         function updateRemoveButtons() {
             const entries = document.querySelectorAll('.portfolio-entry');
-            entries.forEach((e, i) => e.querySelector('.remove-link').classList.toggle('d-none', i === entries.length - 1));
+            entries.forEach((entry, i) => {
+                const input = entry.querySelector('.portfolio-input');
+                const button = entry.querySelector('.remove-link');
+        
+                if (i === entries.length - 1 && input.value.trim() === "") {
+                    button.classList.add('d-none');
+                } else {
+                    button.classList.remove('d-none');
+                }
+            });
+        }
+
+        function prepareSubmit() {
+            const links = Array.from(document.querySelectorAll('.portfolio-input'))
+                               .map(i => i.value.trim())
+                               .filter(v => v !== "");
+            document.getElementById('hiddenPortfolio').value = links.join(', ');
         }
         function rebuildListsFromHidden() {
             const hiddenLangs = document.getElementById('hiddenLanguages').value;

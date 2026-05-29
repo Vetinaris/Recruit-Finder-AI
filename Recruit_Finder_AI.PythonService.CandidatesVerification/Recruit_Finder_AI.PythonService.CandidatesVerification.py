@@ -20,7 +20,6 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
 PORT = int(os.getenv("OFFER_SERVICE_PORT", 8000))
 
 def call_ollama_gemma(prompt):
-    """Pomocnicza funkcja do komunikacji z lokalną instancją Ollama (Gemma 3:4b)"""
     try:
         response = requests.post(
             OLLAMA_URL,
@@ -41,10 +40,7 @@ def call_ollama_gemma(prompt):
         return f"Błąd połączenia z Ollama: {str(e)}"
 
 def convert_raw_text_to_json(raw_text):
-    """
-    Funkcja ratunkowa. Jeśli model Gemma całkowicie zignoruje format JSON i zwróci zwykły tekst,
-    ta funkcja użyje wyrażeń regularnych do wyciągnięcia kluczowych informacji i ustrukturyzowania ich w słownik.
-    """
+
     parsed_data = {
         "description": "Przeprowadzono automatyczną ekstrakcję danych z tekstu strukturalnego AI.",
         "pros": [],
@@ -109,11 +105,7 @@ def convert_raw_text_to_json(raw_text):
     return parsed_data
 
 def clean_and_parse_json(raw_output):
-    """
-    Zaawansowane oczyszczanie tekstu z LLM w celu poprawnego parsowania JSON-a.
-    Usuwa znaczniki markdownu, białe znaki i ewentualny tekst przed/po JSON.
-    W przypadku niepowodzenia uruchamia heurystyczny parser tekstu.
-    """
+
     if not raw_output:
         raise ValueError("Otrzymano pustą odpowiedź od modelu AI.")
 
@@ -134,10 +126,7 @@ def clean_and_parse_json(raw_output):
         return convert_raw_text_to_json(raw_output)
 
 def ensure_list(value):
-    """
-    Upewnia się, że zwracana wartość jest zawsze listą ciągów znaków.
-    Zapobiega rozbijaniu tekstu na pojedyncze litery.
-    """
+
     if isinstance(value, list):
         return [str(item).strip() for item in value if item]
     elif isinstance(value, str):
@@ -146,10 +135,7 @@ def ensure_list(value):
     return []
 
 def process_offer_ranking_logic(csharp_payload):
-    """
-    Główna logika przetwarzania asynchronicznego.
-    Zabezpieczona przed przerwaniem działania w przypadku błędu pojedynczego kandydata.
-    """
+ 
     try:
         offer_id = csharp_payload.get("offerId")
         requirements = csharp_payload.get("requirements", "")

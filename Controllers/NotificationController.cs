@@ -29,6 +29,27 @@ public class NotificationsController : Controller
             .OrderByDescending(n => n.CreatedAt)
             .ToListAsync<Notification>();
 
+        var activeOfferIds = await _context.JobOffers.Select(o => o.Id).ToListAsync();
+
+        foreach (var note in notes)
+        {
+            if (!string.IsNullOrEmpty(note.ActionUrl))
+            {
+                var segments = note.ActionUrl.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                if (segments.Length >= 3 && (segments[0].Equals("Offer", StringComparison.OrdinalIgnoreCase)))
+                {
+                    if (int.TryParse(segments[2], out int offerId))
+                    {
+                        if (!activeOfferIds.Contains(offerId))
+                        {
+                            note.ActionUrl = null;
+                            note.Content += " (This offer is no longer available / has been deleted)";
+                        }
+                    }
+                }
+            }
+        }
+
         return View(notes);
     }
 
@@ -43,6 +64,29 @@ public class NotificationsController : Controller
         {
             note.IsRead = true;
             note.IsCompleted = true;
+            await _context.SaveChangesAsync();
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> MarkAllAsCompleted()
+    {
+        var currentUserId = _userManager.GetUserId(User);
+
+        var uncompletedNotifications = await _context.Notifications
+            .Where(n => n.UserId == currentUserId && !n.IsCompleted)
+            .ToListAsync();
+
+        if (uncompletedNotifications.Any())
+        {
+            foreach (var note in uncompletedNotifications)
+            {
+                note.IsRead = true;
+                note.IsCompleted = true;
+            }
             await _context.SaveChangesAsync();
         }
 

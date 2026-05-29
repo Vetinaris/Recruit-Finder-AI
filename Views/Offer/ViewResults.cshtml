@@ -3,21 +3,34 @@
     ViewData["Title"] = "Applications for Offer";
     var offerTitle = ViewBag.OfferTitle ?? "Job Offer Results";
     string aiStatus = ViewBag.AiStatus;
-    int counter = 1;
 
-    // Pobieramy raporty przekazane z kontrolera
     var aiReports = ViewBag.AiReports as List<Recruit_Finder_AI.Models.AiApplicationReport> ?? new List<Recruit_Finder_AI.Models.AiApplicationReport>();
-}
 
+    var jobOffer = Model.FirstOrDefault()?.JobOffer ?? ViewBag.JobOffer as Recruit_Finder_AI.Models.JobOffer;
+
+    IEnumerable<Recruit_Finder_AI.Models.JobApplication> sortedModel;
+    if (aiReports.Any())
+    {
+        sortedModel = Model.OrderByDescending(app =>
+        {
+            var report = aiReports.FirstOrDefault(r => r.JobApplicationId == app.Id);
+            return report != null ? report.Score : 0;
+        });
+    }
+    else
+    {
+        sortedModel = Model.OrderBy(app => app.Cv != null ? app.Cv.Surname : "")
+                           .ThenBy(app => app.Cv != null ? app.Cv.Name : "");
+    }
+}
 @section Styles {
     <link rel="stylesheet" href="~/css/offer.css" />
 }
 
 <div class="container py-5">
-    <!-- NAGŁÓWEK STRONY -->
     <div class="d-flex align-items-center justify-content-between mb-4">
         <div class="d-flex align-items-center">
-            <a href="javascript:history.back()" class="btn btn-link text-muted p-0 me-3">
+            <a asp-controller="Offer" asp-action="ClosedListings" class="btn btn-link text-muted p-0 me-3">
                 <i class="bi bi-arrow-left fs-4"></i>
             </a>
             <div>
@@ -29,32 +42,179 @@
         <div class="d-flex align-items-center gap-2">
             @if (aiStatus == "Pending" || aiStatus == "Processing")
             {
-                <span class="badge bg-warning text-dark p-2 px-3 rounded-pill fw-bold">
+                <span class="badge bg-warning text-dark p-2 px-3 rounded-pill fw-bold shadow-sm animate-pulse">
                     <i class="bi bi-cpu-fill me-1"></i> AI is analyzing candidates...
                 </span>
             }
             else
             {
                 <form asp-action="VerifyOffer" asp-route-id="@Context.Request.RouteValues["id"]" method="post" class="m-0">
-                    <button type="submit" class="btn btn-sm text-white rounded-pill px-3 fw-bold" style="background: linear-gradient(135deg, #6f42c1, #4e227d);">
+                    <button type="submit" class="btn btn-sm btn-purple-gradient text-white rounded-pill px-3 fw-bold shadow-sm hover-lift">
                         <i class="bi bi-lightning-stars-fill me-1"></i> Generate AI Ranking (Gemma 3)
                     </button>
                 </form>
 
                 @if (aiReports.Any())
                 {
-                    <a asp-action="AiAnalysisDetails" asp-route-id="@Context.Request.RouteValues["id"]" class="btn btn-purple btn-sm text-white rounded-pill px-3 fw-bold" style="background-color: #6f42c1;">
+                    <a asp-action="AiAnalysisDetails" asp-route-id="@Context.Request.RouteValues["id"]" class="btn btn-sm btn-outline-purple rounded-pill px-3 fw-bold shadow-sm hover-lift">
                         <i class="bi bi-robot me-1"></i> View AI Ranking Details
                     </a>
                 }
             }
-            <div class="badge bg-soft-primary text-primary rounded-pill px-3 py-2 fw-bold">
+    
+            <a asp-controller="Offer" asp-action="ExportAllCvDataToExcel" asp-route-id="@Context.Request.RouteValues["id"]" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold shadow-sm hover-lift">
+                <i class="bi bi-file-earmark-excel-fill me-1"></i> Export to Excel
+            </a>
+
+            <div class="badge bg-soft-primary text-primary rounded-pill px-3 py-2 fw-bold shadow-sm">
                 Total: @Model.Count()
             </div>
         </div>
     </div>
 
-    <!-- KLASYCZNA CHRONOLOGICZNA TABELA APLIKACJI -->
+    @if (jobOffer != null)
+    {
+        <div class="accordion custom-accordion mb-4" id="offerDetailsAccordion">
+            <div class="accordion-item border-0 shadow-sm rounded-4 overflow-hidden">
+                <h2 class="accordion-header" id="headingOffer">
+                    <button class="accordion-button collapsed fw-bold py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOffer" aria-expanded="false" aria-controls="collapseOffer">
+                        <i class="bi bi-briefcase-fill text-primary me-2"></i> View Job Offer Details & Requirements (@jobOffer.Company)
+                    </button>
+                </h2>
+                <div id="collapseOffer" class="accordion-collapse collapse" aria-labelledby="headingOffer" data-bs-parent="#offerDetailsAccordion">
+                    <div class="accordion-body bg-white p-0">
+                        <div class="row g-0">
+                            <div class="col-lg-8 p-4 p-md-5 border-end bg-white">
+                                <div class="mb-4">
+                                    <div class="d-flex flex-wrap gap-2 mb-3">
+                                        <span class="badge bg-soft-primary text-primary rounded-pill px-3 py-2">@jobOffer.Category</span>
+                                        @if (!string.IsNullOrEmpty(jobOffer.Subcategory))
+                                        {
+                                            <span class="badge bg-light text-secondary border rounded-pill px-3 py-2">
+                                                <i class="bi bi-tag-fill me-1 small"></i>@jobOffer.Subcategory
+                                            </span>
+                                        }
+                                    </div>
+
+                                    <h2 class="fw-bold text-dark mb-3">@jobOffer.Title</h2>
+
+                                    <div class="row g-3">
+                                        <div class="col-sm-6 col-md-4">
+                                            <div class="d-flex align-items-center text-muted">
+                                                <i class="bi bi-building me-2 text-primary"></i>
+                                                <span class="fw-semibold small">@jobOffer.Company</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6 col-md-4">
+                                            <div class="d-flex align-items-center text-muted">
+                                                <i class="bi bi-geo-alt me-2 text-primary"></i>
+                                                <span class="small">@(string.IsNullOrEmpty(jobOffer.Location) ? "Remote" : jobOffer.Location)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                                    <i class="bi bi-card-text me-2 text-primary"></i>Job Description
+                                </h5>
+                                <div class="text-secondary small mb-5" style="text-indent: 20px; text-align: justify; line-height: 1.5;">
+                                    @jobOffer.Description
+                                </div>
+
+                                <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                                    <i class="bi bi-list-check me-2 text-primary"></i>Key Requirements
+                                </h5>
+                                <div class="requirements-section">
+                                    @if (!string.IsNullOrEmpty(jobOffer.Requirements))
+                                    {
+                                        <div class="small" style="white-space: normal !important;">
+                                            @foreach (var req in jobOffer.Requirements.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries))
+                                            {
+                                                if (!string.IsNullOrWhiteSpace(req))
+                                                {
+                                                    <div class="d-flex align-items-start mb-3">
+                                                        <i class="bi bi-check2-circle text-primary me-2 mt-1" style="font-size: 0.9rem; line-height: 1; flex-shrink: 0;"></i>
+                                                        <span style="line-height: 1.4; text-align: justify; width: 100%;">@req.Trim()</span>
+                                                    </div>
+                                                }
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <p class="text-muted fst-italic small">No specific requirements listed.</p>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="col-lg-4 bg-light p-4">
+                                <div class="sticky-top" style="top: 1rem; z-index: 1;">
+                                    <h5 class="fw-bold mb-4 text-dark">Summary</h5>
+                                    
+                                    <div class="bg-white rounded-4 p-3 shadow-sm mb-4 border-start border-success border-4">
+                                        <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-size: 0.8rem;">Salary Range</label>
+                                        <div class="salary-container">
+                                            <span class="text-success fw-bold fs-5 text-nowrap d-inline-block" style="letter-spacing: -0.4px;">
+                                                @if (jobOffer.SalaryType == "fixed")
+                                                {
+                                                    @:EUR @jobOffer.MinimumSalary?.ToString("N0")
+                                                }
+                                                else if (jobOffer.SalaryType == "range")
+                                                {
+                                                    @:EUR @jobOffer.MinimumSalary?.ToString("N0") - @jobOffer.MaximumSalary?.ToString("N0")
+                                                }
+                                                else if (jobOffer.SalaryType?.ToLower() == "negotiable")
+                                                {
+                                                    @:Negotiable
+                                                }
+                                                else
+                                                {
+                                                    @:Not Disclosed
+                                                }
+                                            </span>
+                                        </div>
+                                        <small class="text-muted d-block mt-1" style="font-size: 0.8rem;">Gross / Month</small>
+                                    </div>
+
+                                    <div class="bg-white rounded-4 p-3 shadow-sm mb-3">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <i class="bi bi-briefcase me-3 fs-5 text-primary"></i>
+                                            <div>
+                                                <small class="text-muted d-block" style="font-size: 0.8rem; font-weight: 700;">Job Type</small>
+                                                <span class="fw-semibold text-dark small">@jobOffer.JobType</span>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-translate me-3 fs-5 text-primary"></i>
+                                            <div>
+                                                <small class="text-muted d-block" style="font-size: 0.8rem; font-weight: 700;">Languages</small>
+                                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                                    @if (!string.IsNullOrEmpty(jobOffer.RequiredLanguages))
+                                                    {
+                                                        @foreach (var lang in jobOffer.RequiredLanguages.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+                                                        {
+                                                            <span class="badge bg-soft-secondary text-secondary rounded-pill border px-2 py-1 small">
+                                                                @lang.Trim()
+                                                            </span>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted small">-</span>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
     <h4 class="fw-bold text-dark mb-3">All Applications</h4>
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
         <div class="table-responsive">
@@ -69,7 +229,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @if (!Model.Any())
+                    @if (!sortedModel.Any())
                     {
                         <tr>
                             <td colspan="5" class="text-center py-5 text-muted">
@@ -80,25 +240,45 @@
                             </td>
                         </tr>
                     }
-                    @foreach (var app in Model)
+                    @foreach (var app in sortedModel)
                     {
                         var reportForThisApp = aiReports.FirstOrDefault(r => r.JobApplicationId == app.Id);
+
+                        string avatarSrc = null;
+                        if (app.Candidate != null && app.Candidate.ProfilePicture != null && app.Candidate.ProfilePicture.Length > 0)
+                        {
+                            var base64 = Convert.ToBase64String(app.Candidate.ProfilePicture);
+                            avatarSrc = $"data:image/png;base64,{base64}";
+                        }
+                        else if (app.Cv != null && !string.IsNullOrEmpty(app.Cv.PhotoUrl))
+                        {
+                            avatarSrc = Url.Content(app.Cv.PhotoUrl);
+                        }
 
                         <tr class="transition-row">
                             <td class="ps-4 py-4">
                                 <div class="d-flex align-items-center">
-                                    <div class="avatar-circle-numbered me-3 bg-soft-primary text-primary fw-bold">
-                                        @counter
+                                    <div class="me-3">
+                                        @if (!string.IsNullOrEmpty(avatarSrc))
+                                        {
+                                            <img src="@avatarSrc" alt="Avatar" class="avatar-img-circle shadow-sm" />
+                                        }
+                                        else
+                                        {
+                                            <div class="avatar-placeholder bg-soft-primary text-primary">
+                                                <i class="bi bi-person-fill"></i>
+                                            </div>
+                                        }
                                     </div>
                                     <div>
-                                        <div class="text-dark fs-5">
+                                        <div class="text-dark fs-5 fw-semibold">
                                             @if (app.Cv != null)
                                             {
-                                                @($"{app.Cv.Name} {app.Cv.Surname}")
+                                                @($"{app.Cv.Surname} {app.Cv.Name}")
                                             }
                                             else
                                             {
-                                                <span class="text-muted italic small">Name Hidden</span>
+                                                <span class="text-muted fst-italic small">Name Hidden</span>
                                             }
                                         </div>
                                     </div>
@@ -147,14 +327,23 @@
                             <td class="text-center pe-4">
                                 <div class="btn-group glass-actions">
                                     <a asp-controller="Offer" asp-action="CvView" asp-route-id="@app.CvId"
-                                       class="btn action-btn text-primary" title="View Full CV">
+                                           class="btn action-btn text-primary" title="View Full CV">
                                         <i class="bi bi-file-earmark-person-fill"></i>
                                     </a>
 
                                     <a asp-controller="Offer" asp-action="DownloadCv" asp-route-id="@app.CvId"
-                                       class="btn action-btn text-success" title="Download PDF">
+                                           download class="btn action-btn text-success" title="Download PDF">
                                         <i class="bi bi-download"></i>
                                     </a>
+
+                                    @if (reportForThisApp != null)
+                                    {
+                                        <button type="button" class="btn action-btn text-success"
+                                                data-bs-toggle="modal" data-bs-target="#selectCandidateModal-@app.Id"
+                                                title="Select Candidate and Notify">
+                                            <i class="bi bi-check-circle-fill"></i>
+                                        </button>
+                                    }
                                 </div>
                             </td>
                         </tr>
@@ -165,9 +354,9 @@
                                 <td colspan="5" class="p-0 border-0">
                                     <div class="collapse" id="msg-@app.Id">
                                         <div class="message-bubble-container">
-                                            <div class="message-bubble-card">
-                                                <div class="d-flex align-items-center mb-3">
-                                                    <div class="icon-shape bg-soft-info text-info rounded-circle me-2" style="width: 32px; height: 32px;">
+                                            <div class="message-bubble-card p-3 m-3 bg-light rounded-3">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <div class="icon-shape bg-soft-info text-info rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
                                                         <i class="bi bi-chat-dots-fill small"></i>
                                                     </div>
                                                     <span class="fw-bold small text-uppercase text-info tracking-wider">Candidate's Message</span>
@@ -181,7 +370,48 @@
                                 </td>
                             </tr>
                         }
-                        counter++;
+
+                        @if (reportForThisApp != null)
+                        {
+                            <div class="modal fade" id="selectCandidateModal-@app.Id" tabindex="-1" aria-labelledby="selectCandidateModalLabel-@app.Id" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content border-0 custom-main-shadow rounded-4">
+                                        <div class="modal-header border-0 pb-0 d-flex justify-content-end">
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <form asp-controller="Offer" asp-action="NotifySelectedCandidate" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="applicationId" value="@app.Id" />
+                                            <input type="hidden" name="jobTitle" value="@offerTitle" />
+                                            
+                                            <div class="modal-body text-center px-4 pb-4">
+                                                <div class="icon-box-circle mb-4 bg-soft-success text-success d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 60px; height: 60px; font-size: 2rem;">
+                                                    <i class="bi bi-check-circle-fill"></i>
+                                                </div>
+                                                <h3 class="fw-bold text-dark mb-2">Confirm Selection</h3>
+                                                <p class="text-muted mb-0">
+                                                    Are you sure you want to select <br>
+                                                    <span class="fw-bold text-success">@(app.Cv != null ? $"{app.Cv.Surname} {app.Cv.Name}" : "this candidate")</span> <br>
+                                                    for the position: <strong class="text-dark">@offerTitle</strong>?
+                                                </p>
+                                                
+                                                <div class="alert alert-info mt-4 border-0 rounded-3 small text-start d-flex align-items-start gap-2 bg-soft-info text-info">
+                                                    <i class="bi bi-info-circle-fill mt-0.5 flex-shrink-0"></i>
+                                                    <span>An automated notification will be sent to the candidate informing them that they have been selected for the recruitment process for <strong>@offerTitle</strong> and asking them to check their e-mail inbox.</span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="modal-footer border-0 justify-content-center gap-2 pb-5">
+                                                <button type="button" class="btn btn-light rounded-pill px-4 fw-semibold border" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm text-white">
+                                                    Accept & Send
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        }
                     }
                 </tbody>
             </table>

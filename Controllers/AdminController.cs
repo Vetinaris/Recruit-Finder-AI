@@ -66,7 +66,9 @@ namespace Recruit_Finder_AI.Controllers
                     PrimaryRole = primaryRole,
                     BanReason = user.BanReason,
                     IsPermanentBan = user.IsPermanentBan,
-                    BanDescription = user.BanDescription
+                    BanDescription = user.BanDescription,
+                    ProfilePicture = user.ProfilePicture,
+                    ProfilePictureContentType = user.ProfilePictureContentType
                 };
             });
 
@@ -94,7 +96,9 @@ namespace Recruit_Finder_AI.Controllers
                     PrimaryRole = primaryRole,
                     BanReason = user.BanReason,
                     IsPermanentBan = user.IsPermanentBan,
-                    BanDescription = user.BanDescription
+                    BanDescription = user.BanDescription,
+                    ProfilePicture = user.ProfilePicture,
+                    ProfilePictureContentType = user.ProfilePictureContentType
                 });
             }
 

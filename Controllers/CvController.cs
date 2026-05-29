@@ -36,57 +36,41 @@ namespace Recruit_Finder_AI.Controllers
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
         }
-
         [HttpGet]
         public async Task<IActionResult> GetStatus(int id)
         {
             var userId = _userManager.GetUserId(User);
             var cv = await _context.Cvs
                 .Where(c => c.Id == id && c.UserId == userId)
-                .Select(c => new { c.IsVerified })
+                .Select(c => new { c.IsVerified, c.AiFeedback })
                 .FirstOrDefaultAsync();
 
             if (cv == null) return NotFound();
             return Json(cv);
         }
 
+
+
         [AllowAnonymous]
-        [HttpPost]
         [IgnoreAntiforgeryToken]
-        public async Task<IActionResult> UpdateAiResult([FromBody] JsonElement result)
+        [HttpPost("UpdateAiResult")]
+        public async Task<IActionResult> UpdateAiResult([FromBody] CvVerificationDto dto)
         {
-            var apiKey = _configuration["AiService:ApiKey"];
-            if (!Request.Headers.TryGetValue("X-AI-Key", out var extractedKey) || extractedKey != apiKey)
+            if (dto == null) return BadRequest("Payload is null");
+
+            var cvFromDb = await _context.Cvs.FirstOrDefaultAsync(c => c.Id == dto.Id);
+
+            if (cvFromDb == null)
             {
-                return Unauthorized("Invalid API Key");
+                return NotFound($"CV with ID {dto.Id} not found.");
             }
 
-            try
-            {
-                int cvId = result.GetProperty("cvId").GetInt32();
-                var cv = await _context.Cvs.FindAsync(cvId);
+            cvFromDb.IsVerified = dto.IsVerified;
+            cvFromDb.AiFeedback = dto.AiFeedback;
+            _context.Cvs.Update(cvFromDb);
+            await _context.SaveChangesAsync();
 
-                if (cv != null)
-                {
-                    cv.IsVerified = true;
-                    _context.Update(cv);
-
-                    var notification = new Notification
-                    {
-                        UserId = cv.UserId,
-                        Title = "AI Verification Complete",
-                        Content = $"AI Verification for your CV is complete!",
-                        CreatedAt = DateTime.UtcNow,
-                        IsRead = false,
-                        IsCompleted = true,
-                        ActionUrl = Url.Action("Index", "Cv")
-                    };
-                    _context.Add(notification);
-                    await _context.SaveChangesAsync();
-                }
-                return Ok();
-            }
-            catch { return BadRequest(); }
+            return Ok(new { message = "CV updated successfully" });
         }
 
         public async Task<IActionResult> Index()
@@ -147,6 +131,10 @@ namespace Recruit_Finder_AI.Controllers
                 TempData["ErrorMessage"] = "CV not found.";
                 return RedirectToAction(nameof(Index));
             }
+            cv.IsVerified = false;
+            cv.AiFeedback = null;
+            _context.Cvs.Update(cv);
+            await _context.SaveChangesAsync();
 
             _ = SendToAiVerification(cv);
 
@@ -202,12 +190,14 @@ namespace Recruit_Finder_AI.Controllers
             {
                 cv.UserId = userId;
                 cv.CreatedAt = existingCv.CreatedAt;
+
                 cv.IsVerified = false;
+                cv.AiFeedback = null;
 
                 _context.Update(cv);
                 await _context.SaveChangesAsync();
 
-                TempData["SuccessMessage"] = "CV updated and re-queued for analysis!";
+                TempData["SuccessMessage"] = "CV updated and verification status has been reset!";
                 return RedirectToAction(nameof(Index));
             }
 
@@ -235,11 +225,11 @@ namespace Recruit_Finder_AI.Controllers
                 client.Timeout = TimeSpan.FromSeconds(5);
 
                 client.DefaultRequestHeaders.Add("X-AI-Key", apiKey);
-
                 var jsonData = JsonSerializer.Serialize(new
                 {
                     cvId = cv.Id,
                     fullName = $"{cv.Name} {cv.Surname}",
+                    dateOfBirth = cv.DateOfBirth?.ToString("yyyy-MM-dd"),
                     experience = cv.ProfessionalExperience,
                     education = cv.Education,
                     skills = cv.Skills,
@@ -248,7 +238,6 @@ namespace Recruit_Finder_AI.Controllers
                 });
 
                 var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
-
                 var response = await client.PostAsync(aiUrl, content);
                 return response.IsSuccessStatusCode;
             }

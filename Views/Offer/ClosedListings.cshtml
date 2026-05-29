@@ -5,6 +5,26 @@
 }
 @{
     ViewData["Title"] = "Closed Listings";
+
+    var categoryIcons = new Dictionary<string, string>
+    {
+        { "IT", "bi-cpu" },
+        { "Data Science", "bi-graph-up-arrow" },
+        { "Marketing", "bi-megaphone" },
+        { "Finance", "bi-cash-coin" },
+        { "Healthcare", "bi-hospital" },
+        { "Engineering", "bi-tools" },
+        { "Sales", "bi-currency-exchange" },
+        { "Customer Service", "bi-headset" },
+        { "Human Resources", "bi-people" },
+        { "Design & Creative", "bi-palette" },
+        { "Logistics", "bi-truck" },
+        { "Legal", "bi-shield-check" },
+        { "Education", "bi-mortarboard" },
+        { "Construction", "bi-building-gear" },
+        { "Hospitality", "bi-cup-hot" },
+        { "Other", "bi-three-dots" }
+    };
 }
 
 <div class="container py-5">
@@ -33,11 +53,16 @@
                     @foreach (var item in Model)
                     {
                         bool isVerified = item.AiAnalysisStatus == "Verified";
+
+                        string iconClass = !string.IsNullOrEmpty(item.Category) && categoryIcons.ContainsKey(item.Category)
+                            ? categoryIcons[item.Category]
+                            : categoryIcons["Other"];
+
                         <tr id="row-@item.Id" class="transition-row">
                             <td class="ps-4 py-4">
                                 <div class="d-flex align-items-center">
                                     <div class="icon-shape bg-soft-primary text-primary rounded-3 me-3 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
-                                        <i class="bi bi-briefcase-fill"></i>
+                                        <i class="bi @iconClass" style="font-size: 1.2rem;"></i>
                                     </div>
                                     <div>
                                         <div class="fw-bold text-dark d-flex align-items-center">
@@ -50,7 +75,6 @@
                                     </div>
                                 </div>
                             </td>
-
                             
                             <td class="text-center">
                                 <span class="badge bg-soft-primary text-primary rounded-pill px-3 py-2 fw-semibold">@item.Category</span>
@@ -151,7 +175,7 @@
                         <span class="fw-bold" style="color: #6f42c1;" id="aiOfferTitle"></span>
                     </p>
                     <p class="x-small text-muted mt-3">
-                        <i class="bi bi-info-circle me-1"></i> The process may take up to a minute.
+                        <i class="bi bi-info-circle me-1"></i> The process may take 3 to 5 days.
                     </p>
                 </div>
                 <div class="modal-footer border-0 justify-content-center gap-2 pb-5">

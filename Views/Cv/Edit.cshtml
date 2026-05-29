@@ -230,21 +230,27 @@
         let validationAttempted = false;
 
         $(document).ready(function () {
-            function removeEmojis(text) {
-                var regex = /[^\w\s\d.,!@@#$%^&*()\-=_+\[\]{}|;:'"<>\/?\\ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/gu;
-                return text.replace(regex, '');
-            }
+                   function removeEmojis(text) {
+            if (!text) return '';
+           return text.replace(/[^\p{L}\p{N}\p{P}\p{Z}\$\^]/gu, '');
+        }
 
-            $(document).on('input change paste', 'input[type="text"], input[type="email"], input[type="url"], textarea', function() {
-                var el = this;
-                setTimeout(function() {
-                    var originalValue = $(el).val();
-                    var cleanedValue = removeEmojis(originalValue);
-                    if (originalValue !== cleanedValue) {
-                        $(el).val(cleanedValue);
-                    }
-                }, 0);
-            });
+        $(document).on('input', 'input[type="text"], input[type="email"], input[type="url"], textarea', function() {
+            var originalValue = $(this).val();
+            var cleanedValue = removeEmojis(originalValue);
+
+            if (originalValue !== cleanedValue) {
+                var startPosition = this.selectionStart;
+                var endPosition = this.selectionEnd;
+
+                $(this).val(cleanedValue);
+
+                this.setSelectionRange(
+                    startPosition - (originalValue.length - cleanedValue.length),
+                    endPosition - (originalValue.length - cleanedValue.length)
+                );
+            }
+        });
 
             $(document).on('input', 'input[type="tel"]', function() {
                 var originalValue = $(this).val();

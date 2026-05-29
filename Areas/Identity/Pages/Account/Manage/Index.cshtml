@@ -36,9 +36,11 @@
                     </div>
                 </div>
                 <div class="col">
-                    <label class="form-label fw-bold d-block">Profile Photo</label>
-                    <input type="file" asp-for="Input.ImageFile" id="imageInput" class="form-control form-control-sm rounded-pill mb-1" style="max-width: 300px;" accept="image/*" />
-                    <div class="form-text small">JPG, PNG or GIF. Max size 2MB.</div>
+                    <div class="col">
+                        <label class="form-label fw-bold d-block">Profile Photo</label>
+                        <input type="file" asp-for="Input.ImageFile" id="imageInput" class="form-control form-control-sm rounded-pill mb-1" style="max-width: 300px;" accept="image/*" />
+                        <div class="form-text small">JPG, PNG or GIF. Max size 2MB.</div>
+                    </div>
                 </div>
             </div>
             
@@ -113,12 +115,17 @@
                     <div class="row g-4">
                         <input type="hidden" asp-for="Input.IsEmployer" />
 
+                        @{
+                            string isReadOnly = (Model.Input.IsEmployer || Model.Input.HasSubmittedCompanyData) ? "readonly" : null;
+                            string bgLightClass = (Model.Input.IsEmployer || Model.Input.HasSubmittedCompanyData) ? "bg-light" : "";
+                        }
+
                         <div class="col-md-6">
                             <label asp-for="Input.CompanyName" class="form-label small fw-bold text-muted text-uppercase ms-2">Company Name</label>
                             <input asp-for="Input.CompanyName"
                                    data-val="false"
-                                   class="form-control rounded-pill border-light-subtle shadow-sm px-4 no-emoji company-input @(Model.Input.IsEmployer ? "bg-light" : "")"
-                                   readonly="@(Model.Input.IsEmployer ? "readonly" : null)" />
+                                   class="form-control rounded-pill border-light-subtle shadow-sm px-4 no-emoji company-input @bgLightClass"
+                                   readonly="@isReadOnly" />
                             <span asp-validation-for="Input.CompanyName" class="text-danger small ms-2"></span>
                         </div>
 
@@ -126,8 +133,8 @@
                             <label asp-for="Input.NIP" class="form-label small fw-bold text-muted text-uppercase ms-2">NIP / Tax ID</label>
                             <input asp-for="Input.NIP"
                                    data-val="false"
-                                   class="form-control rounded-pill border-light-subtle shadow-sm px-4 restrict-nip company-input @(Model.Input.IsEmployer ? "bg-light" : "")"
-                                   readonly="@(Model.Input.IsEmployer ? "readonly" : null)" maxlength="10" />
+                                   class="form-control rounded-pill border-light-subtle shadow-sm px-4 restrict-nip company-input @bgLightClass"
+                                   readonly="@isReadOnly" maxlength="10" />
                             <span asp-validation-for="Input.NIP" class="text-danger small ms-2"></span>
                         </div>
 
@@ -135,9 +142,9 @@
                             <label asp-for="Input.CompanyAddress" class="form-label small fw-bold text-muted text-uppercase ms-2">Headquarters Address</label>
                             <textarea asp-for="Input.CompanyAddress"
                                       data-val="false"
-                                      class="form-control rounded-4 border-light-subtle shadow-sm px-4 py-3 no-emoji company-input @(Model.Input.IsEmployer ? "bg-light" : "")"
+                                      class="form-control rounded-4 border-light-subtle shadow-sm px-4 py-3 no-emoji company-input @bgLightClass"
                                       rows="3"
-                                      readonly="@(Model.Input.IsEmployer ? "readonly" : null)"></textarea>
+                                      readonly="@isReadOnly"></textarea>
                             <span asp-validation-for="Input.CompanyAddress" class="text-danger small ms-2"></span>
                         </div>
                     </div>
@@ -199,7 +206,7 @@
                 if (companySwitch && companySwitch.checked) {
                     let isValid = true;
                     companyInputs.forEach(field => {
-                        if (!field.value.trim()) {
+                        if (!field.value.trim() && !field.hasAttribute('readonly')) {
                             field.classList.add('company-field-error');
                             isValid = false;
                         }

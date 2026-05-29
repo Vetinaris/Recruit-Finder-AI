@@ -2,7 +2,11 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 using Recruit_Finder_AI.Data;
+using Recruit_Finder_AI.Entities;
 using Recruit_Finder_AI.Models;
 using Recruit_Finder_AI.Services;
 using System;
@@ -178,6 +182,7 @@ namespace Recruit_Finder_AI.Controllers
             var offer = await _context.JobOffers
                 .Include(o => o.Applications)
                     .ThenInclude(a => a.Cv)
+                    .ThenInclude(c => c.User)
                 .FirstOrDefaultAsync(o => o.Id == id && (o.RecruiterId == userId || User.IsInRole("ADMIN")));
 
             if (offer == null)
@@ -202,6 +207,7 @@ namespace Recruit_Finder_AI.Controllers
             var applications = await _context.Applications
                 .Include(a => a.JobOffer)
                 .Include(a => a.Cv)
+                .Include(a => a.Candidate)
                 .Where(a => a.JobOfferId == id && a.JobOffer.RecruiterId == userId)
                 .OrderByDescending(a => a.AppliedAt)
                 .ToListAsync();
@@ -540,14 +546,18 @@ namespace Recruit_Finder_AI.Controllers
         [IgnoreAntiforgeryToken]
         public async Task<IActionResult> UpdateAiResult([FromBody] AiResultModel data)
         {
-            Console.WriteLine($"--- CALLBACK OTRZYMANY: OfferId={data.offerId}, Status={data.status} ---");
+            Console.WriteLine($"--- CALLBACK RECEIVED: OfferId={data.offerId}, Status={data.status} ---");
             try
             {
                 var offer = await _context.JobOffers
                     .Include(o => o.Applications)
                     .FirstOrDefaultAsync(o => o.Id == data.offerId);
 
-                if (offer == null) return NotFound();
+                if (offer == null)
+                {
+                    Console.WriteLine($"[AI CALLBACK ERROR] Offer for Id {data.offerId} was not found.");
+                    return NotFound();
+                }
 
                 offer.AiAnalysisStatus = data.status;
                 offer.AiAnalysisComment = $"Analysis completed. Processed {data.results?.Count ?? 0} candidates.";
@@ -583,11 +593,42 @@ namespace Recruit_Finder_AI.Controllers
                 }
 
                 await _context.SaveChangesAsync();
+                Console.WriteLine($"[AI CALLBACK SUCCESS] Reports for the offer {offer.Id} have been saved. Status: {data.status}");
+
+                if (!string.IsNullOrEmpty(data.status) &&
+            (data.status.Equals("Verified", StringComparison.OrdinalIgnoreCase) ||
+             data.status.Equals("Completed", StringComparison.OrdinalIgnoreCase) ||
+             data.status.Equals("Success", StringComparison.OrdinalIgnoreCase)))
+                {
+                    try
+                    {
+                        var newNotification = new Notification
+                        {
+                            UserId = offer.RecruiterId,
+                            Title = "AI Analysis Completed",
+                            Content = $"The AI candidate verification for your job offer '{offer.Title}' has finished. You can now review the scores.",
+                            ActionUrl = $"/Offer/AiAnalysisDetails/{offer.Id}",
+                            CreatedAt = DateTime.Now,
+                            IsRead = false,
+                            IsCompleted = false
+                        };
+
+                        _context.Notifications.Add(newNotification);
+                        await _context.SaveChangesAsync();
+
+                        Console.WriteLine($"[NOTIFICATION SUCCESS] Analysis completion notification sent to user {offer.RecruiterId}");
+                    }
+                    catch (Exception notifEx)
+                    {
+                        Console.WriteLine($"[NOTIFICATION CRITICAL ERROR] Failed to save notification in database: {notifEx.Message}");
+                    }
+                }
+
                 return Ok(new { message = "Data updated successfully and relationally saved" });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Błąd aktualizacji relacyjnej: {ex.Message}");
+                Console.WriteLine($"Relational update error: {ex.Message}");
                 return StatusCode(500);
             }
         }
@@ -831,6 +872,41 @@ namespace Recruit_Finder_AI.Controllers
         }
 
         [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> NotifySelectedCandidate(int applicationId, string jobTitle, string? returnView)
+        {
+            var recruiterId = _userManager.GetUserId(User);
+
+            var application = await _context.Applications
+                .Include(a => a.JobOffer)
+                .FirstOrDefaultAsync(a => a.Id == applicationId && a.JobOffer.RecruiterId == recruiterId);
+
+            if (application == null)
+            {
+                return NotFound("Application not found or you don't have permission to perform this action.");
+            }
+
+            string title = "Application Update";
+            string content = $"Congratulations! You have been selected for the next stage of the recruitment process for the position: '{jobTitle}'. Please check your e-mail inbox for further instructions.";
+
+            string actionUrl = Url.Action("Details", "Offer", new { id = application.JobOfferId });
+
+            await _notificationService.SendAsync(application.CandidateId, title, content, actionUrl);
+
+            TempData["SuccessMessage"] = "The candidate has been successfully notified!";
+
+            await _context.SaveChangesAsync();
+
+            if (returnView == "AiAnalysisDetails")
+            {
+                return RedirectToAction(nameof(AiAnalysisDetails), new { id = application.JobOfferId });
+            }
+
+            return RedirectToAction(nameof(ViewResults), new { id = application.JobOfferId });
+        }
+
+        [Authorize]
         [HttpGet]
         public async Task<IActionResult> ExportAiResultsToCsv(int id)
         {
@@ -869,6 +945,317 @@ namespace Recruit_Finder_AI.Controllers
             Buffer.BlockCopy(buffer, 0, finalFile, bom.Length, buffer.Length);
 
             return File(finalFile, "text/csv", $"AI_Report_Offer_{id}.csv");
+        }
+
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> ExportAllCvDataToExcel(int id)
+        {
+            var userId = _userManager.GetUserId(User);
+
+            var dataToExport = await _context.Applications
+                .Include(a => a.Cv)
+                .Include(a => a.JobOffer)
+                .Where(a => a.JobOfferId == id && a.JobOffer.RecruiterId == userId)
+                .OrderBy(a => a.Cv != null ? a.Cv.Surname : "")
+                .ThenBy(a => a.Cv != null ? a.Cv.Name : "")
+                .ToListAsync();
+
+            var csvBuilder = new StringBuilder();
+
+            string[] headers = {
+                "Surname", "Name", "Email", "PhoneNumber", "DateOfBirth",
+                "Address", "ProfessionalExperience", "Education", "Languages",
+                "Skills", "Interests", "Portfolio", "Candidate Message"
+            };
+
+            csvBuilder.AppendLine(string.Join(";", headers));
+
+            string EscapeCsv(string? value)
+            {
+                if (string.IsNullOrEmpty(value)) return "\"N/A\"";
+                return $"\"{value.Replace("\"", "\"\"")}\"";
+            }
+
+            foreach (var app in dataToExport)
+            {
+                string dateOfBirthStr = app.Cv?.DateOfBirth.HasValue == true
+                    ? app.Cv.DateOfBirth.Value.ToString("yyyy-MM-dd")
+                    : "N/A";
+
+                string phoneNumberStr = app.Cv?.PhoneNumber ?? "N/A";
+
+                var row = new List<string>
+                {
+                    EscapeCsv(app.Cv?.Surname ?? "N/A"),
+                    EscapeCsv(app.Cv?.Name ?? "N/A"),
+                    EscapeCsv(app.Cv?.Email ?? "N/A"),
+                    EscapeCsv(phoneNumberStr),
+                    EscapeCsv(dateOfBirthStr),
+                    EscapeCsv(app.Cv?.Address ?? "N/A"),
+                    EscapeCsv(app.Cv?.ProfessionalExperience ?? "N/A"),
+                    EscapeCsv(app.Cv?.Education ?? "N/A"),
+                    EscapeCsv(app.Cv?.Languages ?? "N/A"),
+                    EscapeCsv(app.Cv?.Skills ?? "N/A"),
+                    EscapeCsv(app.Cv?.Interests ?? "N/A"),
+                    EscapeCsv(app.Cv?.Portfolio ?? "N/A"),
+                    EscapeCsv(app.Message ?? "")
+                };
+
+                csvBuilder.AppendLine(string.Join(";", row));
+            }
+
+            var buffer = Encoding.UTF8.GetBytes(csvBuilder.ToString());
+            var bom = new byte[] { 0xEF, 0xBB, 0xBF };
+            var fileBytes = bom.Concat(buffer).ToArray();
+
+            string fileName = $"All_CVs_Offer_{id}_{DateTime.Now:yyyyMMdd}.csv";
+
+            return File(fileBytes, "text/csv", fileName);
+        }
+
+        [HttpGet]
+        [Authorize]
+        public async Task<IActionResult> DownloadCv(int id)
+        {
+            var userId = _userManager.GetUserId(User);
+
+            var cv = await _context.Cvs
+                .FirstOrDefaultAsync(c => c.Id == id &&
+                    (c.UserId == userId || _context.Applications.Any(a => a.CvId == id && a.JobOffer.RecruiterId == userId)));
+
+            if (cv == null) return NotFound();
+
+            var pdf = GenerateCvDocument(cv);
+            byte[] pdfBytes = pdf.GeneratePdf();
+            return File(pdfBytes, "application/pdf", $"CV_{cv.Name}_{cv.Surname}.pdf");
+        }
+
+        private IDocument GenerateCvDocument(Cv cv)
+        {
+            QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
+            var primaryColor = Colors.Blue.Darken4;
+            var accentColor = Colors.Grey.Lighten3;
+            var textColor = Colors.BlueGrey.Darken4;
+            var mutedText = Colors.BlueGrey.Lighten1;
+            var sidebarBackgroundColor = Colors.Grey.Lighten5;
+            var user = _context.Users.FirstOrDefault(u => u.Id == cv.UserId);
+            byte[]? photoData = cv.IncludePhoto ? user?.ProfilePicture : null;
+
+            return Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.A4);
+                    page.Margin(0);
+                    page.DefaultTextStyle(x => x.FontSize(10).FontFamily(Fonts.Verdana).FontColor(textColor));
+
+                    page.Background().Row(row =>
+                    {
+                        row.ConstantItem(180).Background(sidebarBackgroundColor);
+                        row.RelativeItem().Background(Colors.White);
+                    });
+
+                    page.Content().Row(row =>
+                    {
+                        row.ConstantItem(180).Background(Colors.Grey.Lighten5).Padding(20).Column(col =>
+                        {
+                            if (photoData != null)
+                            {
+                                col.Item().AlignCenter().Width(120).Height(120).Image(photoData).FitArea();
+                            }
+                            else
+                            {
+                                col.Item().AlignCenter().Width(100).Height(100).Background(Colors.Grey.Lighten3);
+                            }
+                            col.Item().PaddingVertical(10);
+
+                            col.Item().Text("CONTACT").FontSize(11).ExtraBold().FontColor(primaryColor).LetterSpacing(0.1f);
+                            col.Item().PaddingVertical(5).LineHorizontal(1.5f).LineColor(primaryColor);
+
+                            var contactInfo = new[] {
+                                ("Phone", cv.PhoneNumber),
+                                ("E-mail", cv.Email),
+                                ("Address", cv.Address)
+                            };
+
+                            foreach (var (label, value) in contactInfo)
+                            {
+                                if (!string.IsNullOrEmpty(value))
+                                {
+                                    col.Item().PaddingTop(8).Column(c => {
+                                        c.Item().Text(label).FontSize(7).SemiBold().FontColor(mutedText);
+                                        c.Item().Text(value).FontSize(9);
+                                    });
+                                }
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(cv.Languages))
+                            {
+                                col.Item().PaddingTop(25).Text("LANGUAGES").FontSize(11).ExtraBold().FontColor(primaryColor);
+                                col.Item().PaddingVertical(5).LineHorizontal(1.5f).LineColor(primaryColor);
+                                foreach (var lang in cv.Languages.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries))
+                                {
+                                    col.Item().Text(lang.Trim()).FontSize(9);
+                                }
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(cv.Skills))
+                            {
+                                col.Item().PaddingTop(25).Text("SKILLS").FontSize(11).ExtraBold().FontColor(primaryColor);
+                                col.Item().PaddingVertical(5).LineHorizontal(1.5f).LineColor(primaryColor);
+                                foreach (var skill in cv.Skills.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries))
+                                {
+                                    col.Item().Text(skill.Trim()).FontSize(9);
+                                }
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(cv.Interests))
+                            {
+                                col.Item().PaddingTop(25).Text("INTERESTS").FontSize(11).ExtraBold().FontColor(primaryColor);
+                                col.Item().PaddingVertical(5).LineHorizontal(1.5f).LineColor(primaryColor);
+                                foreach (var hobby in cv.Interests.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries))
+                                {
+                                    col.Item().Text(hobby.Trim()).FontSize(9);
+                                }
+                            }
+                        });
+
+                        row.RelativeItem().Padding(35).Column(col =>
+                        {
+                            col.Item().Row(r => {
+                                r.RelativeItem().Column(c => {
+                                    c.Item().Text($"{cv.Name} {cv.Surname}").FontSize(26).ExtraBold().FontColor(primaryColor);
+                                    c.Item().PaddingTop(2).Text("CANDIDATE").FontSize(12).Medium().FontColor(mutedText).LetterSpacing(0.2f);
+                                });
+                            });
+
+                            col.Item().PaddingVertical(15);
+
+                            void BuildSectionHeader(string title)
+                            {
+                                col.Item().PaddingTop(15).Column(c => {
+                                    c.Item().Text(title.ToUpper()).FontSize(13).ExtraBold().FontColor(primaryColor).LetterSpacing(0.1f);
+                                    c.Item().PaddingVertical(4).LineHorizontal(1.5f).LineColor(primaryColor);
+                                });
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(cv.ProfessionalExperience))
+                            {
+                                BuildSectionHeader("Experience");
+
+                                var expEntries = cv.ProfessionalExperience.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries);
+                                foreach (var entry in expEntries)
+                                {
+                                    col.Item().PaddingTop(10).Row(rowExp =>
+                                    {
+                                        rowExp.ConstantItem(15).Layers(layers =>
+                                        {
+                                            layers.PrimaryLayer().AlignCenter().LineVertical(0.5f).LineColor(accentColor);
+                                            layers.Layer().AlignCenter().PaddingTop(4).Component(new TimePoint(primaryColor));
+                                        });
+
+                                        rowExp.RelativeItem().PaddingLeft(10).PaddingBottom(10).Column(textCol =>
+                                        {
+                                            var parts = entry.Split(new[] { ':', ']' }, StringSplitOptions.RemoveEmptyEntries);
+                                            if (parts.Length >= 2)
+                                            {
+                                                var date = parts[0].Replace("[", "").Trim();
+                                                var name = parts[1].Trim();
+                                                var desc = parts.Length > 2 ? string.Join(":", parts.Skip(2)).Trim() : "";
+
+                                                textCol.Item().Text(name).FontSize(11).Bold();
+                                                textCol.Item().Text(date).FontSize(8).SemiBold().FontColor(primaryColor);
+                                                if (!string.IsNullOrEmpty(desc))
+                                                    textCol.Item().PaddingTop(3).Text(desc).FontSize(9).FontColor(Colors.Grey.Darken2).LineHeight(1.3f);
+                                            }
+                                            else textCol.Item().Text(entry.Trim()).FontSize(9);
+                                        });
+                                    });
+                                }
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(cv.Education))
+                            {
+                                BuildSectionHeader("Education");
+                                var eduEntries = cv.Education.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries);
+                                foreach (var entry in eduEntries)
+                                {
+                                    col.Item().PaddingTop(10).Row(rowEdu =>
+                                    {
+                                        rowEdu.ConstantItem(15).Layers(layers =>
+                                        {
+                                            layers.PrimaryLayer().AlignCenter().LineVertical(0.5f).LineColor(accentColor);
+                                            layers.Layer().AlignCenter().PaddingTop(4).Component(new TimePoint(primaryColor));
+                                        });
+
+                                        rowEdu.RelativeItem().PaddingLeft(10).PaddingBottom(10).Column(textCol =>
+                                        {
+                                            var parts = entry.Split(new[] { ':', ']' }, StringSplitOptions.RemoveEmptyEntries);
+                                            if (parts.Length >= 2)
+                                            {
+                                                var date = parts[0].Replace("[", "").Trim();
+                                                var school = parts[1].Trim();
+                                                var field = parts.Length > 2 ? string.Join(":", parts.Skip(2)).Trim() : "";
+
+                                                textCol.Item().Text(school).FontSize(11).Bold();
+                                                textCol.Item().Text(date).FontSize(8).SemiBold().FontColor(primaryColor);
+                                                if (!string.IsNullOrEmpty(field))
+                                                    textCol.Item().PaddingTop(3).Text(field).FontSize(9).FontColor(Colors.Grey.Darken2);
+                                            }
+                                            else textCol.Item().Text(entry.Trim()).FontSize(9);
+                                        });
+                                    });
+                                }
+                            }
+
+                            if (!string.IsNullOrEmpty(cv.Portfolio))
+                            {
+                                BuildSectionHeader("Portfolio / Links");
+                                col.Item().PaddingTop(8).Column(linkCol =>
+                                {
+                                    var links = cv.Portfolio.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
+                                    foreach (var link in links)
+                                    {
+                                        linkCol.Item().Text(link.Trim()).FontSize(9).FontColor(textColor);
+                                    }
+                                });
+                            }
+
+                            col.Item().AlignBottom().PaddingTop(30).Text("I hereby give consent for my personal data to be processed for the purpose of the recruitment process.").FontSize(7).FontColor(Colors.Grey.Medium).Italic();
+                        });
+                    });
+
+                    page.Footer().PaddingBottom(10).Row(row =>
+                    {
+                        row.ConstantItem(180);
+
+                        row.RelativeItem().PaddingHorizontal(35).AlignRight().Text(text =>
+                        {
+                            text.Span("Generated by ").FontSize(8).FontColor(mutedText);
+                            text.Span("Recruit Finder AI").FontSize(8).SemiBold().FontColor(primaryColor);
+                        });
+                    });
+                });
+            });
+        }
+
+        private class TimePoint : IComponent
+        {
+            private readonly string _color;
+            public TimePoint(string color) => _color = color;
+
+            public void Compose(IContainer container)
+            {
+                string svgKropka = $@"
+        <svg height='10' width='10'>
+          <circle cx='5' cy='5' r='3.5' fill='white' />
+          <circle cx='5' cy='5' r='2' fill='{_color}' />
+        </svg>";
+
+                container.Width(10).Height(10).Svg(svgKropka);
+            }
         }
     }
 

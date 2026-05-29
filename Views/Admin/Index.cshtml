@@ -60,9 +60,19 @@
                         <tr class="user-row @(isLocked ? "opacity-75 bg-light-subtle" : "")" data-status="@statusTag" data-search="@user.UserName.ToLower() @user.Email.ToLower()">
                             <td class="ps-4 py-4">
                                 <div class="d-flex align-items-center">
-                                    <div class="icon-shape @(isLocked ? "bg-soft-danger text-danger" : "bg-soft-primary text-primary") rounded-circle me-3 flex-shrink-0 fw-bold" style="width: 45px; height: 45px;">
-                                        @user.UserName.Substring(0, 1).ToUpper()
-                                    </div>
+                                    @if (user.ProfilePicture != null && user.ProfilePicture.Length > 0)
+                                    {
+                                        var base64 = Convert.ToBase64String(user.ProfilePicture);
+                                        var imgSrc = $"data:{(string.IsNullOrEmpty(user.ProfilePictureContentType) ? "image/jpeg" : user.ProfilePictureContentType)};base64,{base64}";
+                                        
+                                        <img src="@imgSrc" class="rounded-circle me-3" alt="User profile picture" style="width:40px; height:40px; object-fit:cover;" />
+                                    }
+                                    else
+                                    {
+                                        <div class="bg-soft-primary rounded-circle me-3 d-flex align-items-center justify-content-center" style="width:40px; height:40px;">
+                                            <i class="bi bi-person-fill fs-5 text-primary"></i>
+                                        </div>
+                                    }
                                     <div>
                                         <div class="fw-bold text-dark fs-6 @(isLocked ? "text-decoration-line-through" : "")">@user.UserName</div>
                                         <div class="small text-muted">@user.Email</div>
