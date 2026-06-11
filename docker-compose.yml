@@ -1,0 +1,136 @@
+services:
+
+  webapp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rf_webapp
+    ports:
+      - "80:8080"
+      - "443:8081"
+    environment:
+      - RabbitMQ__Host=rabbitmq
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}
+      - ASPNETCORE_URLS=https://+:8081;http://+:8080
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=${SSL_CERT_PASSWORD}
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/root/.aspnet/https/recruit_finder.pfx
+    volumes:
+      - ./data/keys:/root/.aspnet/DataProtection-Keys
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - ${USERPROFILE}/.aspnet/https:/root/.aspnet/https:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    networks:
+      - recruit_network
+    restart: on-failure
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rf_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - recruit_network
+    restart: always
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: rf_postgres
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    networks:
+      - recruit_network
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d RecruitFinderDb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  candidates-verification:
+    build:
+      context: ./Recruit_Finder_AI.PythonService.CandidatesVerification
+      dockerfile: Dockerfile
+    container_name: rf_python_candidates
+    environment:
+      - PYTHONUNBUFFERED=1
+      - API_KEY=${SHARED_API_KEY}
+      - RABBITMQ_HOST=rabbitmq
+      - OLLAMA_URL=http://host.docker.internal:11434/api/generate
+      - OFFER_CALLBACK_URL=http://webapp:8080/Offer/UpdateAiResult
+    depends_on:
+      - rabbitmq
+      - webapp
+    networks:
+      - recruit_network
+    restart: on-failure
+
+  cv-verification:
+    build:
+      context: ./Recruit_Finder_AI.PythonService
+      dockerfile: Dockerfile
+    container_name: rf_python_cv
+    environment:
+      - PYTHONUNBUFFERED=1
+      - API_KEY=${SHARED_API_KEY}
+      - RABBITMQ_HOST=rabbitmq
+      - OLLAMA_MODEL=${OLLAMA_MODEL_NAME}
+      - OLLAMA_HOST_URL=http://host.docker.internal:11434
+      - CV_CALLBACK_URL=http://webapp:8080/Cv/UpdateAiResult
+    depends_on:
+      - rabbitmq
+      - webapp
+    networks:
+      - recruit_network
+    restart: on-failure
+
+  email-service:
+    build:
+      context: ./Recruit_Finder_AI.PythonService.EmailService
+      dockerfile: Dockerfile
+    container_name: rf_python_email
+    environment:
+      - MAIL_SERVER=smtp.gmail.com
+      - MAIL_PORT=587
+      - MAIL_USERNAME=${SMTP_USER}
+      - MAIL_PASSWORD=${SMTP_PASS}
+      - RABBITMQ_HOST=rabbitmq
+    depends_on:
+      - rabbitmq
+    networks:
+      - recruit_network
+    restart: on-failure
+
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: rf_cloudflare_tunnel
+    command: tunnel --no-tls-verify --url https://webapp:8081
+    depends_on:
+      - webapp
+    networks:
+      - recruit_network
+    restart: always
+
+networks:
+  recruit_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  rabbitmq_data:

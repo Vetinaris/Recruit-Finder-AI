@@ -2,7 +2,14 @@
 
 @if (Model > 0)
 {
-    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
+    <span class="badge rounded-pill bg-danger badge-count @(Model > 0 ? "" : "d-none")"
+          style="font-size: 0.6rem; padding: 0.25em 0.5em; margin-left: -8px; margin-top: -12px;">
         @Model
+    </span>
+}
+else
+{
+    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger badge-count" style="font-size: 0.65rem; display:none;">
+        0
     </span>
 }

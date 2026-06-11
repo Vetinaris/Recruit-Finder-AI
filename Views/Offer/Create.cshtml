@@ -166,9 +166,24 @@
                             <span asp-validation-for="Description" class="text-danger small"></span>
                         </div>
 
+<<<<<<< HEAD
                         <div class="d-flex gap-3 pt-4 border-top">
                             <button type="submit" id="submitBtn" class="btn btn-primary btn-lg rounded-pill px-5 shadow">
                                 <i class="bi me-2"></i>Publish Listing
+=======
+                        <div class="mb-4">
+                            <label asp-for="Description" class="text-muted small text-uppercase fw-bold mb-1 d-block">About the Role</label>
+                            <textarea asp-for="Description" class="form-control border-light-subtle shadow-sm rounded-4 mb-4" rows="8" placeholder="Describe the role..." required></textarea>
+                            <span asp-validation-for="Description" class="text-danger small"></span>
+                            
+                            <label asp-for="Requirements" class="text-muted small text-uppercase fw-bold mb-1 d-block">Job Requirements</label>
+                            <textarea asp-for="Requirements" class="form-control border-light-subtle shadow-sm rounded-4" rows="8" placeholder="Skills and experience..." required></textarea>
+                            <span asp-validation-for="Requirements" class="text-danger small"></span>
+                        </div>
+                        <div class="d-flex flex-column flex-md-row gap-3 pt-4 border-top">
+                            <button type="submit" id="submitBtn" class="btn btn-primary btn-lg rounded-pill px-5 shadow hover-lift fw-bold">
+                                Publish Listing
+>>>>>>> f9c0fb8 (Adding architecture to Docker, PostgreSQL, RabbitMQ and UI)
                             </button>
                             <a asp-action="MyListings" class="btn btn-light btn-lg rounded-pill px-4">Cancel</a>
                         </div>
@@ -182,6 +197,7 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
+<<<<<<< HEAD
         document.addEventListener("DOMContentLoaded", function () {
             const durationSelect = document.getElementById("durationSelect");
             const customDateGroup = document.getElementById("customDateGroup");
@@ -195,6 +211,37 @@
 
             const errorMsg = document.getElementById("salaryError");
             const submitBtn = document.getElementById("submitBtn");
+=======
+        $(document).ready(function () {
+        function removeEmojis(text) {
+            if (!text) return '';
+          return text.replace(/[^\p{L}\p{N}\p{P}\p{Z}\$\^\r\n]/gu, '');
+        }
+
+        $(document).on('input', 'input[type="text"], textarea', function() {
+            var originalValue = $(this).val();
+            var cleanedValue = removeEmojis(originalValue);
+
+            if (originalValue !== cleanedValue) {
+                var startPosition = this.selectionStart;
+                var endPosition = this.selectionEnd;
+
+                $(this).val(cleanedValue);
+
+                this.setSelectionRange(
+                    startPosition - (originalValue.length - cleanedValue.length),
+                    endPosition - (originalValue.length - cleanedValue.length)
+                );
+            }
+        });
+            const minSalaryInput = $('#minSalary');
+            const maxSalaryInput = $('#maxSalary');
+            const fixedSalaryInput = $('#fixedSalaryInput');
+            const salaryError = $('#salaryError');
+            const salaryType = $('#salaryType');
+            const fixedGroup = $('#fixedSalaryGroup');
+            const rangeGroup = $('#rangeSalaryGroup');
+>>>>>>> f9c0fb8 (Adding architecture to Docker, PostgreSQL, RabbitMQ and UI)
 
             const categorySelect = document.getElementById("categorySelect");
             const subcategoryInput = document.getElementById("subcategoryInput");

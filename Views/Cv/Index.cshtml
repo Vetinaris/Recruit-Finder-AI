@@ -74,8 +74,13 @@
                             </div>
                         </div>
                     </div>
+<<<<<<< HEAD
                 
                     @if(remaining == 1)
+=======
+
+                    @if (remaining == 1)
+>>>>>>> f9c0fb8 (Adding architecture to Docker, PostgreSQL, RabbitMQ and UI)
                     {
                     <div class="mt-2 animate-pulse text-danger small fw-bold">
                         <i class="bi bi-exclamation-circle-fill me-1"></i> Only 1 slot left! Use it wisely.
@@ -115,6 +120,12 @@
                                     {
                                         <span class="badge rounded-pill bg-success-soft text-success border border-success border-opacity-25">
                                             <i class="bi bi-patch-check-fill me-1"></i> Verified
+                                        </span>
+                                    }
+                                    else if (!cv.IsVerified && !string.IsNullOrEmpty(cv.AiFeedback))
+                                    {
+                                        <span class="badge rounded-pill bg-danger-soft text-danger border border-danger border-opacity-25">
+                                            <i class="bi bi-x-circle-fill me-1"></i> Rejected by AI
                                         </span>
                                     }
                                     else
@@ -166,13 +177,33 @@
                                         {
                                             <div class="experience-content">
                                                 @Html.Raw(cv.ProfessionalExperience
+<<<<<<< HEAD
                                                     .Replace("[", "").Replace("]", "")
                                                     .Replace(";", "<br>")
                                                     .Replace("\n", "<br>")) 
+=======
+                                                                                    .Replace("[", "").Replace("]", "")
+                                                                                    .Replace(";", "<br>")
+                                                                                    .Replace("\n", "<br>"))
+>>>>>>> f9c0fb8 (Adding architecture to Docker, PostgreSQL, RabbitMQ and UI)
                                             </div>
                                         }
                                     </div>
                                 </div>
+
+                                @if (!string.IsNullOrEmpty(cv.AiFeedback))
+                                {
+                                    <div class="mt-3 rounded-3 @(cv.IsVerified ? "bg-success-soft text-success" : "bg-danger-soft text-danger")" style="font-size: 0.85rem; padding: 8px 0 8px 8px;">
+                                        <div class="fw-bold mb-1 pe-2">
+                                            <i class="bi bi-robot"></i> AI Feedback:
+                                        </div>
+                                        <div class="ai-feedback-scroll-box @(cv.IsVerified ? "scroll-green" : "scroll-red")" style="max-height: 100px; overflow-y: auto; font-style: italic;">
+                                            <div class="pe-2">
+                                                @cv.AiFeedback
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
                             </div>
 
                             <div class="d-flex gap-2">
@@ -183,9 +214,27 @@
                                 <form asp-action="Verify" asp-route-id="@cv.Id" method="post" class="flex-grow-1" onsubmit="startLoading(this, '@cv.Id')">
                                     @Html.AntiForgeryToken()
                                     <button type="submit" id="verify-btn-@cv.Id"
+<<<<<<< HEAD
                                             class="btn btn-soft-info-ai rounded-pill btn-sm w-100 fw-bold"
                                             @(cv.IsVerified ? "disabled" : "")>
                                         <i class="bi bi-robot me-1"></i> @(cv.IsVerified ? "Verified" : "AI Verify")
+=======
+                                            class="btn @(cv.IsVerified ? "btn-soft-info-ai" : (!string.IsNullOrEmpty(cv.AiFeedback) ? "btn-outline-danger" : "btn-soft-info-ai")) rounded-pill w-100 fw-bold"
+                                        @(cv.IsVerified ? "disabled" : "")>
+                                        <i class="bi bi-robot me-1"></i>
+                                        @if (cv.IsVerified)
+                                        {
+                                            <text>Verified</text>
+                                        }
+                                        else if (!string.IsNullOrEmpty(cv.AiFeedback))
+                                        {
+                                            <text>Re-Verify with AI</text>
+                                        }
+                                        else
+                                        {
+                                            <text>AI Verify</text>
+                                        }
+>>>>>>> f9c0fb8 (Adding architecture to Docker, PostgreSQL, RabbitMQ and UI)
                                     </button>
                                 </form>
                             </div>
@@ -230,6 +279,14 @@
                 btn.disabled = true;
                 btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing...';
             }
+            const statusContainer = document.getElementById(`status-container-${cvId}`);
+            if (statusContainer) {
+                statusContainer.innerHTML = `
+                    <span class="badge rounded-pill bg-warning-soft text-warning border border-warning border-opacity-25 animate-pulse">
+                        <i class="bi bi-cpu-fill me-1"></i> AI Processing
+                    </span>
+                `;
+            }
         }
 
         function checkPendingStatuses() {
@@ -242,35 +299,20 @@
                 fetch(`/Cv/GetStatus/${cvId}`)
                     .then(response => response.json())
                     .then(data => {
-                        if (data.isVerified) {
-                            updateUiToVerified(cvId);
+                        const isVerified = data.isVerified ?? data.IsVerified;
+                        const feedback = data.aiFeedback ?? data.AiFeedback;
+                        if (isVerified === true || (feedback !== null && feedback !== undefined && feedback !== "")) {
+                            location.reload();
                         }
                     })
                     .catch(err => console.error("Error polling status:", err));
             });
         }
 
-        function updateUiToVerified(cvId) {
-            const container = document.getElementById(`status-container-${cvId}`);
-            const btn = document.getElementById(`verify-btn-${cvId}`);
-
-            if (container) {
-                container.innerHTML = `
-                    <span class="badge rounded-pill bg-success-soft text-success border border-success border-opacity-25 animate-in">
-                        <i class="bi bi-patch-check-fill me-1"></i> Verified
-                    </span>`;
-            }
-            if (btn) {
-                btn.disabled = true;
-                btn.className = "btn btn-soft-info-ai rounded-pill btn-sm w-100 fw-bold";
-                btn.innerHTML = '<i class="bi bi-robot me-1"></i> Verified';
-            }
-        }
-
         function confirmDelete(id, fullName) {
             document.getElementById('deleteCvId').value = id;
             document.getElementById('deleteCvName').innerText = fullName;
-    
+
             const myModal = new bootstrap.Modal(document.getElementById('deleteModal'));
             myModal.show();
         }

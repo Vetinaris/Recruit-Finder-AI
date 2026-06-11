@@ -281,6 +281,31 @@
 
 @section Scripts {
     <script>
+<<<<<<< HEAD
+=======
+              function removeEmojis(text) {
+            if (!text) return '';
+            return text.replace(/[^\p{L}\p{N}\p{P}\p{Z}\$\^]/gu, '');
+        }
+
+        $(document).on('input', 'input[type="text"], textarea', function() {
+            var originalValue = $(this).val();
+            var cleanedValue = removeEmojis(originalValue);
+
+            if (originalValue !== cleanedValue) {
+                var startPosition = this.selectionStart;
+                var endPosition = this.selectionEnd;
+
+                $(this).val(cleanedValue);
+
+                this.setSelectionRange(
+                    startPosition - (originalValue.length - cleanedValue.length),
+                    endPosition - (originalValue.length - cleanedValue.length)
+                );
+            }
+        });
+
+>>>>>>> f9c0fb8 (Adding architecture to Docker, PostgreSQL, RabbitMQ and UI)
         function openVisibilityModal(id, action, title) {
             const form = document.getElementById('visibilityForm');
             const titleElem = document.getElementById('visibilityModalTitle');

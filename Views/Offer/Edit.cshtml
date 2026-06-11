@@ -150,6 +150,7 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
+<<<<<<< HEAD
         document.addEventListener("DOMContentLoaded", function() {
             const sType = document.getElementById("salaryTypeEdit");
             const inputsArea = document.getElementById("salaryInputsArea");
@@ -160,6 +161,113 @@
             const maxInput = document.getElementById("maxSalary");
             const errorMsg = document.getElementById("salaryError");
             const submitBtn = document.getElementById("submitBtn");
+=======
+        $(document).ready(function () {
+                   function removeEmojis(text) {
+            if (!text) return '';
+          return text.replace(/[^\p{L}\p{N}\p{P}\p{Z}\$\^\r\n]/gu, '');
+        }
+
+        $(document).on('input', 'input[type="text"], textarea', function() {
+            var originalValue = $(this).val();
+            var cleanedValue = removeEmojis(originalValue);
+
+            if (originalValue !== cleanedValue) {
+                var startPosition = this.selectionStart;
+                var endPosition = this.selectionEnd;
+
+                $(this).val(cleanedValue);
+
+                this.setSelectionRange(
+                    startPosition - (originalValue.length - cleanedValue.length),
+                    endPosition - (originalValue.length - cleanedValue.length)
+                );
+            }
+        });
+
+            const minSalaryInput = $('#minSalary');
+            const maxSalaryInput = $('#maxSalary');
+            const fixedSalaryInput = $('#fixedSalaryInput');
+            const salaryError = $('#salaryError');
+            const salaryType = $('#salaryType');
+            const fixedGroup = $('#fixedSalaryGroup');
+            const rangeGroup = $('#rangeSalaryGroup');
+
+            function validateSalaryInputs() {
+                let isValid = true;
+                const type = salaryType.val();
+
+                fixedSalaryInput.removeClass('input-validation-error');
+                minSalaryInput.removeClass('input-validation-error');
+                maxSalaryInput.removeClass('input-validation-error');
+                salaryError.addClass('d-none');
+
+                if (type === 'fixed') {
+                    if (!fixedSalaryInput.val().trim()) {
+                        fixedSalaryInput.addClass('input-validation-error');
+                        isValid = false;
+                    }
+                } else if (type === 'range') {
+                    const min = parseInt(minSalaryInput.val()) || 0;
+                    const max = parseInt(maxSalaryInput.val()) || 0;
+
+                    if (!minSalaryInput.val().trim()) {
+                        minSalaryInput.addClass('input-validation-error');
+                        isValid = false;
+                    }
+                    if (!maxSalaryInput.val().trim()) {
+                        maxSalaryInput.addClass('input-validation-error');
+                        isValid = false;
+                    }
+
+                    if (isValid && max > 0 && min >= max) {
+                        salaryError.text('Max salary must be greater than min!');
+                        salaryError.removeClass('d-none');
+                        maxSalaryInput.addClass('input-validation-error');
+                        isValid = false;
+                    }
+                }
+                return isValid;
+            }
+
+            $('#editOfferForm').on('submit', function (e) {
+                const isSalaryValid = validateSalaryInputs();
+                const isFormValid = $(this).valid();
+
+                if (!isFormValid || !isSalaryValid) {
+                    if (!isSalaryValid) {
+                        e.preventDefault();
+                        $('html, body').animate({
+                            scrollTop: $("#salaryType").offset().top - 150
+                        }, 200);
+                    }
+                }
+            });
+
+            salaryType.on('change', function() {
+                const val = $(this).val();
+                fixedGroup.addClass('d-none');
+                rangeGroup.addClass('d-none');
+                fixedSalaryInput.prop('disabled', true);
+                minSalaryInput.prop('disabled', true);
+                maxSalaryInput.prop('disabled', true);
+
+                if (val === 'fixed') {
+                    fixedGroup.removeClass('d-none');
+                    fixedSalaryInput.prop('disabled', false);
+                } else if (val === 'range') {
+                    rangeGroup.removeClass('d-none');
+                    minSalaryInput.prop('disabled', false);
+                    maxSalaryInput.prop('disabled', false);
+                }
+                validateSalaryInputs();
+            });
+
+            $(document).on('input', '.salary-int', function () {
+                this.value = this.value.replace(/[^0-9]/g, '');
+                validateSalaryInputs();
+            });
+>>>>>>> f9c0fb8 (Adding architecture to Docker, PostgreSQL, RabbitMQ and UI)
 
             const categorySelect = document.getElementById("categorySelect");
             const subcategoryInput = document.getElementById("subcategoryInput");

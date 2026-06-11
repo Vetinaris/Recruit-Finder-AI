@@ -39,6 +39,12 @@ public class Recruit_Finder_AIContext : IdentityDbContext<ApplicationUser>
                   .WithMany()
                   .HasForeignKey(n => n.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Property(n => n.CreatedAt)
+                  .HasConversion(
+                       v => v,
+                       v => DateTime.SpecifyKind(v, DateTimeKind.Utc)
+                  );
         });
 
         builder.Entity<Cv>(entity =>

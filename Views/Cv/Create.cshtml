@@ -238,6 +238,62 @@
 
 @section Scripts {
     <script>
+<<<<<<< HEAD
+=======
+        let validationAttempted = false;
+        $(document).ready(function () {
+                   function removeEmojis(text) {
+            if (!text) return '';
+           return text.replace(/[^\p{L}\p{N}\p{P}\p{Z}\$\^\r\n]/gu, '');
+        }
+
+        $(document).on('input', 'input[type="text"], input[type="email"], input[type="url"], textarea', function() {
+            var originalValue = $(this).val();
+            var cleanedValue = removeEmojis(originalValue);
+
+            if (originalValue !== cleanedValue) {
+                var startPosition = this.selectionStart;
+                var endPosition = this.selectionEnd;
+
+                $(this).val(cleanedValue);
+
+                this.setSelectionRange(
+                    startPosition - (originalValue.length - cleanedValue.length),
+                    endPosition - (originalValue.length - cleanedValue.length)
+                );
+            }
+        });
+
+            $(document).on('input', 'input[type="tel"]', function() {
+                var originalValue = $(this).val();
+                var cleanedValue = originalValue.replace(/[^\d+ \-]/g, '');
+                if (originalValue !== cleanedValue) {
+                    $(this).val(cleanedValue);
+                }
+            });
+
+            $('#cvForm').on('submit', function (e) {
+                if (!$(this).valid()) {
+                    e.preventDefault();
+                }
+            });
+
+            $('#expName, #expStart').on('input', updateSectionValidation);
+            $('#eduName, #eduStart').on('input', updateSectionValidation);
+            $('#langName').on('input', updateSectionValidation);
+
+            @if (!ViewData.ModelState.IsValid)
+            {
+                        <text>
+                                validationAttempted = true;
+                                updateSectionValidation();
+                        </text>
+            }
+
+            rebuildListsFromHidden();
+        });
+
+>>>>>>> f9c0fb8 (Adding architecture to Docker, PostgreSQL, RabbitMQ and UI)
         function formatTitleCase(str) {
             if (!str) return "";
             return str.toLowerCase().replace(/\b\w/g, s => s.toUpperCase());
@@ -330,7 +386,12 @@
         function managePortfolioFields() {
             const container = document.getElementById('portfolioContainer');
             const entries = container.querySelectorAll('.portfolio-entry');
+<<<<<<< HEAD
             const lastInput = entries[entries.length - 1].querySelector('.portfolio-input');
+=======
+            const lastEntry = entries[entries.length - 1];
+            const lastInput = lastEntry.querySelector('.portfolio-input');
+>>>>>>> f9c0fb8 (Adding architecture to Docker, PostgreSQL, RabbitMQ and UI)
             if (lastInput.value.trim() !== "") {
                 const newEntry = document.createElement('div');
                 newEntry.className = 'input-group mb-2 portfolio-entry';
@@ -341,10 +402,38 @@
             }
             updateRemoveButtons();
         }
+<<<<<<< HEAD
         function removeField(btn) { if (document.querySelectorAll('.portfolio-entry').length > 1) btn.closest('.portfolio-entry').remove(); updateRemoveButtons(); }
         function updateRemoveButtons() {
             const entries = document.querySelectorAll('.portfolio-entry');
             entries.forEach((e, i) => e.querySelector('.remove-link').classList.toggle('d-none', i === entries.length - 1));
+=======
+
+        function removeField(btn) {
+            const container = document.getElementById('portfolioContainer');
+            const entries = container.querySelectorAll('.portfolio-entry');
+   
+            if (entries.length > 1) {
+                btn.closest('.portfolio-entry').remove();
+            } else {
+                entries[0].querySelector('.portfolio-input').value = "";
+            }
+            updateRemoveButtons();
+        }
+
+        function updateRemoveButtons() {
+            const entries = document.querySelectorAll('.portfolio-entry');
+            entries.forEach((entry, i) => {
+                const input = entry.querySelector('.portfolio-input');
+                const button = entry.querySelector('.remove-link');
+        
+                if (i === entries.length - 1 && input.value.trim() === "") {
+                    button.classList.add('d-none');
+                } else {
+                    button.classList.remove('d-none');
+                }
+            });
+>>>>>>> f9c0fb8 (Adding architecture to Docker, PostgreSQL, RabbitMQ and UI)
         }
 
         function prepareSubmit() {

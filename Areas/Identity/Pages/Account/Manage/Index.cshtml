@@ -93,4 +93,63 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+<<<<<<< HEAD
+=======
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const companySwitch = document.getElementById('companySwitch');
+            const companyFields = document.getElementById('companyFields');
+            const companyInputs = document.querySelectorAll('.company-input');
+
+            if (companySwitch) {
+                companySwitch.addEventListener('change', function () {
+                    if (this.checked) {
+                        companyFields.style.display = 'block';
+                        companyInputs.forEach(input => input.setAttribute('required', 'required'));
+                    } else {
+                        companyFields.style.display = 'none';
+                        companyInputs.forEach(input => input.removeAttribute('required'));
+                    }
+                });
+            }
+
+            const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu;
+            
+            document.querySelectorAll('.no-emoji').forEach(el => {
+                el.addEventListener('input', e => {
+                    e.target.value = e.target.value.replace(emojiRegex, '');
+                });
+            });
+
+            document.querySelectorAll('.restrict-phone').forEach(el => {
+                el.addEventListener('input', e => {
+                    e.target.value = e.target.value.replace(/[^\d+ \-]/g, '');
+                });
+            });
+
+            document.querySelectorAll('.restrict-nip').forEach(el => {
+                el.addEventListener('input', e => {
+                    e.target.value = e.target.value.replace(/[^a-zA-Z0-9\- ]/g, '');
+                    if (e.target.value.trim()) e.target.classList.remove('company-field-error');
+                });
+            });
+
+            const form = document.getElementById('profile-form');
+            form.addEventListener('submit', function(e) {
+                if (companySwitch && companySwitch.checked) {
+                    let isValid = true;
+                    companyInputs.forEach(field => {
+                        if (!field.value.trim() && !field.hasAttribute('readonly')) {
+                            field.classList.add('company-field-error');
+                            isValid = false;
+                        }
+                    });
+                    if (!isValid) {
+                        e.preventDefault();
+                    }
+                }
+            });
+        });
+    </script>
+>>>>>>> f9c0fb8 (Adding architecture to Docker, PostgreSQL, RabbitMQ and UI)
 }
