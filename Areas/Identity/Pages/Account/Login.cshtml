@@ -27,9 +27,14 @@
                             <span asp-validation-for="Input.Email" class="text-danger small ms-2"></span>
                         </div>
 
-                        <div class="mb-2">
+                        <div class="mb-3">
                             <label asp-for="Input.Password" class="form-label small fw-bold text-muted text-uppercase ms-2">Password</label>
-                            <input asp-for="Input.Password" class="form-control rounded-pill border-light-subtle shadow-sm px-4 py-2 no-emoji" autocomplete="current-password" aria-required="true" placeholder="Enter your password" />
+                            <div class="input-group shadow-sm rounded-pill border border-light-subtle bg-white" style="overflow: hidden;">
+                                <input asp-for="Input.Password" id="passwordInput" class="form-control border-0 px-4 py-2 no-emoji bg-transparent shadow-none" autocomplete="current-password" aria-required="true" placeholder="Enter your password" />
+                                <button class="btn border-0 bg-transparent pe-4 text-muted d-flex align-items-center" type="button" id="togglePassword" style="box-shadow: none;">
+                                    <i class="bi bi-eye" id="toggleIcon" style="cursor: pointer; font-size: 1.1rem;"></i>
+                                </button>
+                            </div>
                             <span asp-validation-for="Input.Password" class="text-danger small ms-2"></span>
                         </div>
 
@@ -85,8 +90,8 @@
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             function removeEmojis(text) {
-                const regex = /[^\w\s\d.,!@@#$%^&*()\-=_+\[\]{}|;:'"<>\/?\\ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/gu;
-                return text.replace(regex, '');
+                if (!text) return '';
+                return text.replace(/[^\p{L}\p{N}\p{P}\p{Z}\$\^\r\n]/gu, '');
             }
 
             document.querySelectorAll('.no-emoji').forEach(el => {
@@ -98,6 +103,25 @@
                     }
                 });
             });
+
+            const togglePassword = document.querySelector('#togglePassword');
+            const passwordInput = document.querySelector('#passwordInput');
+            const toggleIcon = document.querySelector('#toggleIcon');
+
+            if (togglePassword && passwordInput && toggleIcon) {
+                togglePassword.addEventListener('click', function () {
+                    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInput.setAttribute('type', type);
+                    
+                    if (type === 'text') {
+                        toggleIcon.classList.remove('bi-eye');
+                        toggleIcon.classList.add('bi-eye-slash');
+                    } else {
+                        toggleIcon.classList.remove('bi-eye-slash');
+                        toggleIcon.classList.add('bi-eye');
+                    }
+                });
+            }
         });
     </script>
 }

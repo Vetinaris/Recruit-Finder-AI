@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using RabbitMQ.Client;
 using Recruit_Finder_AI.Data;
 using Recruit_Finder_AI.Entities;
 using Recruit_Finder_AI.Models;
@@ -26,19 +27,22 @@ namespace Recruit_Finder_AI.Controllers
         private readonly NotificationService _notificationService;
         private readonly IConfiguration _configuration;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ConnectionFactory _rabbitFactory;
 
         public OfferController(
             Recruit_Finder_AIContext context,
             UserManager<ApplicationUser> userManager,
             NotificationService notificationService,
             IConfiguration configuration,
-            IHttpClientFactory httpClientFactory)
+            IHttpClientFactory httpClientFactory,
+            ConnectionFactory rabbitFactory)
         {
             _context = context;
             _userManager = userManager;
             _notificationService = notificationService;
             _configuration = configuration;
             _httpClientFactory = httpClientFactory;
+            _rabbitFactory = rabbitFactory;
         }
 
         public async Task<IActionResult> List(
@@ -608,7 +612,7 @@ namespace Recruit_Finder_AI.Controllers
                             Title = "AI Analysis Completed",
                             Content = $"The AI candidate verification for your job offer '{offer.Title}' has finished. You can now review the scores.",
                             ActionUrl = $"/Offer/AiAnalysisDetails/{offer.Id}",
-                            CreatedAt = DateTime.Now,
+                            CreatedAt = DateTime.UtcNow,
                             IsRead = false,
                             IsCompleted = false
                         };
@@ -771,14 +775,19 @@ namespace Recruit_Finder_AI.Controllers
         {
             try
             {
-                var client = _httpClientFactory.CreateClient();
+                // 1. Połączenie z RabbitMQ
+                using var connection = await _rabbitFactory.CreateConnectionAsync();
+                using var channel = await connection.CreateChannelAsync();
 
-                var pythonServiceUrl = _configuration["AiService:Url"]
-                    ?? throw new InvalidOperationException("Missing confu=iguration 'AiService:Url' in system.");
+                // 2. Deklaracja kolejki (musi być taka sama jak w Twoim Pythonie!)
+                await channel.QueueDeclareAsync(
+                    queue: "candidates_verification_queue",
+                    durable: true,
+                    exclusive: false,
+                    autoDelete: false
+                );
 
-                var apiKey = _configuration["AiService:ApiKey"]
-                    ?? throw new InvalidOperationException("Missing confu=iguration 'AiService:ApiKey' in system.");
-
+                // 3. Przygotowanie danych
                 var payload = new
                 {
                     offerId = offer.Id,
@@ -801,25 +810,20 @@ namespace Recruit_Finder_AI.Controllers
                     }).ToList()
                 };
 
-                var jsonPayload = JsonSerializer.Serialize(payload);
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                // 4. Publikacja
+                var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(payload));
 
-                client.DefaultRequestHeaders.Clear();
-                client.DefaultRequestHeaders.Add("X-AI-Key", apiKey);
+                await channel.BasicPublishAsync(
+                    exchange: string.Empty,
+                    routingKey: "candidates_verification_queue",
+                    body: body
+                );
 
-                var response = await client.PostAsync(pythonServiceUrl, content);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return true;
-                }
-
-                Console.WriteLine($"Python AI Service returned error status: {response.StatusCode}");
-                return false;
+                return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Critical error during communication with Python AI: {ex.Message}");
+                Console.WriteLine($"[RABBITMQ ERROR] Could not queue offer {offer.Id}: {ex.Message}");
                 return false;
             }
         }

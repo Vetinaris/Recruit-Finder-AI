@@ -1,19 +1,19 @@
 ﻿using Microsoft.Extensions.Configuration;
-using System.Net.Http.Json;
-using System.Text.Json;
+using System;
 using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
+using RabbitMQ.Client;
 
 namespace Recruit_Finder_AI.Services
 {
     public class EmailService
     {
-        private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
         private readonly JsonSerializerOptions _jsonOptions;
 
-        public EmailService(IHttpClientFactory httpClientFactory, IConfiguration configuration)
+        public EmailService(IConfiguration configuration)
         {
-            _httpClientFactory = httpClientFactory;
             _configuration = configuration;
 
             _jsonOptions = new JsonSerializerOptions
@@ -22,8 +22,8 @@ namespace Recruit_Finder_AI.Services
                 WriteIndented = true
             };
 
-            var rawUrl = _configuration["AiService:EmailServiceUrl"];
-            Console.WriteLine($">>> [DIAGNOZA] Adres usługi e-mail: {rawUrl ?? "BRAK KLUCZA W KONFIGURACJI!"}");
+            var rabbitHost = _configuration["RabbitMQ:Host"] ?? "localhost";
+            Console.WriteLine($">>> [DIAGNOZA] Adres brokera RabbitMQ dla maili: {rabbitHost}");
         }
 
         public async Task<bool> SendPasswordResetCodeAsync(string email, string code, string testValue = null)
@@ -35,7 +35,7 @@ namespace Recruit_Finder_AI.Services
                 testValue = testValue
             };
 
-            return await SendToPythonAsync(payload, "Reset Hasła");
+            return await SendToRabbitMQAsync(payload, "Reset Hasła");
         }
 
         public async Task<bool> SendEmailConfirmationCodeAsync(string email, string code)
@@ -48,38 +48,46 @@ namespace Recruit_Finder_AI.Services
             };
 
             Console.WriteLine($">>> [EmailService] Wysyłka kodu potwierdzającego [{code}] do: {email}");
-            return await SendToPythonAsync(payload, "Potwierdzenie Email");
+            return await SendToRabbitMQAsync(payload, "Potwierdzenie Email");
         }
 
-        private async Task<bool> SendToPythonAsync(object payload, string context)
+        private async Task<bool> SendToRabbitMQAsync(object payload, string context)
         {
-            var emailServiceUrl = _configuration["AiService:EmailServiceUrl"];
-            var emailApiKey = _configuration["AiService:EmailApiKey"];
-            var client = _httpClientFactory.CreateClient("PythonClient");
-
-            var request = new HttpRequestMessage(HttpMethod.Post, emailServiceUrl);
-            request.Headers.Add("X-Email-Key", emailApiKey);
-            request.Content = JsonContent.Create(payload, options: _jsonOptions);
+            var rabbitHost = _configuration["RabbitMQ:Host"] ?? "localhost";
 
             try
             {
-                var response = await client.SendAsync(request);
+                var factory = new ConnectionFactory() { HostName = rabbitHost };
 
-                if (response.IsSuccessStatusCode)
+                using var connection = await factory.CreateConnectionAsync();
+                using var channel = await connection.CreateChannelAsync();
+
+                await channel.QueueDeclareAsync(queue: "email_queue",
+                                                durable: true,
+                                                exclusive: false,
+                                                autoDelete: false,
+                                                arguments: null);
+
+                var messageBody = JsonSerializer.Serialize(payload, _jsonOptions);
+                var body = Encoding.UTF8.GetBytes(messageBody);
+
+                var properties = new BasicProperties
                 {
-                    Console.WriteLine($">>> [EmailService] Python odebrał dane ({context}) poprawnie.");
-                    return true;
-                }
-                else
-                {
-                    var errorBody = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($">>> [EmailService] Błąd ({context}): {response.StatusCode}, Treść: {errorBody}");
-                    return false;
-                }
+                    Persistent = true
+                };
+
+                await channel.BasicPublishAsync(exchange: "",
+                                                routingKey: "email_queue",
+                                                mandatory: false,
+                                                basicProperties: properties,
+                                                body: body);
+
+                Console.WriteLine($">>> [EmailService] Sukces ({context}): Wiadomość wrzucona do email_queue w RabbitMQ.");
+                return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($">>> [EmailService] BŁĄD POŁĄCZENIA ({context}): {ex.Message}");
+                Console.WriteLine($">>> [EmailService] BŁĄD RABBITMQ ({context}): {ex.Message}");
                 return false;
             }
         }

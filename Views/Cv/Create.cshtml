@@ -236,12 +236,27 @@
     <script>
         let validationAttempted = false;
         $(document).ready(function () {
-            function removeEmojis(text) {
-                return text;
-            }
+                   function removeEmojis(text) {
+            if (!text) return '';
+           return text.replace(/[^\p{L}\p{N}\p{P}\p{Z}\$\^\r\n]/gu, '');
+        }
 
-            $(document).on('input', 'input[type="text"], input[type="email"], input[type="url"], textarea', function() {
-            });
+        $(document).on('input', 'input[type="text"], input[type="email"], input[type="url"], textarea', function() {
+            var originalValue = $(this).val();
+            var cleanedValue = removeEmojis(originalValue);
+
+            if (originalValue !== cleanedValue) {
+                var startPosition = this.selectionStart;
+                var endPosition = this.selectionEnd;
+
+                $(this).val(cleanedValue);
+
+                this.setSelectionRange(
+                    startPosition - (originalValue.length - cleanedValue.length),
+                    endPosition - (originalValue.length - cleanedValue.length)
+                );
+            }
+        });
 
             $(document).on('input', 'input[type="tel"]', function() {
                 var originalValue = $(this).val();
@@ -413,8 +428,6 @@
             const entries = container.querySelectorAll('.portfolio-entry');
             const lastEntry = entries[entries.length - 1];
             const lastInput = lastEntry.querySelector('.portfolio-input');
-    
-            // Jeśli ostatnie pole nie jest puste, dodaj nowe puste pole poniżej
             if (lastInput.value.trim() !== "") {
                 const newEntry = document.createElement('div');
                 newEntry.className = 'input-group mb-2 portfolio-entry';
@@ -434,12 +447,10 @@
         function removeField(btn) {
             const container = document.getElementById('portfolioContainer');
             const entries = container.querySelectorAll('.portfolio-entry');
-    
-            // Pozwól usunąć pole tylko, jeśli na liście jest więcej niż 1 wpis
+   
             if (entries.length > 1) {
                 btn.closest('.portfolio-entry').remove();
             } else {
-                // Jeśli to jedyne pole, wyczyść tylko jego wartość
                 entries[0].querySelector('.portfolio-input').value = "";
             }
             updateRemoveButtons();
@@ -451,7 +462,6 @@
                 const input = entry.querySelector('.portfolio-input');
                 const button = entry.querySelector('.remove-link');
         
-                // Pokaż przycisk usuwania (kosz) tylko wtedy, gdy pole nie jest ostatnim PUSTYM elementem
                 if (i === entries.length - 1 && input.value.trim() === "") {
                     button.classList.add('d-none');
                 } else {

@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Elementy rozwiązania/">
+    <File Path="docker-compose.yml" />
+  </Folder>
   <Project Path="Recruit_Finder_AI.csproj" />
   <Project Path="Recruit_Finder_AI.PythonService.CandidatesVerification/Recruit_Finder_AI.PythonService.CandidatesVerification.pyproj" Type="888888a0-9f3d-457c-b088-3a5042f75d52" Id="210401d4-6d57-431b-8052-503a48de2f2a">
     <Build Project="false" />

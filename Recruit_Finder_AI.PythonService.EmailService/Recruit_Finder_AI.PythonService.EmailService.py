@@ -1,22 +1,22 @@
 import os
 import smtplib
+import time
+import json
+import pika
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 
 load_dotenv()
-
-app = Flask(__name__)
 
 SMTP_SERVER = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
 SMTP_PORT = int(os.getenv('MAIL_PORT', 587))
 MAIL_USERNAME = os.getenv('MAIL_USERNAME')
 MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
-SERVICE_KEY = os.getenv('EMAIL_SERVICE_KEY')
+RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
 
 def send_email_template(recipient_email, code, subject, title_text, description_text):
-    """General function to send styled emails"""
+    """Generic function to send formatted emails via SMTP"""
     msg = MIMEMultipart("alternative")
     msg['Subject'] = f"{subject} - Recruit Finder AI"
     msg['From'] = f"Recruit Finder AI <{MAIL_USERNAME}>"
@@ -47,24 +47,25 @@ def send_email_template(recipient_email, code, subject, title_text, description_
     msg.attach(MIMEText(text_content, "plain"))
     msg.attach(MIMEText(html_content, "html"))
 
+    print(f" -> Attempting to send an email to {recipient_email} (Topic: {subject})...")
     with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
         server.starttls()
         server.login(MAIL_USERNAME, MAIL_PASSWORD)
         server.sendmail(MAIL_USERNAME, recipient_email, msg.as_string())
+    print(f" [OK] Email sent successfully to {recipient_email}")
 
-@app.route('/send-reset-code', methods=['POST'])
-def handle_email_request():
-    incoming_key = request.headers.get('X-Email-Key')
-    if SERVICE_KEY and incoming_key != SERVICE_KEY:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    data = request.json
-    email = data.get('email')
-    
-    reset_code = data.get('resetCode')
-    confirm_code = data.get('confirmationCode')
-
+def rabbitmq_callback(ch, method, properties, body):
     try:
+        data = json.loads(body)
+        email = data.get('email')
+        reset_code = data.get('resetCode')
+        confirm_code = data.get('confirmationCode')
+
+        if not email:
+            print(" [!] Error: Recipient's email address missing from message.")
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+            return
+
         if reset_code:
             send_email_template(
                 email, 
@@ -73,8 +74,6 @@ def handle_email_request():
                 "Reset your password", 
                 "We received a request to reset your password. Use the code below to set a new one."
             )
-            return jsonify({"status": "Success", "message": "Reset code sent"}), 200
-            
         elif confirm_code:
             send_email_template(
                 email, 
@@ -83,15 +82,29 @@ def handle_email_request():
                 "Welcome to Recruit Finder AI!", 
                 "Thank you for registering. Please enter the code below to verify your account."
             )
-            return jsonify({"status": "Success", "message": "Confirmation code sent"}), 200
-        
         else:
-            return jsonify({"error": "No code provided"}), 400
+            print(" [!] Error: Message received but no code (resetCode/confirmationCode) was transmitted.")
 
     except Exception as e:
-        print(f"SMTP Error: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        print(f" [CRITICAL] SMTP error while processing message: {e}")
+    finally:
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+
+def start_consumer():
+    while True:
+        try:
+            connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
+            channel = connection.channel()
+            
+            channel.queue_declare(queue='email_queue', durable=True)
+            channel.basic_qos(prefetch_count=1)
+            channel.basic_consume(queue='email_queue', on_message_callback=rabbitmq_callback)
+            
+            print(' [*] Email dispatch service started. Waiting for tasks in email_queue...')
+            channel.start_consuming()
+        except pika.exceptions.AMQPConnectionError:
+            print(" [!] Could not connect to RabbitMQ. Retrying in 5 seconds....")
+            time.sleep(5)
 
 if __name__ == '__main__':
-    port = int(os.getenv('EMAIL_SERVICE_PORT', 8001))
-    app.run(host='127.0.0.1', port=port, debug=True, ssl_context='adhoc')
+    start_consumer()

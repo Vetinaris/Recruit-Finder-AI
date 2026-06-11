@@ -98,10 +98,14 @@
                             @if (User.Identity.IsAuthenticated)
                             {
                                 <li class="nav-item me-lg-2">
-                                    <a class="nav-link d-flex align-items-center justify-content-center" asp-controller="Notifications" asp-action="Index"
-                                           style="height: 40px;">
-                                        <i class="bi bi-bell me-2"></i> Notifications
-                                        @await Component.InvokeAsync("NotificationBadge")
+                                    <a class="nav-link d-flex align-items-center justify-content-center"
+                                           asp-controller="Notifications" asp-action="Index" style="height: 40px;">
+        
+                                        <div class="d-flex align-items-start">
+                                            <i class="bi bi-bell me-2"></i>
+                                            @await Component.InvokeAsync("NotificationBadge")
+                                        </div>
+                                        <span>Notifications</span>
                                     </a>
                                 </li>
                             }

@@ -196,7 +196,7 @@
 
             document.querySelectorAll('.restrict-nip').forEach(el => {
                 el.addEventListener('input', e => {
-                    e.target.value = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
+                    e.target.value = e.target.value.replace(/[^a-zA-Z0-9\- ]/g, '');
                     if (e.target.value.trim()) e.target.classList.remove('company-field-error');
                 });
             });

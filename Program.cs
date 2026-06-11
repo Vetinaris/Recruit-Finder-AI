@@ -1,10 +1,13 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Recruit_Finder_AI.Data;
-using Recruit_Finder_AI.Models;
-using Recruit_Finder_AI.Extensions;
-using Recruit_Finder_AI.Services;
+using RabbitMQ.Client;
 using Recruit_Finder_AI.Areas.Identity.Data;
+using Recruit_Finder_AI.Data;
+using Recruit_Finder_AI.Extensions;
+using Recruit_Finder_AI.Models;
+using Recruit_Finder_AI.Services;
+
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,7 +15,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? throw new InvalidOperationException("Connection string not found.");
 
 builder.Services.AddDbContext<Recruit_Finder_AIContext>(options =>
-    options.UseSqlServer(connectionString));
+    options.UseNpgsql(connectionString));
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
     options.SignIn.RequireConfirmedAccount = false;
@@ -28,6 +31,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
 .AddEntityFrameworkStores<Recruit_Finder_AIContext>()
 .AddDefaultTokenProviders()
 .AddDefaultUI();
+
+builder.Services.AddScoped<IPasswordHasher<ApplicationUser>, BCryptPasswordHasher>();
 
 builder.Services.AddHttpClient("PythonClient")
     .ConfigurePrimaryHttpMessageHandler(() => {
@@ -75,16 +80,32 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.SameSite = SameSiteMode.None;
 });
 
+builder.Services.AddSingleton<ConnectionFactory>(sp =>
+    new ConnectionFactory()
+    {
+        HostName = builder.Configuration["RabbitMQ:Host"] ?? "rabbitmq"
+    });
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    try { await Seed.SeedData(services); }
-    catch (Exception ex)
+    var context = services.GetRequiredService<Recruit_Finder_AIContext>();
+
+    for (int i = 0; i < 10; i++)
     {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Error during seeding.");
+        try
+        {
+            await context.Database.MigrateAsync();
+            await Seed.SeedData(services);
+            break;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"The base is not ready yet (test {i + 1}/10)...");
+            await Task.Delay(3000);
+        }
     }
 }
 

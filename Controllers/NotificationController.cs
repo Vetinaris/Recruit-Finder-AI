@@ -65,6 +65,7 @@ public class NotificationsController : Controller
             note.IsRead = true;
             note.IsCompleted = true;
             await _context.SaveChangesAsync();
+            return Ok();
         }
 
         return RedirectToAction(nameof(Index));

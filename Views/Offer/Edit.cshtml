@@ -197,19 +197,27 @@
     <partial name="_ValidationScriptsPartial" />
     <script>
         $(document).ready(function () {
-            function removeEmojis(text) {
-                var regex = /[^\w\s\d.,!@@#$%^&*()\-=_+\[\]{}|;:'"<>\/?\\ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/gu;
-                return text.replace(regex, '');
-            }
+                   function removeEmojis(text) {
+            if (!text) return '';
+          return text.replace(/[^\p{L}\p{N}\p{P}\p{Z}\$\^\r\n]/gu, '');
+        }
 
-            $(document).on('input', 'input[type="text"], textarea', function() {
-                var originalValue = $(this).val();
-                var cleanedValue = removeEmojis(originalValue);
-                
-                if (originalValue !== cleanedValue) {
-                    $(this).val(cleanedValue);
-                }
-            });
+        $(document).on('input', 'input[type="text"], textarea', function() {
+            var originalValue = $(this).val();
+            var cleanedValue = removeEmojis(originalValue);
+
+            if (originalValue !== cleanedValue) {
+                var startPosition = this.selectionStart;
+                var endPosition = this.selectionEnd;
+
+                $(this).val(cleanedValue);
+
+                this.setSelectionRange(
+                    startPosition - (originalValue.length - cleanedValue.length),
+                    endPosition - (originalValue.length - cleanedValue.length)
+                );
+            }
+        });
 
             const minSalaryInput = $('#minSalary');
             const maxSalaryInput = $('#maxSalary');

@@ -54,13 +54,23 @@
 
                         <div>
                             <label asp-for="Input.Password" class="form-label small fw-bold text-muted text-uppercase ms-2">Password</label>
-                            <input asp-for="Input.Password" class="form-control rounded-pill border-light-subtle shadow-sm px-4 py-2 no-emoji" autocomplete="new-password" aria-required="true" placeholder="Create a password" />
+                            <div class="input-group shadow-sm rounded-pill border border-light-subtle bg-white" style="overflow: hidden;">
+                                <input asp-for="Input.Password" class="form-control border-0 px-4 py-2 no-emoji bg-transparent shadow-none" autocomplete="new-password" aria-required="true" placeholder="Create a password" />
+                                <button class="btn border-0 bg-transparent pe-4 text-muted d-flex align-items-center toggle-password-btn" type="button" style="box-shadow: none;">
+                                    <i class="bi bi-eye toggle-icon" style="cursor: pointer; font-size: 1.1rem;"></i>
+                                </button>
+                            </div>
                             <span asp-validation-for="Input.Password" class="text-danger small ms-2"></span>
                         </div>
 
-                        <div>
+                        <div class="mb-3">
                             <label asp-for="Input.ConfirmPassword" class="form-label small fw-bold text-muted text-uppercase ms-2">Confirm Password</label>
-                            <input asp-for="Input.ConfirmPassword" class="form-control rounded-pill border-light-subtle shadow-sm px-4 py-2 no-emoji" autocomplete="new-password" aria-required="true" placeholder="Repeat password" />
+                            <div class="input-group shadow-sm rounded-pill border border-light-subtle bg-white" style="overflow: hidden;">
+                                <input asp-for="Input.ConfirmPassword" class="form-control border-0 px-4 py-2 no-emoji bg-transparent shadow-none" autocomplete="new-password" aria-required="true" placeholder="Repeat password" />
+                                <button class="btn border-0 bg-transparent pe-4 text-muted d-flex align-items-center toggle-password-btn" type="button" style="box-shadow: none;">
+                                    <i class="bi bi-eye toggle-icon" style="cursor: pointer; font-size: 1.1rem;"></i>
+                                </button>
+                            </div>
                             <span asp-validation-for="Input.ConfirmPassword" class="text-danger small ms-2"></span>
                         </div>
 
@@ -116,8 +126,8 @@
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             function removeEmojis(text) {
-                const regex = /[^\w\s\d.,!@@#$%^&*()\-=_+\[\]{}|;:'"<>\/?\\ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/gu;
-                return text.replace(regex, '');
+                if (!text) return '';
+                return text.replace(/[^\p{L}\p{N}\p{P}\p{Z}\$\^\r\n]/gu, '');
             }
 
             document.querySelectorAll('.no-emoji').forEach(el => {
@@ -126,6 +136,25 @@
                     const cleaned = removeEmojis(original);
                     if (original !== cleaned) {
                         e.target.value = cleaned;
+                    }
+                });
+            });
+
+            document.querySelectorAll('.toggle-password-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const inputGroup = this.closest('.input-group');
+                    const input = inputGroup.querySelector('input');
+                    const icon = this.querySelector('.toggle-icon');
+                    
+                    const isPassword = input.getAttribute('type') === 'password';
+                    input.setAttribute('type', isPassword ? 'text' : 'password');
+                    
+                    if (isPassword) {
+                        icon.classList.remove('bi-eye');
+                        icon.classList.add('bi-eye-slash');
+                    } else {
+                        icon.classList.remove('bi-eye-slash');
+                        icon.classList.add('bi-eye');
                     }
                 });
             });

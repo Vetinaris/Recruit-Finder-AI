@@ -9,12 +9,14 @@ using Recruit_Finder_AI.Models;
 using Recruit_Finder_AI.Services;
 using System.Drawing;
 using System.Security.Claims;
+using RabbitMQ.Client;
 using System.Text;
 using System.Text.Json;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using SkiaSharp;
+using Recruit_Finder_AI.DTO;
 
 namespace Recruit_Finder_AI.Controllers
 {
@@ -25,68 +27,81 @@ namespace Recruit_Finder_AI.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
+        private readonly ConnectionFactory _rabbitFactory;
+        private readonly NotificationService _notificationService;
 
         public CvController(Recruit_Finder_AIContext context,
                             UserManager<ApplicationUser> userManager,
                             IHttpClientFactory httpClientFactory,
-                            IConfiguration configuration)
+                            IConfiguration configuration,
+                            ConnectionFactory rabbitFactory,
+                            NotificationService notificationService)
         {
             _context = context;
             _userManager = userManager;
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
+            _rabbitFactory = rabbitFactory;
+            _notificationService = notificationService;
         }
-
         [HttpGet]
         public async Task<IActionResult> GetStatus(int id)
         {
             var userId = _userManager.GetUserId(User);
             var cv = await _context.Cvs
                 .Where(c => c.Id == id && c.UserId == userId)
-                .Select(c => new { c.IsVerified })
+                .Select(c => new { c.IsVerified, c.AiFeedback })
                 .FirstOrDefaultAsync();
 
             if (cv == null) return NotFound();
             return Json(cv);
         }
 
+
+
         [AllowAnonymous]
-        [HttpPost]
         [IgnoreAntiforgeryToken]
-        public async Task<IActionResult> UpdateAiResult([FromBody] JsonElement result)
+        [HttpPost("/Cv/UpdateAiResult")]
+        public async Task<IActionResult> UpdateAiResult([FromBody] CvVerificationDto dto)
         {
-            var apiKey = _configuration["AiService:ApiKey"];
-            if (!Request.Headers.TryGetValue("X-AI-Key", out var extractedKey) || extractedKey != apiKey)
+            if (dto == null) return BadRequest("Payload is null");
+
+            var cvFromDb = await _context.Cvs
+                .Include(c => c.User)
+                .FirstOrDefaultAsync(c => c.Id == dto.Id);
+
+            if (cvFromDb == null)
             {
-                return Unauthorized("Invalid API Key");
+                return NotFound($"CV with ID {dto.Id} not found.");
             }
+
+            cvFromDb.IsVerified = dto.IsVerified;
+            cvFromDb.AiFeedback = dto.AiFeedback;
+            _context.Cvs.Update(cvFromDb);
+            await _context.SaveChangesAsync();
 
             try
             {
-                int cvId = result.GetProperty("cvId").GetInt32();
-                var cv = await _context.Cvs.FindAsync(cvId);
-
-                if (cv != null)
+                var notification = new Notification
                 {
-                    cv.IsVerified = true;
-                    _context.Update(cv);
+                    UserId = cvFromDb.UserId,
+                    Title = "AI Analysis Completed",
+                    Content = $"The AI verification for your CV '{cvFromDb.Name} {cvFromDb.Surname}' is finished.",
+                    ActionUrl = $"/Cv/Details/{cvFromDb.Id}",
+                    CreatedAt = DateTime.UtcNow,
+                    IsRead = false,
+                    IsCompleted = false
+                };
 
-                    var notification = new Notification
-                    {
-                        UserId = cv.UserId,
-                        Title = "AI Verification Complete",
-                        Content = $"AI Verification for your CV is complete!",
-                        CreatedAt = DateTime.UtcNow,
-                        IsRead = false,
-                        IsCompleted = true,
-                        ActionUrl = Url.Action("Index", "Cv")
-                    };
-                    _context.Add(notification);
-                    await _context.SaveChangesAsync();
-                }
-                return Ok();
+                _context.Notifications.Add(notification);
+                await _context.SaveChangesAsync();
             }
-            catch { return BadRequest(); }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[NOTIFICATION ERROR]: {ex.Message}");
+            }
+
+            return Ok(new { message = "CV updated successfully and notification created" });
         }
 
         public async Task<IActionResult> Index()
@@ -147,8 +162,12 @@ namespace Recruit_Finder_AI.Controllers
                 TempData["ErrorMessage"] = "CV not found.";
                 return RedirectToAction(nameof(Index));
             }
+            cv.IsVerified = false;
+            cv.AiFeedback = null;
+            _context.Cvs.Update(cv);
+            await _context.SaveChangesAsync();
 
-            _ = SendToAiVerification(cv);
+            await SendToAiVerification(cv);
 
             TempData["SuccessMessage"] = "AI analysis triggered in the background!";
             return RedirectToAction(nameof(Index));
@@ -202,12 +221,14 @@ namespace Recruit_Finder_AI.Controllers
             {
                 cv.UserId = userId;
                 cv.CreatedAt = existingCv.CreatedAt;
+
                 cv.IsVerified = false;
+                cv.AiFeedback = null;
 
                 _context.Update(cv);
                 await _context.SaveChangesAsync();
 
-                TempData["SuccessMessage"] = "CV updated and re-queued for analysis!";
+                TempData["SuccessMessage"] = "CV updated and verification status has been reset!";
                 return RedirectToAction(nameof(Index));
             }
 
@@ -226,34 +247,44 @@ namespace Recruit_Finder_AI.Controllers
         }
         private async Task<bool> SendToAiVerification(Cv cv)
         {
+            System.Diagnostics.Debug.WriteLine($"DEBUG: Attempting to connect to RabbitMQ host: {_rabbitFactory.HostName}");
+
             try
             {
-                var aiUrl = _configuration["AiService:PythonServiceUrl"];
-                var apiKey = _configuration["AiService:ApiKey"];
+                using var connection = await _rabbitFactory.CreateConnectionAsync();
+                using var channel = await connection.CreateChannelAsync();
 
-                var client = _httpClientFactory.CreateClient();
-                client.Timeout = TimeSpan.FromSeconds(5);
+                await channel.QueueDeclareAsync(
+                    queue: "cv_verification_queue",
+                    durable: true,
+                    exclusive: false,
+                    autoDelete: false
+                );
 
-                client.DefaultRequestHeaders.Add("X-AI-Key", apiKey);
-
-                var jsonData = JsonSerializer.Serialize(new
+                var message = new
                 {
                     cvId = cv.Id,
                     fullName = $"{cv.Name} {cv.Surname}",
+                    dateOfBirth = cv.DateOfBirth?.ToString("yyyy-MM-dd"),
                     experience = cv.ProfessionalExperience,
                     education = cv.Education,
                     skills = cv.Skills,
                     languages = cv.Languages,
                     portfolio = cv.Portfolio
-                });
+                };
 
-                var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
+                var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
 
-                var response = await client.PostAsync(aiUrl, content);
-                return response.IsSuccessStatusCode;
+                await channel.BasicPublishAsync(
+                    exchange: string.Empty,
+                    routingKey: "cv_verification_queue",
+                    body: body
+                );
+                return true;
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"Error connecting to RabbitMQ: {ex.Message}");
                 return false;
             }
         }

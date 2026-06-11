@@ -394,3 +394,33 @@ body.modal-open {
     border: none;
     box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2);
 }
+
+.ai-feedback-scroll-box {
+    padding-right: 8px;
+    scrollbar-width: thin;
+}
+
+    .ai-feedback-scroll-box::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .ai-feedback-scroll-box::-webkit-scrollbar-thumb {
+        border-radius: 10px;
+    }
+
+
+.scroll-green {
+    scrollbar-color: #2ec4b6 #f8f9fa;
+}
+
+    .scroll-green::-webkit-scrollbar-thumb {
+        background-color: #2ec4b6;
+    }
+
+.scroll-red {
+    scrollbar-color: #dc3545 #f8f9fa;
+}
+
+    .scroll-red::-webkit-scrollbar-thumb {
+        background-color: #dc3545;
+    }

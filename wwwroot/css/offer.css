@@ -444,3 +444,8 @@ textarea.input-validation-error {
         opacity: 1;
     }
 }
+
+textarea.form-control {
+    resize: vertical !important;
+    min-height: 120px;
+}

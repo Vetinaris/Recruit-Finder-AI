@@ -1,26 +1,19 @@
 import os
-import threading
+import time
 import requests
 import urllib3
 import json
 import re
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-from dotenv import load_dotenv
+import pika
 
-load_dotenv()
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-app = Flask(__name__)
-CORS(app)
-
-API_KEY = os.getenv("API_KEY")
-CALLBACK_URL = os.getenv("OFFER_CALLBACK_URL")
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
-PORT = int(os.getenv("OFFER_SERVICE_PORT", 8000))
+API_KEY = os.getenv("API_KEY", "He_ovat_kuin_veden_aarelle_is")
+CALLBACK_URL = os.getenv("OFFER_CALLBACK_URL", "https://web-api:8080/Offer/UpdateAiResult")
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://host.docker.internal:11434/api/generate")
+RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
 
 def call_ollama_gemma(prompt):
-    """Pomocnicza funkcja do komunikacji z lokalną instancją Ollama (Gemma 3:4b)"""
     try:
         response = requests.post(
             OLLAMA_URL,
@@ -32,26 +25,21 @@ def call_ollama_gemma(prompt):
                     "temperature": 0.1
                 }
             },
-            timeout=60
+            timeout=120
         )
         if response.status_code == 200:
             return response.json().get("response", "")
-        return "Błąd: Nie udało się pobrać analizy od AI."
+        return "Error: Failed to retrieve analysis from AI."
     except Exception as e:
-        return f"Błąd połączenia z Ollama: {str(e)}"
+        return f"Error connecting to Ollama: {str(e)}"
 
 def convert_raw_text_to_json(raw_text):
-    """
-    Funkcja ratunkowa. Jeśli model Gemma całkowicie zignoruje format JSON i zwróci zwykły tekst,
-    ta funkcja użyje wyrażeń regularnych do wyciągnięcia kluczowych informacji i ustrukturyzowania ich w słownik.
-    """
     parsed_data = {
-        "description": "Przeprowadzono automatyczną ekstrakcję danych z tekstu strukturalnego AI.",
+        "description": "Automatic data extraction from AI structured text was performed.",
         "pros": [],
         "cons": [],
         "score": 10
     }
-    
     if not raw_text:
         return parsed_data
 
@@ -102,23 +90,17 @@ def convert_raw_text_to_json(raw_text):
     parsed_data["cons"] = list(set(parsed_data["cons"]))
     
     if not parsed_data["pros"]:
-        parsed_data["pros"] = ["Zweryfikowano profil kandydata."]
+        parsed_data["pros"] = ["Candidate profile verified."]
     if not parsed_data["cons"] and parsed_data["score"] < 50:
-        parsed_data["cons"] = ["Wykryto brak pełnego dopasowania do wymagań oferty."]
+        parsed_data["cons"] = ["The offer was found to be incompletely matched to the requirements."]
 
     return parsed_data
 
 def clean_and_parse_json(raw_output):
-    """
-    Zaawansowane oczyszczanie tekstu z LLM w celu poprawnego parsowania JSON-a.
-    Usuwa znaczniki markdownu, białe znaki i ewentualny tekst przed/po JSON.
-    W przypadku niepowodzenia uruchamia heurystyczny parser tekstu.
-    """
     if not raw_output:
-        raise ValueError("Otrzymano pustą odpowiedź od modelu AI.")
+        raise ValueError("An empty response was received from the AI ​​model.")
 
     cleaned = raw_output.strip()
-
     match = re.search(r'(\{.*})', cleaned, re.DOTALL)
     if match:
         cleaned = match.group(1)
@@ -130,14 +112,10 @@ def clean_and_parse_json(raw_output):
     try:
         return json.loads(cleaned)
     except Exception as json_err:
-        print(f"Błąd składni JSON od AI ({json_err}). Uruchamianie parsera heurystycznego...")
+        print(f"JSON syntax error from AI ({json_err}). Running the heuristic parser...")
         return convert_raw_text_to_json(raw_output)
 
 def ensure_list(value):
-    """
-    Upewnia się, że zwracana wartość jest zawsze listą ciągów znaków.
-    Zapobiega rozbijaniu tekstu na pojedyncze litery.
-    """
     if isinstance(value, list):
         return [str(item).strip() for item in value if item]
     elif isinstance(value, str):
@@ -146,10 +124,6 @@ def ensure_list(value):
     return []
 
 def process_offer_ranking_logic(csharp_payload):
-    """
-    Główna logika przetwarzania asynchronicznego.
-    Zabezpieczona przed przerwaniem działania w przypadku błędu pojedynczego kandydata.
-    """
     try:
         offer_id = csharp_payload.get("offerId")
         requirements = csharp_payload.get("requirements", "")
@@ -158,7 +132,7 @@ def process_offer_ranking_logic(csharp_payload):
         required_languages = csharp_payload.get("requiredLanguages", "Not specified")
         applications = csharp_payload.get("applications", [])
     except Exception as e:
-        print(f"Błąd podczas parsowania payloadu z C#: {e}")
+        print(f"Error parsing payload from C#: {e}")
         return False
 
     analyzed_candidates = []
@@ -166,12 +140,11 @@ def process_offer_ranking_logic(csharp_payload):
     for app_data in applications:
         try:
             app_id_raw = app_data.get("applicationId") or app_data.get("id")
-            
             try:
                 app_id = int(app_id_raw) if app_id_raw is not None else 0
             except (ValueError, TypeError):
                 app_id = 0
-                print(f"Ostrzeżenie: Nie można rzutować ID '{app_id_raw}' na int. Domyślnie 0.")
+                print(f"Warning: Cannot cast ID '{app_id_raw}' to int. Default 0.")
 
             cv = app_data.get("cv", {})
             candidate_name = f"{cv.get('name', 'Ukryte')} {cv.get('surname', 'Nazwisko')}"
@@ -288,8 +261,7 @@ def process_offer_ranking_logic(csharp_payload):
                 pros = ensure_list(parsed_data.get("pros", []))
                 cons = ensure_list(parsed_data.get("cons", []))
             except Exception as e:
-                print(f"Błąd parsowania JSON dla aplikacji {app_id}: {e}. Próba użycia wyniku pierwotnego...")
-                
+                print(f"JSON parsing error for application {app_id}: {e}. Attempting to use the original result...")
                 try:
                     parsed_fallback = clean_and_parse_json(initial_output)
                     score = int(parsed_fallback.get("score", 50))
@@ -297,11 +269,11 @@ def process_offer_ranking_logic(csharp_payload):
                     pros = ensure_list(parsed_fallback.get("pros", []))
                     cons = ensure_list(parsed_fallback.get("cons", []))
                 except Exception as fe:
-                    print(f"Krytyczny błąd parsowania awaryjnego dla aplikacji {app_id}: {fe}")
-                    candidate_description = "Krytyczny błąd formatowania odpowiedzi AI."
+                    print(f"Critical emergency parsing error for application {app_id}: {fe}")
+                    candidate_description = "Fatal AI response formatting error."
                     score = 15
                     pros = []
-                    cons = ["Nie można przeprowadzić strukturalnego parsowania danych z powodu błędnego formatowania AI."]
+                    cons = ["Unable to perform structured data parsing due to incorrect AI formatting."]
 
             analyzed_candidates.append({
                 "applicationId": app_id,
@@ -312,7 +284,7 @@ def process_offer_ranking_logic(csharp_payload):
             })
 
         except Exception as candidate_error:
-            print(f"Krytyczny błąd przetwarzania kandydata: {candidate_error}")
+            print(f"Critical candidate processing error: {candidate_error}")
             try:
                 fallback_id = int(app_data.get("applicationId") or app_data.get("id") or 0)
             except:
@@ -321,9 +293,9 @@ def process_offer_ranking_logic(csharp_payload):
             analyzed_candidates.append({
                 "applicationId": fallback_id,
                 "score": 10,
-                "description": "Wewnętrzny błąd systemu podczas oceny profilu kandydata.",
+                "description": "Internal system error while evaluating candidate profile.",
                 "pros": [],
-                "cons": [f"Błąd systemowy: {str(candidate_error)}"]
+                "cons": [f"System error: {str(candidate_error)}"]
             })
 
     analyzed_candidates.sort(key=lambda x: x["score"], reverse=True)
@@ -335,7 +307,7 @@ def process_offer_ranking_logic(csharp_payload):
             "results": analyzed_candidates
         }
     except ValueError as e:
-        print(f"Błąd rzutowania ID oferty na int: {e}")
+        print(f"Error casting offer ID to int: {e}")
         return False
 
     try:
@@ -345,29 +317,35 @@ def process_offer_ranking_logic(csharp_payload):
             headers={"X-AI-Key": API_KEY}, 
             verify=False
         )
-        print(f"Callback zakończony sukcesem dla Oferty ID {offer_id}. Kod statusu: {response.status_code}")
+        print(f"Callback provided to ASP.NET for Offer ID {offer_id}. HTTP status: {response.status_code}")
     except Exception as e:
-        print(f"Błąd dostarczania callbacku dla Oferty ID {offer_id}: {e}")
+        print(f"Error delivering callback for Offer ID {offer_id}: {e}")
 
-@app.route('/analyze-offer', methods=['POST'])
-def analyze_offer():
-    if request.headers.get("X-AI-Key") != API_KEY:
-        return jsonify({"status": "unauthorized"}), 401
-    
-    data = request.json
-    if not data or not data.get('offerId'):
-        return jsonify({"status": "bad_request", "message": "Missing offerId"}), 400
+def rabbitmq_callback(ch, method, properties, body):
+    print(" [x] A new batch of candidates has been received for analysis...")
+    try:
+        payload = json.loads(body)
+        process_offer_ranking_logic(payload)
+    except Exception as e:
+        print(f"Error processing messages from queue: {e}")
+    finally:
+        ch.basic_ack(delivery_tag=method.delivery_tag)
 
-    threading.Thread(
-        target=process_offer_ranking_logic, 
-        args=(data,) 
-    ).start()
-    
-    return jsonify({
-        "status": "accepted", 
-        "offerId": data.get('offerId'),
-        "count_received": len(data.get('applications', []))
-    }), 202
+def start_consumer():
+    while True:
+        try:
+            connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
+            channel = connection.channel()
+            
+            channel.queue_declare(queue='candidates_verification_queue', durable=True)
+            channel.basic_qos(prefetch_count=1)
+            channel.basic_consume(queue='candidates_verification_queue', on_message_callback=rabbitmq_callback)
+            
+            print(' [*] Candidate assessment service launched. Waiting for tasks from RabbitMQ...')
+            channel.start_consuming()
+        except pika.exceptions.AMQPConnectionError:
+            print(" [!] Could not connect to RabbitMQ. Retrying in 5 seconds....")
+            time.sleep(5)
 
 if __name__ == '__main__':
-    app.run(port=PORT, debug=True)
+    start_consumer()

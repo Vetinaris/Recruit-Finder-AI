@@ -174,7 +174,7 @@
                             <span asp-validation-for="Description" class="text-danger small"></span>
                             
                             <label asp-for="Requirements" class="text-muted small text-uppercase fw-bold mb-1 d-block">Job Requirements</label>
-                            <textarea asp-for="Requirements" class="form-control border-light-subtle shadow-sm rounded-4" rows="5" placeholder="Skills and experience..." required></textarea>
+                            <textarea asp-for="Requirements" class="form-control border-light-subtle shadow-sm rounded-4" rows="8" placeholder="Skills and experience..." required></textarea>
                             <span asp-validation-for="Requirements" class="text-danger small"></span>
                         </div>
                         <div class="d-flex flex-column flex-md-row gap-3 pt-4 border-top">
@@ -196,20 +196,27 @@
     <partial name="_ValidationScriptsPartial" />
     <script>
         $(document).ready(function () {
+        function removeEmojis(text) {
+            if (!text) return '';
+          return text.replace(/[^\p{L}\p{N}\p{P}\p{Z}\$\^\r\n]/gu, '');
+        }
 
-            function removeEmojis(text) {
-                var regex = /[^\w\s\d.,!@@#$%^&*()\-=_+\[\]{}|;:'"<>\/?\\ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/gu;
-                return text.replace(regex, '');
+        $(document).on('input', 'input[type="text"], textarea', function() {
+            var originalValue = $(this).val();
+            var cleanedValue = removeEmojis(originalValue);
+
+            if (originalValue !== cleanedValue) {
+                var startPosition = this.selectionStart;
+                var endPosition = this.selectionEnd;
+
+                $(this).val(cleanedValue);
+
+                this.setSelectionRange(
+                    startPosition - (originalValue.length - cleanedValue.length),
+                    endPosition - (originalValue.length - cleanedValue.length)
+                );
             }
-
-            $(document).on('input', 'input[type="text"], textarea', function() {
-                var originalValue = $(this).val();
-                var cleanedValue = removeEmojis(originalValue);
-                
-                if (originalValue !== cleanedValue) {
-                    $(this).val(cleanedValue);
-                }
-            });
+        });
             const minSalaryInput = $('#minSalary');
             const maxSalaryInput = $('#maxSalary');
             const fixedSalaryInput = $('#fixedSalaryInput');

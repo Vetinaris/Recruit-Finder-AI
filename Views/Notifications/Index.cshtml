@@ -60,7 +60,8 @@
                                             @item.Title
                                         </h5>
                                         <small class="text-muted fw-medium small">
-                                            <i class="bi bi-clock me-1"></i>@item.CreatedAt.ToString("g")
+                                            <i class="bi bi-clock me-1"></i>
+                                            <span class="local-date" data-utc-date="@item.CreatedAt.ToString("o")">@item.CreatedAt.ToString("g")</span>
                                         </small>
                                     </div>
                                     <p class="mb-0 text-secondary pe-md-5">@item.Content</p>
@@ -76,13 +77,12 @@
 
                                     @if (!item.IsCompleted)
                                     {
-                                        <form asp-action="MarkAsCompleted" method="post" class="m-0">
-                                            <input type="hidden" name="id" value="@item.Id" />
-                                            <button type="submit" class="btn btn-sm @(User.IsInRole("ADMIN") || User.IsInRole("MODERATOR") ? "btn-success shadow-sm" : "btn-light border") rounded-pill px-3 fw-bold">
-                                                <i class="bi bi-check2-circle me-1"></i>
-                                                @(User.IsInRole("ADMIN") || User.IsInRole("MODERATOR") ? "Mark Done" : "Mark as read")
-                                            </button>
-                                        </form>
+                                        <button type="button"
+                                                onclick="markAsRead(@item.Id, this)"
+                                                class="btn btn-sm @(User.IsInRole("ADMIN") || User.IsInRole("MODERATOR") ? "btn-success shadow-sm" : "btn-light border") rounded-pill px-3 fw-bold">
+                                            <i class="bi bi-check2-circle me-1"></i>
+                                            @(User.IsInRole("ADMIN") || User.IsInRole("MODERATOR") ? "Mark Done" : "Mark as read")
+                                        </button>
                                     }
                                     else
                                     {
@@ -100,3 +100,46 @@
         </div>
     }
 </div>
+
+@section Scripts {
+    <script>
+        function markAsRead(id, buttonElement) {
+            const token = $('input[name="__RequestVerificationToken"]').val();
+        
+            $.ajax({
+                url: '@Url.Action("MarkAsCompleted", "Notifications")',
+                type: 'POST',
+                data: { id: id, __RequestVerificationToken: token },
+                success: function () {
+                    const card = buttonElement.closest('.notification-card');
+                    card.classList.add('bg-light', 'opacity-75');
+                    card.classList.remove('border-primary');
+                    buttonElement.remove();
+                
+                    const badge = document.querySelector('.badge-count');
+                    if (badge) {
+                        let count = parseInt(badge.textContent) - 1;
+                        badge.textContent = count > 0 ? count : "";
+                        if(count <= 0) badge.style.display = 'none';
+                    }
+                }
+            });
+        }
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll('.local-date').forEach(function (el) {
+                const utcString = el.getAttribute('data-utc-date');
+                if (utcString) {
+                    const date = new Date(utcString);
+                    
+                    el.textContent = date.toLocaleString(navigator.language, {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
+            });
+        });
+    </script>
+}

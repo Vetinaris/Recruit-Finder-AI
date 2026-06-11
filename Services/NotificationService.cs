@@ -18,7 +18,7 @@ public class NotificationService
             Title = title,
             Content = content,
             ActionUrl = url,
-            CreatedAt = DateTime.Now
+            CreatedAt = DateTime.UtcNow
         };
 
         _context.Notifications.Add(notification);
